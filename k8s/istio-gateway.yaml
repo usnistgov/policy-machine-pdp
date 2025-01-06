@@ -1,0 +1,45 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: pm-server-gateway
+  namespace: default
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*"
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: pm-server
+  namespace: default
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - pm-server-gateway
+  http:
+    - match:
+        - uri:
+            prefix: /gov.nist.csd.pm.pdp.proto.ResourcePDP/
+      route:
+        - destination:
+            host: resource-pdp
+            port:
+              number: 50051
+    - match:
+        - uri:
+            prefix: /gov.nist.csd.pm.pdp.proto.AdminPDP/
+        - uri:
+            prefix: /gov.nist.csd.pm.epp.proto.EPP/
+      route:
+        - destination:
+            host: admin-pdp-epp
+            port:
+              number: 50052

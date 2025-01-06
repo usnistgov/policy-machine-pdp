@@ -19,6 +19,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class EPPClient extends EPP implements EventProcessor {
@@ -52,6 +53,8 @@ public class EPPClient extends EPP implements EventProcessor {
 
 			ManagedChannel channel = ManagedChannelBuilder
 					.forAddress(config.adminHost(), config.adminPort())
+					.defaultServiceConfig(buildGrpcConfigMap())
+					.enableRetry()
 					.usePlaintext()
 					.build();
 
@@ -64,6 +67,30 @@ public class EPPClient extends EPP implements EventProcessor {
 			logger.info("sending event {}", eventContext);
 
 			blockingStub.processEvent(EventContextUtil.toProto(eventContext));
+		}
+
+		private Map<String, Object> buildGrpcConfigMap() {
+			Map<String, Object> serviceConfig = new HashMap<>();
+
+			// Load balancing configuration
+			serviceConfig.put("loadBalancingConfig", List.of(Map.of("round_robin", new HashMap<>())));
+
+			// Method configuration with retry policy
+			Map<String, Object> retryPolicy = new HashMap<>();
+			retryPolicy.put("maxAttempts", "4");
+			retryPolicy.put("initialBackoff", "0.2s");
+			retryPolicy.put("maxBackoff", "10s");
+			retryPolicy.put("backoffMultiplier", 1.5);
+			retryPolicy.put("retryableStatusCodes", List.of("UNAVAILABLE"));
+
+			serviceConfig.put("methodConfig", List.of(
+					Map.of(
+							"name", List.of(Map.of("service", "your.service.Name")),
+							"retryPolicy", retryPolicy
+					)
+			));
+
+			return serviceConfig;
 		}
 	}
 }
