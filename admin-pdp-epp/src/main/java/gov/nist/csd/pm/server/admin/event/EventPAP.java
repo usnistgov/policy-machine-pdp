@@ -12,7 +12,7 @@ public class EventPAP extends PAP {
 	private EventPolicyModifier policyModifier;
 
 	public EventPAP(Neo4jMemoryPAP pap) throws PMException {
-		super(pap.policyStore());
+		super(pap);
 
 		this.pap = pap;
 		this.policyModifier = new EventPolicyModifier(pap.policyStore());

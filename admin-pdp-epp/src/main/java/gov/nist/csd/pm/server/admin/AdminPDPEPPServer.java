@@ -16,6 +16,7 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -31,11 +32,15 @@ public class AdminPDPEPPServer {
 	public static void main(String[] args) throws Exception {
 		ServerConfig config = ServerConfig.load();
 
+		System.out.println(config);
+
 		// init event store client
 		EventStoreDBClient eventStoreDBClient = EventStoreClient.get(config);
 
 		// start neo4j embedded
-		DatabaseManagementService managementService = new DatabaseManagementServiceBuilder(new File("/tmp/admin-pdp-epp").toPath()).build();
+		DatabaseManagementService managementService = new DatabaseManagementServiceBuilder(new File("/tmp/admin-pdp-epp").toPath())
+				.setConfig(GraphDatabaseSettings.strict_config_validation, false)
+				.build();
 		GraphDatabaseService graphDb = managementService.database(DEFAULT_DATABASE_NAME);
 
 		// create the PDP and EPP services
