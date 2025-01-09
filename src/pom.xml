@@ -35,7 +35,7 @@
         <dependency>
             <groupId>com.github.usnistgov</groupId>
             <artifactId>policy-machine-core</artifactId>
-            <version>4a07ee9e</version>
+            <version>68b06d3</version>
         </dependency>
 
         <dependency>
