@@ -2,21 +2,22 @@ package gov.nist.csd.pm.server.shared;
 
 import java.util.Map;
 
-public record ServerConfig(int resourcePort,
-                           String resourceHost,
-                           int adminPort,
-                           String adminHost,
-                           String esdbHost,
-                           int esdbPort) {
+public record ServerConfig(String resourceHost, int resourcePort,
+                           String adminHost, int adminPort,
+                           String esdbHost, int esdbPort,
+                           String bootstrapFilePath,
+                           String bootstrapUser) {
 
-	private static final String RESOURCE_GRPC_SERVER_HOST = "RESOURCE_GRPC_SERVER_HOST";
-	private static final String RESOURCE_GRPC_SERVER_PORT = "RESOURCE_GRPC_SERVER_PORT";
-
-	private static final String ADMIN_GRPC_SERVER_HOST = "ADMIN_GRPC_SERVER_HOST";
-	private static final String ADMIN_GRPC_SERVER_PORT = "ADMIN_GRPC_SERVER_PORT";
-
-	private static final String ESDB_HOST = "ESDB_HOST";
-	private static final String ESDB_PORT = "ESDB_PORT";
+	public enum Key {
+		RESOURCE_GRPC_SERVER_HOST,
+		RESOURCE_GRPC_SERVER_PORT,
+		ADMIN_GRPC_SERVER_HOST,
+		ADMIN_GRPC_SERVER_PORT,
+		ESDB_HOST,
+		ESDB_PORT,
+		BOOTSTRAP_FILE_PATH,
+		BOOTSTRAP_USER
+	}
 
 	/**
 	 * Load config from environment variables.
@@ -26,27 +27,27 @@ public record ServerConfig(int resourcePort,
 		Map<String, String> env = System.getenv();
 
 		// grpc server host names
-		String resourceHost = env.get(RESOURCE_GRPC_SERVER_HOST);
-		String adminHost = env.get(ADMIN_GRPC_SERVER_HOST);
+		String resourceHost = env.getOrDefault(Key.RESOURCE_GRPC_SERVER_HOST.name(), "localhost");
+		String adminHost = env.getOrDefault(Key.ADMIN_GRPC_SERVER_HOST.name(), "localhost");
 
 		// grpc server ports
-		String resPort = env.get(RESOURCE_GRPC_SERVER_PORT);
-		String adminPort = env.get(ADMIN_GRPC_SERVER_PORT);
+		String resPort = env.getOrDefault(Key.RESOURCE_GRPC_SERVER_PORT.name(), "50051");
+		String adminPort = env.getOrDefault(Key.ADMIN_GRPC_SERVER_PORT.name(), "50052");
 
 		// esdb connection params
-		String esdbHost = env.get(ESDB_HOST);
-		String esdbPort = env.get(ESDB_PORT);
+		String esdbHost = env.getOrDefault(Key.ESDB_HOST.name(), "localhost");
+		String esdbPort = env.getOrDefault(Key.ESDB_PORT.name(), "2113");
 
-		System.out.println(env);
+		// bootstrap params
+		String bootstrapFilePath = env.get(Key.BOOTSTRAP_FILE_PATH.name());
+		String bootstrapUser = env.get(Key.BOOTSTRAP_USER.name());
 
 		return new ServerConfig(
-				resPort != null ? Integer.parseInt(resPort) : -1,
-				resourceHost,
-				adminPort != null ? Integer.parseInt(adminPort) : -1,
-				adminHost,
-				esdbHost,
-				esdbPort != null ? Integer.parseInt(esdbPort) : -1
+				resourceHost, Integer.parseInt(resPort),
+				adminHost, Integer.parseInt(adminPort),
+				esdbHost, Integer.parseInt(esdbPort),
+				bootstrapFilePath,
+				bootstrapUser
 		);
 	}
-
 }

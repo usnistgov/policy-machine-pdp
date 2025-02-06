@@ -1,11 +1,9 @@
 package gov.nist.csd.pm.server.shared;
 
-import com.google.protobuf.ByteString;
-import gov.nist.csd.pm.epp.proto.OperandEntry;
-import gov.nist.csd.pm.epp.proto.StringList;
-import gov.nist.csd.pm.impl.neo4j.memory.pap.store.Neo4jUtil;
-import gov.nist.csd.pm.pap.exception.PMException;
-import gov.nist.csd.pm.pap.obligation.EventContext;
+import gov.nist.csd.pm.common.event.EventContext;
+import gov.nist.csd.pm.common.exception.PMException;
+import gov.nist.csd.pm.proto.epp.OperandEntry;
+import gov.nist.csd.pm.proto.epp.StringList;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,8 +12,8 @@ import java.util.Map;
 
 public class EventContextUtil {
 
-	public static gov.nist.csd.pm.epp.proto.EventContext toProto(EventContext eventContext) throws PMException {
-		return gov.nist.csd.pm.epp.proto.EventContext.newBuilder()
+	public static gov.nist.csd.pm.proto.epp.EventContext toProto(EventContext eventContext) throws PMException {
+		return gov.nist.csd.pm.proto.epp.EventContext.newBuilder()
 				.setUser(eventContext.user())
 				.setProcess(eventContext.process())
 				.setOpName(eventContext.opName())
@@ -23,7 +21,7 @@ public class EventContextUtil {
 				.build();
 	}
 
-	public static EventContext fromProto(gov.nist.csd.pm.epp.proto.EventContext protoCtx) throws PMException {
+	public static EventContext fromProto(gov.nist.csd.pm.proto.epp.EventContext protoCtx) throws PMException {
 		return new EventContext(
 				protoCtx.getUser(),
 				protoCtx.getProcess(),

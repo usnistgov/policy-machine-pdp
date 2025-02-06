@@ -1,8 +1,8 @@
 package gov.nist.csd.pm.server.admin.event;
 
+import gov.nist.csd.pm.common.exception.PMException;
 import gov.nist.csd.pm.impl.neo4j.memory.pap.Neo4jMemoryPAP;
 import gov.nist.csd.pm.pap.PAP;
-import gov.nist.csd.pm.pap.exception.PMException;
 import gov.nist.csd.pm.pap.modification.PolicyModification;
 import gov.nist.csd.pm.pap.query.PolicyQuery;
 

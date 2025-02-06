@@ -2,14 +2,14 @@ package gov.nist.csd.pm.server.admin;
 
 import com.eventstore.dbclient.EventData;
 import com.eventstore.dbclient.EventStoreDBClient;
+import gov.nist.csd.pm.common.exception.PMException;
 import gov.nist.csd.pm.epp.EPP;
-import gov.nist.csd.pm.epp.proto.EPPGrpc;
-import gov.nist.csd.pm.epp.proto.EPPResponse;
-import gov.nist.csd.pm.epp.proto.EventContext;
 import gov.nist.csd.pm.impl.neo4j.memory.pap.Neo4jMemoryPAP;
 import gov.nist.csd.pm.pap.PAP;
-import gov.nist.csd.pm.pap.exception.PMException;
 import gov.nist.csd.pm.pdp.PDP;
+import gov.nist.csd.pm.proto.epp.EPPGrpc;
+import gov.nist.csd.pm.proto.epp.EPPResponse;
+import gov.nist.csd.pm.proto.epp.EventContext;
 import gov.nist.csd.pm.server.admin.event.EventPAP;
 import gov.nist.csd.pm.server.shared.EventContextUtil;
 import io.grpc.stub.StreamObserver;
@@ -20,7 +20,7 @@ public class EPPService extends EPPGrpc.EPPImplBase {
 	private GraphDatabaseService graphDB;
 	private EventStoreDBClient eventStoreDBClient;
 
-	public EPPService(GraphDatabaseService graphDB, EventStoreDBClient eventStoreDBClient) throws PMException {
+	public EPPService(GraphDatabaseService graphDB, EventStoreDBClient eventStoreDBClient) {
 		this.graphDB = graphDB;
 		this.eventStoreDBClient = eventStoreDBClient;
 	}

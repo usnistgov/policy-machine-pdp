@@ -1,18 +1,23 @@
 package gov.nist.csd.pm.server.resource;
 
-import gov.nist.csd.pm.epp.EPP;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.protobuf.InvalidProtocolBufferException;
+import gov.nist.csd.pm.common.exception.PMException;
 import gov.nist.csd.pm.pap.PAP;
-import gov.nist.csd.pm.pap.exception.PMException;
 import gov.nist.csd.pm.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.pdp.PDP;
-import gov.nist.csd.pm.pdp.proto.ResourceOperationRequest;
-import gov.nist.csd.pm.pdp.proto.ResourceOperationResponse;
-import gov.nist.csd.pm.pdp.proto.ResourcePDPGrpc;
+import gov.nist.csd.pm.proto.pdp.AdjudicationResponse;
+import gov.nist.csd.pm.proto.pdp.Decision;
+import gov.nist.csd.pm.proto.pdp.ResourceOperationRequest;
+import gov.nist.csd.pm.proto.pdp.ResourcePDPGrpc;
+import gov.nist.csd.pm.server.shared.ObjectToStruct;
 import gov.nist.csd.pm.server.shared.ServerConfig;
 import gov.nist.csd.pm.server.shared.UserContextInterceptor;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
-import com.eventstore.dbclient.*;
+
+import static gov.nist.csd.pm.server.shared.AdjudicateResponseUtil.deny;
+import static gov.nist.csd.pm.server.shared.AdjudicateResponseUtil.grant;
 
 public class ResourcePDPService extends ResourcePDPGrpc.ResourcePDPImplBase {
 
@@ -22,11 +27,11 @@ public class ResourcePDPService extends ResourcePDPGrpc.ResourcePDPImplBase {
 	public ResourcePDPService(PDP pdp, PAP pap, ServerConfig serverConfig) throws PMException {
 		this.pdp = pdp;
 		this.epp = new EPPClient(pdp, pap, serverConfig);
-		this.pdp.addEventListener(this.epp);
+		this.pdp.addEventSubscriber(this.epp);
 	}
 
 	@Override
-	public void adjudicateResourceOperation(ResourceOperationRequest request, StreamObserver<ResourceOperationResponse> responseObserver) {
+	public void adjudicateResourceOperation(ResourceOperationRequest request, StreamObserver<AdjudicationResponse> responseObserver) {
 		System.out.println("Received operation: " + request);
 
 		UserContext userCtx = new UserContext(
@@ -35,13 +40,17 @@ public class ResourcePDPService extends ResourcePDPGrpc.ResourcePDPImplBase {
 		);
 
 		try {
-			pdp.adjudicateResourceOperation(userCtx, request.getTarget(), request.getOperation());
+			gov.nist.csd.pm.pdp.adjudication.AdjudicationResponse adjudicationResponse =
+					pdp.adjudicateResourceOperation(userCtx, request.getTarget(), request.getOperation());
 
-			ResourceOperationResponse response = ResourceOperationResponse.newBuilder().build();
+			if (adjudicationResponse.getDecision() == gov.nist.csd.pm.pdp.adjudication.Decision.GRANT)
+				responseObserver.onNext(grant(adjudicationResponse));
+			else {
+				responseObserver.onNext(deny(adjudicationResponse));
+			}
 
-			responseObserver.onNext(response);
 			responseObserver.onCompleted();
-		} catch (PMException e) {
+		} catch (Exception e) {
 			responseObserver.onError(
 					Status.INTERNAL
 							.withDescription(e.getMessage())

@@ -1,28 +1,12 @@
 package gov.nist.csd.pm.server.resource;
 
-import com.eventstore.dbclient.*;
-import gov.nist.csd.pm.pap.op.graph.proto.CreatePolicyClassOp;
-import gov.nist.csd.pm.pap.op.graph.proto.CreatePolicyClassOpOrBuilder;
-import gov.nist.csd.pm.pdp.proto.ResourceOperationRequest;
-import gov.nist.csd.pm.pdp.proto.ResourceOperationResponse;
-import gov.nist.csd.pm.pdp.proto.ResourcePDPGrpc;
-import gov.nist.csd.pm.server.shared.UserContextInterceptor;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import io.grpc.Metadata;
-import io.grpc.stub.MetadataUtils;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 public class Test {
 
 	public static void main(String[] args) throws ExecutionException, InterruptedException {
 		// Create a channel to connect to the server
-		ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 50051)
+		/*ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 50051)
 				.usePlaintext() // Disable TLS for simplicity
 				.build();
 
@@ -47,7 +31,7 @@ public class Test {
 		System.out.println("Received response: " + response.getNode());
 
 		// Close the channel
-		channel.shutdown();
+		channel.shutdown();*/
 
 		/*
 		EventData event = EventData.builderAsJson(eventType, eventData)
