@@ -2,14 +2,14 @@ package gov.nist.csd.pm.server.admin;
 
 import com.eventstore.dbclient.EventData;
 import com.eventstore.dbclient.EventStoreDBClient;
+import gov.nist.csd.pm.common.exception.PMException;
 import gov.nist.csd.pm.epp.EPP;
 import gov.nist.csd.pm.impl.neo4j.memory.pap.Neo4jMemoryPAP;
 import gov.nist.csd.pm.pap.PAP;
-import gov.nist.csd.pm.pap.exception.PMException;
 import gov.nist.csd.pm.pap.query.model.context.UserContext;
-import gov.nist.csd.pm.pdp.OperationRequest;
 import gov.nist.csd.pm.pdp.PDP;
-import gov.nist.csd.pm.pdp.proto.*;
+import gov.nist.csd.pm.pdp.adjudication.OperationRequest;
+import gov.nist.csd.pm.proto.pdp.*;
 import gov.nist.csd.pm.server.admin.event.EventPAP;
 import gov.nist.csd.pm.server.shared.UserContextInterceptor;
 import io.grpc.stub.StreamObserver;
@@ -25,8 +25,6 @@ import static gov.nist.csd.pm.server.shared.EventContextUtil.fromProtoOperands;
 
 public class PDPService extends AdminPDPGrpc.AdminPDPImplBase {
 
-	private static final Logger logger = LogManager.getLogger(PDPService.class);
-
 	private GraphDatabaseService graphDB;
 	private EventStoreDBClient eventStoreDBClient;
 
@@ -38,7 +36,7 @@ public class PDPService extends AdminPDPGrpc.AdminPDPImplBase {
 	}
 
 	@Override
-	public void adjudicateAdminOperation(AdminOperationRequest request, StreamObserver<AdminOperationResponse> responseObserver) {
+	public void adjudicateAdminOperation(AdminOperationRequest request, StreamObserver<AdjudicationResponse> responseObserver) {
 		try {
 			NoCommitNeo4jPolicyStore neo4jMemoryPolicyStore = new NoCommitNeo4jPolicyStore(graphDB);
 			EventPAP pap = new EventPAP(new Neo4jMemoryPAP(neo4jMemoryPolicyStore));
@@ -52,7 +50,7 @@ public class PDPService extends AdminPDPGrpc.AdminPDPImplBase {
 
 			Map<String, Object> operands = fromProtoOperands(request.getOperandsList());
 
-			logger.info("adjudicating operation {}({})", request.getOpName(), operands);
+			System.out.println("adjudicating operation " + request.getOpName() + "(" + operands + ")");
 
 			// adjudicate operation - changes not committed
 			pdp.adjudicateAdminOperation(
@@ -69,7 +67,7 @@ public class PDPService extends AdminPDPGrpc.AdminPDPImplBase {
 	}
 
 	@Override
-	public void adjudicateAdminRoutine(AdminRoutineRequest request, StreamObserver<AdminRoutineResponse> responseObserver) {
+	public void adjudicateAdminRoutine(AdminRoutineRequest request, StreamObserver<AdjudicationResponse> responseObserver) {
 		try {
 			NoCommitNeo4jPolicyStore neo4jMemoryPolicyStore = new NoCommitNeo4jPolicyStore(graphDB);
 			EventPAP pap = new EventPAP(new Neo4jMemoryPAP(neo4jMemoryPolicyStore));
@@ -103,7 +101,7 @@ public class PDPService extends AdminPDPGrpc.AdminPDPImplBase {
 	}
 
 	@Override
-	public void adjudicateNamedAdminRoutine(NamedAdminRoutineRequest request, StreamObserver<AdminRoutineResponse> responseObserver) {
+	public void adjudicateNamedAdminRoutine(NamedAdminRoutineRequest request, StreamObserver<AdjudicationResponse> responseObserver) {
 		try {
 			NoCommitNeo4jPolicyStore neo4jMemoryPolicyStore = new NoCommitNeo4jPolicyStore(graphDB);
 			EventPAP pap = new EventPAP(new Neo4jMemoryPAP(neo4jMemoryPolicyStore));

@@ -8,12 +8,11 @@ import gov.nist.csd.pm.pap.PAP;
 import gov.nist.csd.pm.pdp.PDP;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import io.grpc.health.v1.HealthCheckResponse;
+import io.grpc.protobuf.services.HealthStatusManager;
+import io.grpc.protobuf.services.ProtoReflectionService;
 
 public class ResourcePDPServer {
-
-	private static final Logger logger = LogManager.getLogger(ResourcePDPServer.class);
 
 	public static void main(String[] args) throws Exception {
 		ServerConfig config = ServerConfig.load();
@@ -24,13 +23,19 @@ public class ResourcePDPServer {
 		// create the PDP service
 		ResourcePDPService resourcePDPService = new ResourcePDPService(pdp, pap, config);
 
+		// create health check
+		HealthStatusManager healthStatusManager = new HealthStatusManager();
+		healthStatusManager.setStatus("resource-pdp", HealthCheckResponse.ServingStatus.SERVING);
+
 		Server server = ServerBuilder
 				.forPort(config.resourcePort())
 				.addService(resourcePDPService)
+				.addService(ProtoReflectionService.newInstance())
+				.addService(healthStatusManager.getHealthService())
 				.intercept(new UserContextInterceptor())
 				.build();
 
-		logger.info("Starting resource PDP server on port " + config.resourcePort());
+		System.out.println("Starting resource PDP server on port " + config.resourcePort());
 
 		// create the policy event subscriber
 		PolicyEventSubscriber policyEventSubscriber = new PolicyEventSubscriber(pap, config);

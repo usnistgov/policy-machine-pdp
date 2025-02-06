@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: resource-pdp-deployment
+  name: resource-pdp
   labels:
     app: resource-pdp
 spec:
@@ -18,6 +18,18 @@ spec:
         - name: resource-pdp
           image: csd773/pm.server.resource-pdp:latest
           imagePullPolicy: Always
+          readinessProbe:
+            grpc:
+              port: 50051
+              service: "resource-pdp"
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            grpc:
+              port: 50051
+              service: "resource-pdp"
+            initialDelaySeconds: 5
+            periodSeconds: 10
           ports:
             - containerPort: 50051
           env:
@@ -31,16 +43,18 @@ spec:
               value: "eventstore"
             - name: ESDB_PORT
               value: "2113"
-
 ---
+
 apiVersion: v1
 kind: Service
 metadata:
   name: resource-pdp-service
 spec:
-  type: ClusterIP
-  ports:
-    - port: 50051
-      targetPort: 50051
   selector:
     app: resource-pdp
+  ports:
+    - name: grpc
+      protocol: TCP
+      port: 50051
+      targetPort: 50051
+

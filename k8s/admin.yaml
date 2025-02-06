@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bootstrap-config
+data:
+  bootstrap.pml: |  # The PML executed during bootstrapping
+    set resource operations ["read"]
+    
+    create pc "pc1"
+    create oa "oa1" in ["pc1"]
+    create ua "ua1" in ["pc1"]
+    create u "u1" in ["ua1"]
+    create o "o1" in ["oa1"]
+    
+    associate "ua1" and "oa1" with ["read"]
+# uncomment to use json as bootstrap policy format
+# bootstrap.pm.json: |
+#    {}
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-pdp-epp
+  labels:
+    app: admin-pdp-epp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-pdp-epp
+  template:
+    metadata:
+      labels:
+        app: admin-pdp-epp
+    spec:
+      containers:
+        - name: admin-pdp-epp
+          image: csd773/pm.server.admin-pdp-epp:latest
+          imagePullPolicy: Always
+          readinessProbe:
+            grpc:
+              port: 50051
+              service: "resource-pdp"
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            grpc:
+              port: 50051
+              service: "resource-pdp"
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          ports:
+            - containerPort: 50052
+          env:
+            - name: ADMIN_GRPC_SERVER_PORT
+              value: "50052"
+            - name: ESDB_HOST
+              value: "eventstore"
+            - name: ESDB_PORT
+              value: "2113"
+            - name: BOOTSTRAP_FILE_PATH
+              value: "/config/bootstrap.pml"
+            - name: BOOTSTRAP_USER
+              value: "u1"
+          volumeMounts:
+              - name: config-volume
+                mountPath: /config
+                readOnly: true
+      volumes:
+        - name: config-volume
+          configMap:
+            name: bootstrap-config
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-epp-service
+spec:
+  selector:
+    app: admin-epp
+  ports:
+    - name: grpc
+      protocol: TCP
+      port: 50052
+      targetPort: 50052
