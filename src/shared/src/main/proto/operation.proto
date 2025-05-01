@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "gov.nist.csd.pm.proto.operation";
+
+package gov.nist.csd.pm.proto.operation;
+
+message AdminOperationCreated {
+  string pml = 1;
+}
+
+message AdminOperationDeleted {
+  string name = 1;
+}
+
+message ResourceOperationsSet {
+  repeated string operations = 1;
+}

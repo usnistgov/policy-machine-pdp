@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "gov.nist.csd.pm.proto.graph";
+
+package gov.nist.csd.pm.proto.graph;
+
+message AssignmentCreated {
+  int64 ascendant = 1;
+  repeated int64 descendants = 2;
+}
+
+message AssociationCreated {
+  int64 ua = 1;
+  int64 target = 2;
+  repeated string arset = 3;
+}
+
+message PolicyClassCreated {
+  int64 id = 1;
+  string name = 2;
+}
+
+message UserAttributeCreated {
+  int64 id = 1;
+  string name = 2;
+  repeated int64 descendants = 3;
+}
+
+message ObjectAttributeCreated {
+  int64 id = 1;
+  string name = 2;
+  repeated int64 descendants = 3;
+}
+
+message UserCreated {
+  int64 id = 1;
+  string name = 2;
+  repeated int64 descendants = 3;
+}
+
+message ObjectCreated {
+  int64 id = 1;
+  string name = 2;
+  repeated int64 descendants = 3;
+}
+
+message AssignmentDeleted {
+  int64 ascendant = 1;
+  repeated int64 descendants = 2;
+}
+
+message NodeDeleted {
+  int64 id = 1;
+}
+
+message AssociationDeleted {
+  int64 ua = 1;
+  int64 target = 2;
+}
+
+message NodePropertiesSet {
+  int64 id = 1;
+  map<string, string> properties = 2;
+}

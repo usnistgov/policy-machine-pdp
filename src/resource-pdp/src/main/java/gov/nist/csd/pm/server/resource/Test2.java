@@ -1,19 +1,41 @@
 package gov.nist.csd.pm.server.resource;
 
+import gov.nist.csd.pm.proto.pdp.PDPResponse;
+import gov.nist.csd.pm.proto.pdp.ResourceOperationRequestByName;
+import gov.nist.csd.pm.proto.pdp.ResourcePDPGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
-import gov.nist.csd.pm.proto.pdp.AdminPDPGrpc;
-import gov.nist.csd.pm.proto.pdp.AdjudicationResponse;
-import gov.nist.csd.pm.proto.pdp.AdminOperationRequest;
-import gov.nist.csd.pm.proto.epp.EPPGrpc;
-import gov.nist.csd.pm.proto.epp.EventContext;
-import gov.nist.csd.pm.proto.epp.EPPResponse;
-import gov.nist.csd.pm.proto.pdp.ResourcePDPGrpc;
-import gov.nist.csd.pm.proto.pdp.ResourceOperationRequest;
+import java.util.concurrent.TimeUnit;
 
 public class Test2 {
-	public static void main(String[] args) {
+
+    public static void main(String[] args) throws InterruptedException {
+        ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 50051)
+            .usePlaintext()
+            .build();
+
+        while (true) {
+            ResourcePDPGrpc.ResourcePDPBlockingStub stub = ResourcePDPGrpc.newBlockingStub(channel);
+
+            ResourceOperationRequestByName request = ResourceOperationRequestByName.newBuilder()
+                .setTarget("o1")
+                .setOperation("read")
+                .build();
+
+            try {
+                PDPResponse response = stub.adjudicateResourceOperationByName(request);
+                System.out.println("ResourcePDP Response: " + response);
+            } catch (StatusRuntimeException e) {
+                e.printStackTrace();
+                System.err.println("ResourcePDP Error: " + e.getStatus());
+            }
+
+            TimeUnit.SECONDS.sleep(5);
+        }
+    }
+
+	/*public static void main(String[] args) {
 		String ingressHost = "localhost"; // Replace with the Ingress Gateway IP if not running locally
 		int ingressPort = 8080;          // Ingress Gateway port
 
@@ -40,5 +62,5 @@ public class Test2 {
 		} finally {
 			channel.shutdown();
 		}
-	}
+	}*/
 }
