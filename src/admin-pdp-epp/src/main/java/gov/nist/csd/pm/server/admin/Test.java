@@ -1,25 +1,7 @@
 package gov.nist.csd.pm.server.admin;
 
-import gov.nist.csd.pm.proto.epp.OperandEntry;
-import gov.nist.csd.pm.proto.epp.StringList;
-import gov.nist.csd.pm.proto.pdp.*;
-import gov.nist.csd.pm.server.shared.ServerConfig;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import io.grpc.Metadata;
-import io.grpc.stub.MetadataUtils;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.jar.JarFile;
-
-import static gov.nist.csd.pm.server.shared.UserContextInterceptor.PM_USER_KEY;
-
 public class Test {
-	public static void main(String[] args) throws MalformedURLException, ClassNotFoundException {
+	/*public static void main(String[] args) throws MalformedURLException, ClassNotFoundException {
 		ServerConfig config = ServerConfig.load();
 
 		ManagedChannel channel = ManagedChannelBuilder
@@ -57,5 +39,5 @@ public class Test {
 		} finally {
 			channel.shutdown();
 		}
-	}
+	}*/
 }

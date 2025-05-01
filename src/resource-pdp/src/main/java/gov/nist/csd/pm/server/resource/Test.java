@@ -1,37 +1,47 @@
 package gov.nist.csd.pm.server.resource;
 
+import gov.nist.csd.pm.proto.pdp.PDPResponse;
+import gov.nist.csd.pm.proto.pdp.ResourceOperationRequestByName;
+import gov.nist.csd.pm.proto.pdp.ResourcePDPGrpc;
+import gov.nist.csd.pm.server.shared.auth.UserContextInterceptor;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.Metadata;
+import io.grpc.stub.MetadataUtils;
 import java.util.concurrent.ExecutionException;
 
 public class Test {
 
-	public static void main(String[] args) throws ExecutionException, InterruptedException {
-		// Create a channel to connect to the server
-		/*ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 50051)
-				.usePlaintext() // Disable TLS for simplicity
-				.build();
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        // Create a channel to connect to the server
+        ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 50051)
+            .usePlaintext() // Disable TLS for simplicity
+            .build();
 
-		Metadata metadata = new Metadata();
-		Metadata.Key<String> userKey = Metadata.Key.of(UserContextInterceptor.PM_USER_KEY, Metadata.ASCII_STRING_MARSHALLER);
-		metadata.put(userKey, "u1");
+        Metadata metadata = new Metadata();
+        Metadata.Key<String> userKey = Metadata.Key.of(UserContextInterceptor.PM_USER_KEY,
+            Metadata.ASCII_STRING_MARSHALLER);
+        metadata.put(userKey, "u1");
 
-		// Create a blocking stub (synchronous)
-		ResourcePDPGrpc.ResourcePDPBlockingStub blockingStub = ResourcePDPGrpc.newBlockingStub(channel)
-				.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));;
+        // Create a blocking stub (synchronous)
+        ResourcePDPGrpc.ResourcePDPBlockingStub blockingStub = ResourcePDPGrpc.newBlockingStub(channel)
+            .withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
+        ;
 
-		// Create a request
-		ResourceOperationRequest request = ResourceOperationRequest.newBuilder()
-				.setOperation("read")
-				.setTarget("o1")
-				.build();
+        // Create a request
+        ResourceOperationRequestByName request = ResourceOperationRequestByName.newBuilder()
+            .setOperation("read")
+            .setTarget("o1")
+            .build();
 
-		// Call the gRPC method on the server and get the response
-		ResourceOperationResponse response = blockingStub.adjudicateResourceOperation(request);
+        // Call the gRPC method on the server and get the response
+        PDPResponse response = blockingStub.adjudicateResourceOperationByName(request);
 
-		// Print the response from the server
-		System.out.println("Received response: " + response.getNode());
+        // Print the response from the server
+        System.out.println("Received response: " + response);
 
-		// Close the channel
-		channel.shutdown();*/
+        // Close the channel
+        channel.shutdown();
 
 		/*
 		EventData event = EventData.builderAsJson(eventType, eventData)
@@ -71,7 +81,7 @@ public class Test {
 		EventStoreDBClient client = EventStoreDBClient.create(settings);
 
 		// Stream name and event data
-		String streamName = "policy-machine-v1";
+		String streamName = EVENTSTORE_STREAM;
 
 		try {
 			// Read events from the stream
@@ -99,5 +109,5 @@ public class Test {
 		} finally {
 			client.shutdown();
 		}*/
-	}
+    }
 }

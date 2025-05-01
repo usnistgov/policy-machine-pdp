@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "gov.nist.csd.pm.proto.prohibition";
+
+package gov.nist.csd.pm.proto.prohibition;
+
+message ProhibitionCreated {
+  string name = 1;
+
+  oneof subject {
+    int64 node = 2;
+    string process = 3;
+  }
+
+  repeated string arset = 4;
+  bool intersection = 5;
+  map<int64, bool> container_conditions = 6;
+}
+
+message ProhibitionDeleted {
+  string name = 1;
+}

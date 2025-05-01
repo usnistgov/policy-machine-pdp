@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>gov.nist.csd.pm</groupId>
-        <artifactId>server</artifactId>
+        <groupId>gov.nist.csd.pm.server</groupId>
+        <artifactId>parent</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
     <artifactId>admin-pdp-epp</artifactId>
@@ -18,9 +18,32 @@
 
     <dependencies>
         <dependency>
-            <groupId>gov.nist.csd.pm</groupId>
+            <groupId>net.devh</groupId>
+            <artifactId>grpc-server-spring-boot-starter</artifactId>
+            <version>3.1.0.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>gov.nist.csd.pm.server</groupId>
+            <artifactId>shared-test</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.usnistgov</groupId>
+            <artifactId>policy-machine-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.eventstore</groupId>
+            <artifactId>db-client-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>gov.nist.csd.pm.server</groupId>
             <artifactId>shared</artifactId>
             <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-services</artifactId>
         </dependency>
     </dependencies>
 

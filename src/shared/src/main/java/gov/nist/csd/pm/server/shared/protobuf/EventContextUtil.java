@@ -1,0 +1,95 @@
+package gov.nist.csd.pm.server.shared.protobuf;
+
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
+import gov.nist.csd.pm.common.event.EventContext;
+import gov.nist.csd.pm.common.exception.PMException;
+import gov.nist.csd.pm.proto.epp.OperandEntry;
+import gov.nist.csd.pm.proto.epp.StringList;
+import gov.nist.csd.pm.proto.graph.AssignmentCreated;
+import gov.nist.csd.pm.proto.graph.AssignmentCreated.Builder;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class EventContextUtil {
+
+    public static void main(String[] args) throws InvalidProtocolBufferException {
+        AssignmentCreated build = AssignmentCreated.newBuilder()
+            .setAscendant(1)
+            .addDescendants(2)
+            .build();
+
+        String print = JsonFormat.printer().print(build);
+        System.out.println(print);
+
+        Builder builder = AssignmentCreated.newBuilder();
+        JsonFormat.parser().merge(print, builder);
+
+        System.out.println(builder.build());
+    }
+
+    public static gov.nist.csd.pm.proto.epp.EventContext toProto(EventContext eventContext) throws
+                                                                                            PMException {
+        return gov.nist.csd.pm.proto.epp.EventContext.newBuilder()
+            .setUser(eventContext.getUser())
+            .setProcess(eventContext.getProcess())
+            .setOpName(eventContext.getOpName())
+            .addAllOperands(toProtoOperands(eventContext.getArgs()))
+            .build();
+    }
+
+    public static EventContext fromProto(gov.nist.csd.pm.proto.epp.EventContext protoCtx) throws
+                                                                                          PMException {
+        return new EventContext(
+            protoCtx.getUser(),
+            protoCtx.getProcess(),
+            protoCtx.getOpName(),
+            fromProtoOperands(protoCtx.getOperandsList())
+        );
+    }
+
+    public static Map<String, Object> fromProtoOperands(List<OperandEntry> operandsList) {
+        Map<String, Object> operandsMap = new HashMap<>();
+        for (OperandEntry operandEntry : operandsList) {
+            Object operandObj;
+
+            if (operandEntry.getValueCase() == OperandEntry.ValueCase.LISTVALUE) {
+                operandObj = operandEntry.getListValue();
+            } else {
+                operandObj = operandEntry.getStringValue();
+            }
+
+            operandsMap.put(operandEntry.getName(), operandObj);
+        }
+
+        return operandsMap;
+    }
+
+    public static List<OperandEntry> toProtoOperands(Map<String, Object> operands) throws
+                                                                                   PMException {
+        List<OperandEntry> operandEntries = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : operands.entrySet()) {
+            // serialize the value of the operand to a hex string byte array defined in Neo4j package
+            OperandEntry.Builder operandEntryBuilder = OperandEntry.newBuilder()
+                .setName(entry.getKey());
+
+            if (entry.getValue() instanceof String) {
+                operandEntryBuilder.setStringValue((String) entry.getValue());
+            } else if (entry.getValue() instanceof Iterable<?>) {
+                // build StringList
+                StringList stringList = StringList.newBuilder()
+                    .addAllValues((Iterable<String>) entry.getValue())
+                    .build();
+
+                operandEntryBuilder.setListValue(stringList);
+            }
+
+            operandEntries.add(operandEntryBuilder.build());
+        }
+
+        return operandEntries;
+    }
+
+}
