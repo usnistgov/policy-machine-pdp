@@ -39,3 +39,8 @@ message PMEvent {
     gov.nist.csd.pm.proto.routine.AdminRoutineDeleted adminRoutineDeleted = 20;
   }
 }
+
+message PMSnapshot {
+  uint64 revision = 1;
+  string json = 2;
+}
