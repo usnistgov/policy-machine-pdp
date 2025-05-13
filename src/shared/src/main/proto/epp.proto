@@ -1,4 +1,5 @@
 syntax = "proto3";
+import "event.proto";
 
 option java_multiple_files = true;
 option java_package = "gov.nist.csd.pm.proto.epp";
@@ -24,7 +25,16 @@ message EventContext {
   repeated OperandEntry operands = 4;
 }
 
-message EPPResponse {}
+message EPPResponse {
+  uint64 startRevision = 1;
+  repeated gov.nist.csd.pm.proto.event.PMEvent events = 2;
+}
+
+message ExecuteResponseRequest {
+  string obligationName = 1;
+  string ruleName = 2;
+  EventContext eventCtx = 3;
+}
 
 service EPP {
   rpc processEvent(EventContext) returns (EPPResponse) {}
