@@ -1,21 +1,21 @@
 package gov.nist.csd.pm.server.admin.pap;
 
-import com.eventstore.dbclient.EventData;
 import gov.nist.csd.pm.common.exception.PMException;
 import gov.nist.csd.pm.pap.modification.ObligationsModifier;
 import gov.nist.csd.pm.pap.obligation.Obligation;
 import gov.nist.csd.pm.pap.obligation.Rule;
 import gov.nist.csd.pm.pap.store.PolicyStore;
-import gov.nist.csd.pm.proto.event.PMEvent;
-import gov.nist.csd.pm.proto.obligation.ObligationCreated;
-import gov.nist.csd.pm.proto.obligation.ObligationDeleted;
+import gov.nist.csd.pm.pdp.proto.event.ObligationCreated;
+import gov.nist.csd.pm.pdp.proto.event.ObligationDeleted;
+import gov.nist.csd.pm.pdp.proto.event.PMEvent;
+
 import java.util.List;
 
 public class EventObligationsModifier extends ObligationsModifier {
 
-    private final List<EventData> events;
+    private final List<PMEvent> events;
 
-    public EventObligationsModifier(List<EventData> events, PolicyStore store) {
+    public EventObligationsModifier(List<PMEvent> events, PolicyStore store) {
         super(store);
 
         this.events = events;
@@ -24,31 +24,27 @@ public class EventObligationsModifier extends ObligationsModifier {
     @Override
     public void createObligation(long author, String name, List<Rule> rules) throws
                                                                              PMException {
-        byte[] bytes = PMEvent.newBuilder()
+        PMEvent event = PMEvent.newBuilder()
             .setObligationCreated(
-                ObligationCreated.newBuilder()
+                    ObligationCreated.newBuilder()
                     .setAuthor(author)
                     .setPml(new Obligation(author, name, rules).toString())
             )
-            .build()
-            .toByteArray();
-        events.add(EventData.builderAsBinary(ObligationCreated.getDescriptor().getName(), bytes)
-            .build());
+            .build();
+        events.add(event);
 
         super.createObligation(author, name, rules);
     }
 
     @Override
     public void deleteObligation(String name) throws PMException {
-        byte[] bytes = PMEvent.newBuilder()
+        PMEvent event = PMEvent.newBuilder()
             .setObligationDeleted(
-                ObligationDeleted.newBuilder()
+                    ObligationDeleted.newBuilder()
                     .setName(name)
             )
-            .build()
-            .toByteArray();
-        events.add(EventData.builderAsBinary(ObligationDeleted.getDescriptor().getName(), bytes)
-            .build());
+            .build();
+        events.add(event);
 
         super.deleteObligation(name);
     }

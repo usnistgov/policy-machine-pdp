@@ -37,3 +37,6 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+./docker/eventstore-data
+./docker/eventstore-logs

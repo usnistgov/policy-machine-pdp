@@ -1,13 +1,12 @@
 package gov.nist.csd.pm.server.shared.protobuf;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
 import gov.nist.csd.pm.common.event.EventContext;
 import gov.nist.csd.pm.common.exception.PMException;
-import gov.nist.csd.pm.proto.epp.OperandEntry;
-import gov.nist.csd.pm.proto.epp.StringList;
-import gov.nist.csd.pm.proto.graph.AssignmentCreated;
-import gov.nist.csd.pm.proto.graph.AssignmentCreated.Builder;
+import gov.nist.csd.pm.epp.proto.EventContextArg;
+import gov.nist.csd.pm.epp.proto.EventContextProto;
+import gov.nist.csd.pm.pdp.proto.model.StringList;
+import gov.nist.csd.pm.epp.proto.EventContextArg;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -15,48 +14,35 @@ import java.util.Map;
 
 public class EventContextUtil {
 
-    public static void main(String[] args) throws InvalidProtocolBufferException {
-        AssignmentCreated build = AssignmentCreated.newBuilder()
-            .setAscendant(1)
-            .addDescendants(2)
-            .build();
-
-        String print = JsonFormat.printer().print(build);
-        System.out.println(print);
-
-        Builder builder = AssignmentCreated.newBuilder();
-        JsonFormat.parser().merge(print, builder);
-
-        System.out.println(builder.build());
-    }
-
-    public static gov.nist.csd.pm.proto.epp.EventContext toProto(EventContext eventContext) throws
-                                                                                            PMException {
-        return gov.nist.csd.pm.proto.epp.EventContext.newBuilder()
+    public static EventContextProto toProto(EventContext eventContext) throws PMException {
+        EventContextProto.Builder builder = EventContextProto.newBuilder()
             .setUser(eventContext.getUser())
-            .setProcess(eventContext.getProcess())
             .setOpName(eventContext.getOpName())
-            .addAllOperands(toProtoOperands(eventContext.getArgs()))
-            .build();
+            .addAllArgs(toProtoEventContextArgs(eventContext.getArgs()));
+
+        if (eventContext.getProcess() != null && !eventContext.getProcess().isEmpty()) {
+            builder.setProcess(eventContext.getProcess());
+        }
+
+        return builder.build();
     }
 
-    public static EventContext fromProto(gov.nist.csd.pm.proto.epp.EventContext protoCtx) throws
-                                                                                          PMException {
+    public static EventContext fromProto(EventContextProto protoCtx) throws PMException {
         return new EventContext(
-            protoCtx.getUser(),
-            protoCtx.getProcess(),
-            protoCtx.getOpName(),
-            fromProtoOperands(protoCtx.getOperandsList())
+                protoCtx.getUser(),
+                protoCtx.getProcess(),
+                protoCtx.getOpName(),
+                fromProtoEventContextArgs(protoCtx.getArgsList())
         );
     }
 
-    public static Map<String, Object> fromProtoOperands(List<OperandEntry> operandsList) {
+    public static Map<String, Object> fromProtoEventContextArgs(List<EventContextArg> operandsList) {
         Map<String, Object> operandsMap = new HashMap<>();
-        for (OperandEntry operandEntry : operandsList) {
+        for (EventContextArg operandEntry : operandsList) {
             Object operandObj;
 
-            if (operandEntry.getValueCase() == OperandEntry.ValueCase.LISTVALUE) {
-                operandObj = operandEntry.getListValue();
+            if (operandEntry.getValueCase() == EventContextArg.ValueCase.LISTVALUE) {
+                operandObj = operandEntry.getListValue().getValuesList();
             } else {
                 operandObj = operandEntry.getStringValue();
             }
@@ -67,12 +53,12 @@ public class EventContextUtil {
         return operandsMap;
     }
 
-    public static List<OperandEntry> toProtoOperands(Map<String, Object> operands) throws
+    public static List<EventContextArg> toProtoEventContextArgs(Map<String, Object> operands) throws
                                                                                    PMException {
-        List<OperandEntry> operandEntries = new ArrayList<>();
+        List<EventContextArg> operandEntries = new ArrayList<>();
         for (Map.Entry<String, Object> entry : operands.entrySet()) {
             // serialize the value of the operand to a hex string byte array defined in Neo4j package
-            OperandEntry.Builder operandEntryBuilder = OperandEntry.newBuilder()
+            EventContextArg.Builder operandEntryBuilder = EventContextArg.newBuilder()
                 .setName(entry.getKey());
 
             if (entry.getValue() instanceof String) {

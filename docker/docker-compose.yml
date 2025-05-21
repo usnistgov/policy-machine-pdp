@@ -1,6 +1,6 @@
 services:
   eventstore:
-    image: eventstore/eventstore:latest
+    image: eventstore/eventstore:24.10
     container_name: eventstore
     environment:
       - EVENTSTORE_HTTP_PORT=2113
@@ -14,9 +14,11 @@ services:
       - "2113:2113"
       - "1113:1113"
     volumes:
-      - eventstore-data:/var/lib/eventstore
-      - eventstore-logs:/var/log/eventstore
+      - ./eventstore-data:/var/lib/eventstore
+      - ./eventstore-logs:/var/log/eventstore
     restart: unless-stopped
+    networks:
+      - pm_pdp
 
   admin-pdp-epp:
     image: csd773/pm.server.admin-pdp-epp:latest
@@ -34,6 +36,8 @@ services:
     volumes:
       - ./bootstrap.pml:/config/bootstrap.pml
     restart: unless-stopped
+    networks:
+      - pm_pdp
 
   resource-pdp:
     image: csd773/pm.server.resource-pdp:latest
@@ -49,7 +53,13 @@ services:
     depends_on:
       - eventstore
     restart: unless-stopped
+    networks:
+      - pm_pdp
 
 volumes:
   eventstore-data:
   eventstore-logs:
+
+networks:
+  pm_pdp:
+    name: pm_pdp

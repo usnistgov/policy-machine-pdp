@@ -1,24 +1,24 @@
 package gov.nist.csd.pm.server.admin.pap;
 
-import com.eventstore.dbclient.EventData;
 import gov.nist.csd.pm.common.exception.PMException;
 import gov.nist.csd.pm.common.graph.relationship.AccessRightSet;
 import gov.nist.csd.pm.common.prohibition.ContainerCondition;
 import gov.nist.csd.pm.common.prohibition.ProhibitionSubject;
 import gov.nist.csd.pm.pap.modification.ProhibitionsModifier;
 import gov.nist.csd.pm.pap.store.PolicyStore;
-import gov.nist.csd.pm.proto.event.PMEvent;
-import gov.nist.csd.pm.proto.prohibition.ProhibitionCreated;
-import gov.nist.csd.pm.proto.prohibition.ProhibitionDeleted;
+import gov.nist.csd.pm.pdp.proto.event.PMEvent;
+import gov.nist.csd.pm.pdp.proto.event.ProhibitionCreated;
+import gov.nist.csd.pm.pdp.proto.event.ProhibitionDeleted;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class EventProhibitionsModifier extends ProhibitionsModifier {
 
-    private final List<EventData> events;
+    private final List<PMEvent> events;
 
-    public EventProhibitionsModifier(List<EventData> events, PolicyStore store) {
+    public EventProhibitionsModifier(List<PMEvent> events, PolicyStore store) {
         super(store);
 
         this.events = events;
@@ -48,11 +48,8 @@ public class EventProhibitionsModifier extends ProhibitionsModifier {
             builder.setProcess(subject.getProcess());
         }
 
-        byte[] bytes = PMEvent.newBuilder().setProhibitionCreated(builder).build()
-            .toByteArray();
-        events.add(
-            EventData.builderAsBinary(ProhibitionCreated.getDescriptor().getName(), bytes)
-                .build());
+        PMEvent event = PMEvent.newBuilder().setProhibitionCreated(builder).build();
+        events.add(event);
 
         super.createProhibition(name, subject, accessRightSet, intersection,
             containerConditions);
@@ -60,16 +57,13 @@ public class EventProhibitionsModifier extends ProhibitionsModifier {
 
     @Override
     public void deleteProhibition(String name) throws PMException {
-        byte[] bytes = PMEvent.newBuilder()
+        PMEvent event = PMEvent.newBuilder()
             .setProhibitionDeleted(
-                ProhibitionDeleted.newBuilder()
+                    ProhibitionDeleted.newBuilder()
                     .setName(name)
             )
-            .build()
-            .toByteArray();
-        events.add(
-            EventData.builderAsBinary(ProhibitionDeleted.getDescriptor().getName(), bytes)
-                .build());
+            .build();
+        events.add(event);
 
         super.deleteProhibition(name);
     }
