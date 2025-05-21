@@ -1,41 +1,32 @@
 syntax = "proto3";
 import "event.proto";
+import "model.proto";
 
 option java_multiple_files = true;
-option java_package = "gov.nist.csd.pm.proto.epp";
+option java_package = "gov.nist.csd.pm.epp.proto";
 
-package gov.nist.csd.pm.proto.epp;
+package gov.nist.csd.pm.epp.proto;
 
-message StringList {
-  repeated string values = 1;
-}
-
-message OperandEntry {
-  string name = 1;
-  oneof value {
-    string stringValue = 2;
-    StringList listValue = 3;
-  }
-}
-
-message EventContext {
+message EventContextProto {
   string user = 1;
   string process = 2;
   string opName = 3;
-  repeated OperandEntry operands = 4;
+  repeated EventContextArg args = 4;
 }
 
 message EPPResponse {
   uint64 startRevision = 1;
-  repeated gov.nist.csd.pm.proto.event.PMEvent events = 2;
-}
-
-message ExecuteResponseRequest {
-  string obligationName = 1;
-  string ruleName = 2;
-  EventContext eventCtx = 3;
+  repeated gov.nist.csd.pm.pdp.proto.event.PMEvent events = 2;
 }
 
 service EPP {
-  rpc processEvent(EventContext) returns (EPPResponse) {}
+  rpc processEvent(EventContextProto) returns (EPPResponse) {}
+}
+
+message EventContextArg {
+  string name = 1;
+  oneof value {
+    string stringValue = 2;
+    gov.nist.csd.pm.pdp.proto.model.StringList listValue = 3;
+  }
 }

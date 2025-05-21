@@ -1,95 +1,78 @@
 package gov.nist.csd.pm.server.resource;
 
-import static gov.nist.csd.pm.server.shared.protobuf.PDPResponseUtil.deny;
-import static gov.nist.csd.pm.server.shared.protobuf.PDPResponseUtil.grant;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.InvalidProtocolBufferException;
 import gov.nist.csd.pm.common.exception.PMException;
 import gov.nist.csd.pm.common.graph.node.Node;
 import gov.nist.csd.pm.pap.PAP;
-import gov.nist.csd.pm.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.pdp.PDP;
-import gov.nist.csd.pm.proto.pdp.PDPResponse;
-import gov.nist.csd.pm.proto.pdp.ResourceOperationRequestById;
-import gov.nist.csd.pm.proto.pdp.ResourceOperationRequestByName;
-import gov.nist.csd.pm.proto.pdp.ResourcePDPGrpc;
-import gov.nist.csd.pm.server.resource.epp.EPPClient;
-import gov.nist.csd.pm.server.shared.auth.UserContextInterceptor;
-import gov.nist.csd.pm.server.shared.config.PDPConfig;
+import gov.nist.csd.pm.pdp.adjudication.AdjudicationResponse;
+import gov.nist.csd.pm.pdp.adjudication.Decision;
+import gov.nist.csd.pm.pdp.proto.modify.*;
+import gov.nist.csd.pm.server.shared.auth.UserContextFromHeader;
+import gov.nist.csd.pm.server.shared.protobuf.AdjudicationResponseUtil;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static gov.nist.csd.pm.server.shared.protobuf.ProtoUtil.toNodeProto;
 
 @GrpcService
-public class ResourcePDPService extends ResourcePDPGrpc.ResourcePDPImplBase {
+public class ResourcePDPService extends ResourcePDPServiceGrpc.ResourcePDPServiceImplBase {
 
-    private PDP pdp;
-    private PAP pap;
-    private EPPClient epp;
+    private static final Logger logger = LoggerFactory.getLogger(ResourcePDPService.class);
 
-    public ResourcePDPService(PDP pdp, PAP pap, PDPConfig config) throws PMException {
+    private final PDP pdp;
+    private final PAP pap;
+
+    public ResourcePDPService(PDP pdp, PAP pap) {
         this.pdp = pdp;
         this.pap = pap;
-        this.epp = new EPPClient(pdp, pap, config);
-        this.pdp.addEventSubscriber(this.epp);
     }
 
     @Override
-    public void adjudicateResourceOperationById(ResourceOperationRequestById request,
-                                                StreamObserver<PDPResponse> responseObserver) {
+    public void adjudicateResourceOperation(AdjudicateResourceOperationCmd request,
+                                            StreamObserver<AdjudicateResourceOperationResponse> responseObserver) {
         try {
-            adjudicateResourceOperation(request.getOperation(), request.getTarget(), responseObserver);
+            UserContextFromHeader userCtx = new UserContextFromHeader();
+
+            String operation = request.getOperation();
+            long targetId = request.getTargetId();
+
+            logger.info("adjudicating resource operation {} on {} by {}", operation, targetId, userCtx);
+            AdjudicationResponse adjudicationResponse = pdp.adjudicateResourceOperation(userCtx, targetId, operation);
+            if (adjudicationResponse.getDecision() == Decision.GRANT) {
+                logger.debug("adjudication granted");
+                responseObserver.onNext(grant(targetId, adjudicationResponse));
+            } else {
+                logger.debug("adjudication denied {}", adjudicationResponse.getExplain());
+                responseObserver.onNext(deny(adjudicationResponse));
+            }
+
+            responseObserver.onCompleted();
         } catch (PMException | InvalidProtocolBufferException | JsonProcessingException e) {
-            responseObserver.onError(
-                Status.INTERNAL
-                    .withDescription(e.getMessage())
-                    .withCause(e)
-                    .asRuntimeException()
-            );
+            responseObserver.onError(e);
         }
     }
 
-    @Override
-    public void adjudicateResourceOperationByName(ResourceOperationRequestByName request,
-                                                  StreamObserver<PDPResponse> responseObserver) {
-        System.out.println("resource operation " + request);
-        try {
-            Node node = pap.query().graph().getNodeByName(request.getTarget());
+    private AdjudicateResourceOperationResponse grant(long targetId, AdjudicationResponse adjudicationResponse) throws PMException, InvalidProtocolBufferException, JsonProcessingException {
+        AdjudicateGenericResponse grant = AdjudicationResponseUtil.grant(adjudicationResponse);
+        Node node = pap.query().graph().getNodeById(targetId);
 
-            adjudicateResourceOperation(request.getOperation(), node.getId(), responseObserver);
-        } catch (PMException | InvalidProtocolBufferException | JsonProcessingException e) {
-            responseObserver.onError(
-                Status.INTERNAL
-                    .withDescription(e.getMessage())
-                    .withCause(e)
-                    .asRuntimeException()
-            );
-        }
+        return AdjudicateResourceOperationResponse.newBuilder()
+                .setDecision(grant.getDecision())
+                .setNode(toNodeProto(node))
+                .build();
+
     }
 
-    private void adjudicateResourceOperation(String operation,
-                                             long targetId,
-                                             StreamObserver<PDPResponse> responseObserver) throws PMException,
-                                                                                                  InvalidProtocolBufferException,
-                                                                                                  JsonProcessingException {
-        String username = UserContextInterceptor.getPmUserHeaderValue();
-        Node node = pap.query().graph().getNodeByName(username);
-
-        UserContext userCtx = new UserContext(
-            node.getId(),
-            UserContextInterceptor.getPmProcessHeaderValue()
-        );
-
-        gov.nist.csd.pm.pdp.adjudication.AdjudicationResponse adjudicationResponse =
-            pdp.adjudicateResourceOperation(userCtx, targetId, operation);
-
-        if (adjudicationResponse.getDecision() == gov.nist.csd.pm.pdp.adjudication.Decision.GRANT) {
-            responseObserver.onNext(grant(adjudicationResponse));
-        } else {
-            responseObserver.onNext(deny(adjudicationResponse));
-        }
-
-        responseObserver.onCompleted();
+    private AdjudicateResourceOperationResponse deny(AdjudicationResponse adjudicationResponse) throws PMException {
+        AdjudicateGenericResponse deny = AdjudicationResponseUtil.deny(adjudicationResponse);
+        return AdjudicateResourceOperationResponse.newBuilder()
+                .setDecision(deny.getDecision())
+                .setExplain(deny.getExplain())
+                .build();
     }
 }

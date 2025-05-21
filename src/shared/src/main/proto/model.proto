@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "gov.nist.csd.pm.pdp.proto.model";
+
+package gov.nist.csd.pm.pdp.proto.model;
+
+message NodeProto {
+  int64 id = 1;
+  string name = 2;
+  NodeTypeProto type = 3;
+  map<string, string> properties = 4;
+
+  enum NodeTypeProto {
+    PC = 0;
+    UA = 1;
+    OA = 2;
+    U = 3;
+    O = 4;
+    ANY = 5;
+  }
+}
+
+message ProhibitionProto {
+  string name = 1;
+  oneof subject {
+    int64 node_id = 2;
+    string process = 3;
+  }
+  AccessRightSetProto arset = 4;
+  bool intersection = 5;
+  repeated ContainerCondition container_conditions = 6;
+
+  message ContainerCondition {
+    int64 container_id = 1;
+    bool complement = 2;
+  }
+}
+
+message AccessRightSetProto {
+  repeated string set = 1;
+}
+
+message PathProto {
+  repeated NodeProto nodes = 1;
+}
+
+message ExplainAssociationProto {
+  NodeProto ua = 1;
+  AccessRightSetProto arset = 2;
+  repeated PathProto user_paths = 3;
+}
+
+message ExplainNodeProto {
+  NodeProto node = 1;
+  repeated ExplainAssociationProto associations = 2;
+}
+
+message ExplainNodePathProto {
+  repeated ExplainNodeProto nodes = 1;
+}
+
+message PolicyClassExplainProto {
+  NodeProto pc = 1;
+ AccessRightSetProto arset = 2;
+  repeated ExplainNodePathProto paths = 3;
+}
+
+message ExplainResponse {
+  AccessRightSetProto privileges = 1;
+  repeated PolicyClassExplainProto policy_classes = 2;
+  AccessRightSetProto denied_privileges = 3;
+  repeated ProhibitionProto prohibitions = 4;
+}
+
+message StringList {
+  repeated string values = 1;
+}

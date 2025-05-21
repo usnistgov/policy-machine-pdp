@@ -32,6 +32,12 @@
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
         <dependency>
+            <groupId>gov.nist.csd.pm.server</groupId>
+            <artifactId>shared-test</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.eventstore</groupId>
             <artifactId>db-client-java</artifactId>
         </dependency>
@@ -64,8 +70,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
+                    <release>21</release>
                 </configuration>
             </plugin>
             <plugin>
@@ -75,11 +80,11 @@
                 <configuration>
                     <pluginId>grpc-java</pluginId>
                     <protocArtifact>
-                        com.google.protobuf:protoc:3.23.0:exe:${os.detected.classifier}
+                        com.google.protobuf:protoc:4.28.2:exe:${os.detected.classifier}
                     </protocArtifact>
                     <pluginId>grpc-java</pluginId>
                     <pluginArtifact>
-                        io.grpc:protoc-gen-grpc-java:1.59.0:exe:${os.detected.classifier}
+                        io.grpc:protoc-gen-grpc-java:1.71.0:exe:${os.detected.classifier}
                     </pluginArtifact>
                 </configuration>
                 <executions>

@@ -1,0 +1,274 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "model.proto";
+
+option java_multiple_files = true;
+option java_package = "gov.nist.csd.pm.pdp.proto.query";
+
+package gov.nist.csd.pm.pdp.proto.query;
+
+service PolicyQueryService {
+  // graph queries
+  rpc NodeExists(IdOrNameQuery) returns (BooleanResponse);
+  rpc GetNode(IdOrNameQuery) returns (gov.nist.csd.pm.pdp.proto.model.NodeProto);
+  rpc GetNodeId(IdOrNameQuery) returns (NodeIdResponse);
+  rpc SearchNodes(SearchQuery)  returns (SearchResponse);
+  rpc GetPolicyClasses(google.protobuf.Empty) returns (PolicyClassesResponse);
+  rpc GetAdjacentDescendants(GetAdjacentAssignmentsQuery) returns (NodeIdListResponse);
+  rpc GetAdjacentAscendants(GetAdjacentAssignmentsQuery) returns (NodeIdListResponse);
+  rpc GetAssociationsWithSource(GetAssociationsQuery) returns (AssociationList);
+  rpc GetAssociationsWithTarget(GetAssociationsQuery) returns (AssociationList);
+  rpc GetAscendantSubgraph(GetSubgraphQuery) returns (SubgraphProto);
+  rpc GetDescendantSubgraph(GetSubgraphQuery) returns (SubgraphProto);
+  rpc GetAttributeDescendants(GetDescendantsQuery) returns (NodeIdListResponse);
+  rpc GetPolicyClassDescendants(GetDescendantsQuery) returns (NodeIdListResponse);
+  rpc IsAscendant(IsAncestorQuery) returns (BooleanResponse);
+  rpc IsDescendant(IsAncestorQuery) returns (BooleanResponse);
+
+  // prohibition queries
+  rpc GetProhibitions(google.protobuf.Empty) returns (ProhibitionListResponse);
+  rpc GetProhibitionsBySubject(GetProhibitionBySubjectQuery) returns (ProhibitionListResponse);
+  rpc GetProhibition(GetByNameQuery) returns (gov.nist.csd.pm.pdp.proto.model.ProhibitionProto);
+  rpc GetInheritedProhibitions(GetInheritedProhibitionsQuery) returns (ProhibitionListResponse);
+  rpc GetProhibitionsWithContainer(GetProhibitionsWithContainerQuery) returns (ProhibitionListResponse);
+
+  // obligation queries
+  rpc GetObligations(google.protobuf.Empty) returns (ObligationListResponse);
+  rpc GetObligation(GetByNameQuery) returns (ObligationProto);
+  rpc GetObligationsByAuthor(GetObligationByAuthorQuery) returns (ObligationListResponse);
+
+  // operation queries
+  rpc GetResourceOperations(google.protobuf.Empty) returns (gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto);
+  rpc GetAdminOperationNames(google.protobuf.Empty) returns (GetAdminOperationNamesResponse);
+  rpc GetAdminOperation(GetAdminOperationQuery) returns (OperationResponse);
+
+  // routine queries
+  rpc GetAdminRoutineNames(google.protobuf.Empty) returns (GetAdminRoutineNamesResponse);
+  rpc GetAdminRoutine(GetAdminRoutineQuery) returns (RoutineResponse);
+
+  // access queries
+  rpc ComputePrivileges(ComputePrivilegesQuery) returns (gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto);
+  rpc ComputeDeniedPrivileges(ComputeDeniedPrivilegesQuery) returns (gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto);
+  rpc ComputeCapabilityList(ComputeCapabilityListQuery) returns (AccessQueryMappingResponse);
+  rpc ComputeACL(ComputeACLQuery) returns (AccessQueryMappingResponse);
+  rpc ComputeDestinationAttributes(ComputeDestinationAttributesQuery) returns (AccessQueryMappingResponse);
+  rpc ComputeSubgraphPrivileges(AccessWithRootQuery) returns (SubgraphPrivilegesProto);
+  rpc ComputeAdjacentAscendantPrivileges(AccessWithRootQuery) returns (NodePrivilegeList);
+  rpc ComputeAdjacentDescendantPrivileges(AccessWithRootQuery) returns (NodePrivilegeList);
+  rpc Explain(ExplainQuery) returns (gov.nist.csd.pm.pdp.proto.model.ExplainResponse);
+  rpc ComputePersonalObjectSystem(ComputePOSQuery) returns (NodePrivilegeList);
+
+  // self (caller) access queries
+  rpc SelfComputePrivileges(TargetContextProto) returns (gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto);
+  rpc SelfComputeSubgraphPrivileges(SelfAccessWithRootQuery) returns (SubgraphPrivilegesProto);
+  rpc SelfComputeAdjacentAscendantPrivileges(SelfAccessWithRootQuery) returns (NodePrivilegeList);
+  rpc SelfComputePersonalObjectSystem(google.protobuf.Empty) returns (NodePrivilegeList);
+}
+
+message IdOrNameQuery {
+  oneof idOrName {
+    int64 id = 1;
+    string name = 2;
+  }
+}
+
+message NodeIdResponse {
+  int64 id = 1;
+}
+
+message SearchQuery {
+  gov.nist.csd.pm.pdp.proto.model.NodeProto.NodeTypeProto type = 1;
+  map<string, string> properties = 2;
+}
+message SearchResponse {
+  repeated gov.nist.csd.pm.pdp.proto.model.NodeProto nodes = 1;
+}
+
+message PolicyClassesResponse {
+  repeated int64 ids = 1;
+}
+
+message GetAdjacentAssignmentsQuery {
+  int64 node_id = 1;
+}
+
+message GetAssociationsQuery {
+  int64 node_id = 1;
+}
+message AssociationList {
+  repeated AssociationProto associations = 1;
+}
+message AssociationProto {
+  int64 ua_id = 1;
+  int64 target_id = 2;
+  gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto arset = 3;
+}
+
+message GetSubgraphQuery {
+  int64 node_id = 1;
+}
+message SubgraphProto {
+  gov.nist.csd.pm.pdp.proto.model.NodeProto node = 1;
+  repeated SubgraphProto subgraph = 2;
+}
+
+message GetDescendantsQuery {
+  int64 node_id = 1;
+}
+
+message NodeIdListResponse {
+  repeated int64 ids = 1;
+}
+
+message IsAncestorQuery {
+  int64 ascendant_id = 1;
+  int64 descendant_id = 2;
+}
+
+message BooleanResponse {
+  bool result = 1;
+}
+
+message ObligationProto {
+  string name = 1;
+  int64  author_id = 2;
+  string pml = 3;
+}
+
+message ObligationListResponse {
+  repeated ObligationProto obligations = 1;
+}
+
+message ObligationExistsQuery {
+  string name = 1;
+}
+
+message GetObligationByAuthorQuery {
+  int64 author_id = 1;
+}
+
+message GetByNameQuery {
+  string name = 1;
+}
+
+message GetAdminOperationNamesResponse {
+  repeated string names = 1;
+}
+
+message GetAdminOperationQuery {
+  string operation_name = 1;
+}
+
+message OperationResponse {
+  string pml = 1;
+}
+
+message ProhibitionListResponse {
+  repeated gov.nist.csd.pm.pdp.proto.model.ProhibitionProto prohibitions = 1;
+}
+
+message GetProhibitionBySubjectQuery {
+  oneof subject {
+    int64 node_id = 1;
+    string process = 2;
+  }
+}
+
+message GetInheritedProhibitionsQuery {
+  int64 subject_id = 1;
+}
+
+message GetProhibitionsWithContainerQuery {
+  int64 container_id = 1;
+}
+
+message GetAdminRoutineNamesResponse {
+  repeated string names = 1;
+}
+
+message GetAdminRoutineQuery {
+  string routine_name = 1;
+}
+
+message RoutineResponse {
+  string pml = 1;
+}
+
+message UserContextProto {
+  oneof user {
+    int64 id = 1;
+    IdList attributes = 2;
+  }
+  optional string process = 3;
+}
+
+message TargetContextProto {
+  oneof target {
+    int64 id = 1;
+    IdList attributes = 2;
+  }
+}
+
+message IdList {
+  repeated int64 ids = 1;
+}
+
+message ComputePrivilegesQuery {
+  UserContextProto user_ctx = 1;
+  TargetContextProto target_ctx = 2;
+}
+
+message ComputeDeniedPrivilegesQuery {
+  UserContextProto user_ctx = 1;
+  TargetContextProto target_ctx = 2;
+}
+
+message ComputeCapabilityListQuery {
+  UserContextProto user_ctx = 1;
+}
+
+message ComputeACLQuery {
+  TargetContextProto target_ctx = 1;
+}
+
+message ComputeDestinationAttributesQuery {
+  UserContextProto user_ctx = 1;
+}
+
+message AccessQueryMappingResponse {
+  map<int64, gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto> map = 1;
+}
+
+message AccessWithRootQuery {
+  UserContextProto user_ctx = 1;
+  int64 root = 2;
+}
+
+message ExplainQuery {
+  UserContextProto user_ctx = 1;
+  TargetContextProto target_ctx = 2;
+}
+
+message ComputePOSQuery {
+  UserContextProto user_ctx = 1;
+}
+
+message SubgraphPrivilegesProto {
+  gov.nist.csd.pm.pdp.proto.model.NodeProto node = 1;
+  gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto arset = 2;
+  repeated SubgraphPrivilegesProto ascendants = 3;
+}
+
+message NodePrivilege {
+  gov.nist.csd.pm.pdp.proto.model.NodeProto node = 1;
+  gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto arset = 2;
+}
+
+message NodePrivilegeList {
+  repeated NodePrivilege privileges = 1;
+}
+
+message SelfAccessWithRootQuery {
+  int64 root = 1;
+}

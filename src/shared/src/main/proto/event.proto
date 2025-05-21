@@ -1,46 +1,150 @@
 syntax = "proto3";
 
-import "graph.proto";
-import "prohibition.proto";
-import "obligation.proto";
-import "operation.proto";
-import "routine.proto";
-
 option java_multiple_files = true;
-option java_package = "gov.nist.csd.pm.proto.event";
+option java_package = "gov.nist.csd.pm.pdp.proto.event";
 
-package gov.nist.csd.pm.proto.event;
+package gov.nist.csd.pm.pdp.proto.event;
 
 message PMEvent {
   oneof event {
-    gov.nist.csd.pm.proto.graph.AssignmentCreated assignmentCreated = 1;
-    gov.nist.csd.pm.proto.graph.AssociationCreated associationCreated = 2;
-    gov.nist.csd.pm.proto.graph.PolicyClassCreated policyClassCreated = 3;
-    gov.nist.csd.pm.proto.graph.UserAttributeCreated userAttributeCreated = 4;
-    gov.nist.csd.pm.proto.graph.ObjectAttributeCreated objectAttributeCreated = 5;
-    gov.nist.csd.pm.proto.graph.UserCreated userCreated = 6;
-    gov.nist.csd.pm.proto.graph.ObjectCreated objectCreated = 7;
-    gov.nist.csd.pm.proto.graph.AssignmentDeleted assignmentDeleted = 8;
-    gov.nist.csd.pm.proto.graph.NodeDeleted nodeDeleted = 9;
-    gov.nist.csd.pm.proto.graph.AssociationDeleted associationDeleted = 10;
-    gov.nist.csd.pm.proto.graph.NodePropertiesSet nodePropertiesSet = 11;
+    AssignmentCreated assignmentCreated = 1;
+    AssociationCreated associationCreated = 2;
+    PolicyClassCreated policyClassCreated = 3;
+    UserAttributeCreated userAttributeCreated = 4;
+    ObjectAttributeCreated objectAttributeCreated = 5;
+    UserCreated userCreated = 6;
+    ObjectCreated objectCreated = 7;
+    AssignmentDeleted assignmentDeleted = 8;
+    NodeDeleted nodeDeleted = 9;
+    AssociationDeleted associationDeleted = 10;
+    NodePropertiesSet nodePropertiesSet = 11;
 
-    gov.nist.csd.pm.proto.prohibition.ProhibitionCreated prohibitionCreated = 12;
-    gov.nist.csd.pm.proto.prohibition.ProhibitionDeleted prohibitionDeleted = 13;
+    ProhibitionCreated prohibitionCreated = 12;
+    ProhibitionDeleted prohibitionDeleted = 13;
 
-    gov.nist.csd.pm.proto.obligation.ObligationCreated obligationCreated = 14;
-    gov.nist.csd.pm.proto.obligation.ObligationDeleted obligationDeleted = 15;
+    ObligationCreated obligationCreated = 14;
+    ObligationDeleted obligationDeleted = 15;
 
-    gov.nist.csd.pm.proto.operation.AdminOperationCreated adminOperationCreated = 16;
-    gov.nist.csd.pm.proto.operation.AdminOperationDeleted adminOperationDeleted = 17;
-    gov.nist.csd.pm.proto.operation.ResourceOperationsSet resourceOperationsSet = 18;
+    AdminOperationCreated adminOperationCreated = 16;
+    AdminOperationDeleted adminOperationDeleted = 17;
+    ResourceOperationsSet resourceOperationsSet = 18;
 
-    gov.nist.csd.pm.proto.routine.AdminRoutineCreated adminRoutineCreated = 19;
-    gov.nist.csd.pm.proto.routine.AdminRoutineDeleted adminRoutineDeleted = 20;
+    AdminRoutineCreated adminRoutineCreated = 19;
+    AdminRoutineDeleted adminRoutineDeleted = 20;
   }
 }
 
 message PMSnapshot {
   uint64 revision = 1;
   string json = 2;
+}
+
+// graph
+message AssignmentCreated {
+  int64 ascendant = 1;
+  repeated int64 descendants = 2;
+}
+
+message AssociationCreated {
+  int64 ua = 1;
+  int64 target = 2;
+  repeated string arset = 3;
+}
+
+message PolicyClassCreated {
+  int64 id = 1;
+  string name = 2;
+}
+
+message UserAttributeCreated {
+  int64 id = 1;
+  string name = 2;
+  repeated int64 descendants = 3;
+}
+
+message ObjectAttributeCreated {
+  int64 id = 1;
+  string name = 2;
+  repeated int64 descendants = 3;
+}
+
+message UserCreated {
+  int64 id = 1;
+  string name = 2;
+  repeated int64 descendants = 3;
+}
+
+message ObjectCreated {
+  int64 id = 1;
+  string name = 2;
+  repeated int64 descendants = 3;
+}
+
+message AssignmentDeleted {
+  int64 ascendant = 1;
+  repeated int64 descendants = 2;
+}
+
+message NodeDeleted {
+  int64 id = 1;
+}
+
+message AssociationDeleted {
+  int64 ua = 1;
+  int64 target = 2;
+}
+
+message NodePropertiesSet {
+  int64 id = 1;
+  map<string, string> properties = 2;
+}
+
+// prohibitions
+message ProhibitionCreated {
+  string name = 1;
+
+  oneof subject {
+    int64 node = 2;
+    string process = 3;
+  }
+
+  repeated string arset = 4;
+  bool intersection = 5;
+  map<int64, bool> container_conditions = 6;
+}
+
+message ProhibitionDeleted {
+  string name = 1;
+}
+
+// obligations
+message ObligationCreated {
+  int64 author = 1;
+  string pml = 2;
+}
+
+message ObligationDeleted {
+  string name = 1;
+}
+
+// operations
+message AdminOperationCreated {
+  string pml = 1;
+}
+
+message AdminOperationDeleted {
+  string name = 1;
+}
+
+message ResourceOperationsSet {
+  repeated string operations = 1;
+}
+
+// routines
+message AdminRoutineCreated {
+  string pml = 1;
+}
+
+message AdminRoutineDeleted {
+  string name = 1;
 }
