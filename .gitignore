@@ -40,3 +40,4 @@ build/
 
 ./docker/eventstore-data
 ./docker/eventstore-logs
+**/dependency_reduced-pom.xml
