@@ -605,6 +605,16 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
+	public void selfComputeAdjacentDescendantPrivileges(SelfAccessWithRootQuery request,
+	                                                    StreamObserver<NodePrivilegeList> responseObserver) {
+		Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
+			return pdpTx.query().selfAccess().computeAdjacentDescendantPrivileges(request.getRoot());
+		});
+
+		nodePrivilegeResponse(responseObserver, map);
+	}
+
+	@Override
 	public void selfComputePersonalObjectSystem(Empty request, StreamObserver<NodePrivilegeList> responseObserver) {
 		Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().selfAccess().computePersonalObjectSystem();

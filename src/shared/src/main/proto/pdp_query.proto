@@ -63,6 +63,7 @@ service PolicyQueryService {
   rpc SelfComputePrivileges(TargetContextProto) returns (gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto);
   rpc SelfComputeSubgraphPrivileges(SelfAccessWithRootQuery) returns (SubgraphPrivilegesProto);
   rpc SelfComputeAdjacentAscendantPrivileges(SelfAccessWithRootQuery) returns (NodePrivilegeList);
+  rpc SelfComputeAdjacentDescendantPrivileges(SelfAccessWithRootQuery) returns (NodePrivilegeList);
   rpc SelfComputePersonalObjectSystem(google.protobuf.Empty) returns (NodePrivilegeList);
 }
 

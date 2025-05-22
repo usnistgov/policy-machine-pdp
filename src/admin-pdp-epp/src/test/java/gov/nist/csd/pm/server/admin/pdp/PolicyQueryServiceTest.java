@@ -2887,6 +2887,85 @@ public class PolicyQueryServiceTest {
 	}
 
 	@Nested
+	class SelfComputeAdjacentDescendantPrivilegesTests {
+		@Mock
+		private StreamObserver<NodePrivilegeList> observer;
+
+		private final SelfAccessWithRootQuery request =
+				SelfAccessWithRootQuery.newBuilder().setRoot(1).build();
+
+		@Test
+		void shouldReturnNodePrivilegesOrderAgnostic() throws PMException {
+			Node n1 = mock(Node.class), n2 = mock(Node.class);
+			AccessRightSet s1 = new AccessRightSet("create"), s2 = new AccessRightSet("delete");
+			Map<Node, AccessRightSet> map = Map.of(n1, s1, n2, s2);
+
+			stubAdjudicatorTx(adjudicator -> {
+				when(adjudicator.selfAccess()
+						     .computeAdjacentDescendantPrivileges(request.getRoot()))
+						.thenReturn(map);
+			});
+
+			NodeProto p1 = NodeProto.newBuilder().setName("t1").build();
+			NodeProto p2 = NodeProto.newBuilder().setName("t2").build();
+			NodePrivilege np1 = NodePrivilege.newBuilder()
+					.setNode(p1)
+					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("create")).build())
+					.build();
+			NodePrivilege np2 = NodePrivilege.newBuilder()
+					.setNode(p2)
+					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("delete")).build())
+					.build();
+
+			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
+				pu.when(() -> ProtoUtil.toNodeProto(n1)).thenReturn(p1);
+				pu.when(() -> ProtoUtil.toNodeProto(n2)).thenReturn(p2);
+
+				service.selfComputeAdjacentDescendantPrivileges(request, observer);
+
+				verify(selfAccessQueryAdjudicator)
+						.computeAdjacentDescendantPrivileges(request.getRoot());
+
+				ArgumentCaptor<NodePrivilegeList> cap =
+						ArgumentCaptor.forClass(NodePrivilegeList.class);
+				verify(observer).onNext(cap.capture());
+				verify(observer).onCompleted();
+				verifyNoMoreInteractions(observer);
+
+				List<NodePrivilege> actual = cap.getValue().getPrivilegesList();
+				assertThat(actual, containsInAnyOrder(np1, np2));
+			}
+		}
+
+		@Test
+		void shouldReturnEmptyWhenNone() throws PMException {
+			stubAdjudicatorTx(adjudicator -> {
+				when(adjudicator.selfAccess()
+						     .computeAdjacentDescendantPrivileges(request.getRoot()))
+						.thenReturn(Collections.emptyMap());
+			});
+
+			service.selfComputeAdjacentDescendantPrivileges(request, observer);
+
+			verify(selfAccessQueryAdjudicator)
+					.computeAdjacentDescendantPrivileges(request.getRoot());
+			verify(observer).onNext(NodePrivilegeList.newBuilder().build());
+			verify(observer).onCompleted();
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldPropagateException() {
+			when(adjudicator.adjudicateQuery(any()))
+					.thenThrow(new RuntimeException("test exception"));
+
+			assertThrows(RuntimeException.class,
+			             () -> service.selfComputeAdjacentDescendantPrivileges(request, observer));
+			verifyNoMoreInteractions(observer);
+		}
+	}
+
+	@Nested
 	class SelfComputePersonalObjectSystemTests {
 		@Mock
 		private StreamObserver<NodePrivilegeList> observer;
