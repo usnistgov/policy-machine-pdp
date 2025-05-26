@@ -3,7 +3,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>gov.nist.csd.pm.server</groupId>
+    <groupId>gov.nist.csd.pm.pdp</groupId>
     <artifactId>parent</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
@@ -84,7 +84,7 @@
             <dependency>
                 <groupId>com.github.usnistgov</groupId>
                 <artifactId>policy-machine-core</artifactId>
-                <version>a48bebd</version>
+                <version>3.0.0</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>

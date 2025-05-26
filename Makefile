@@ -7,11 +7,11 @@ build-docker-images:
 	docker buildx create --use && \
 	docker buildx build \
       --platform linux/amd64,linux/arm64 \
-      -t csd773/pm.server.admin-pdp-epp:latest \
+      -t csd773/pm-admin-pdp-epp:latest \
       --push ./src/admin-pdp-epp && \
 	docker buildx build \
       --platform linux/amd64,linux/arm64 \
-      -t csd773/pm.server.resource-pdp:latest \
+      -t csd773/pm-resource-pdp:latest \
       --push ./src/resource-pdp
 
 PHONY: build

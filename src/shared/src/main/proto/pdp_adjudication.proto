@@ -4,9 +4,9 @@ import "google/protobuf/struct.proto";
 import "model.proto";
 
 option java_multiple_files = true;
-option java_package = "gov.nist.csd.pm.pdp.proto.modify";
+option java_package = "gov.nist.csd.pm.pdp.proto.adjudication";
 
-package gov.nist.csd.pm.pdp.proto.modify;
+package gov.nist.csd.pm.pdp.proto.adjudication;
 
 service AdjudicationService {
   rpc AdjudicateAdminCmd(AdjudicateAdminCmdRequest) returns (CreatedNodeIdsResponse);

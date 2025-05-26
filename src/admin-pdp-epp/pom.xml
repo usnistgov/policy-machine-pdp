@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>gov.nist.csd.pm.server</groupId>
+        <groupId>gov.nist.csd.pm.pdp</groupId>
         <artifactId>parent</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
@@ -13,17 +13,17 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <main.class>gov.nist.csd.pm.server.admin.AdminPDPEPPServer</main.class>
+        <main.class>gov.nist.csd.pm.pdp.admin.AdminPDPEPPApplication</main.class>
     </properties>
 
     <dependencies>
         <dependency>
-            <groupId>gov.nist.csd.pm.server</groupId>
+            <groupId>gov.nist.csd.pm.pdp</groupId>
             <artifactId>shared</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>gov.nist.csd.pm.server</groupId>
+            <groupId>gov.nist.csd.pm.pdp</groupId>
             <artifactId>shared-test</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>test</scope>

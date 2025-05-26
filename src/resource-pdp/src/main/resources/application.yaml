@@ -4,8 +4,6 @@ grpc:
 pm:
   pdp:
     resource:
-      hostname: localhost
-      port: 50051
       admin-hostname: localhost
       admin-port: 50052
     esdb:
@@ -14,14 +12,6 @@ pm:
       event-stream: pm-events-v1
       snapshot-stream: pm-snapshot-v1
 
-management:
-  health:
-    neo4j:
-      enabled: false
-spring:
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.neo4j.Neo4jAutoConfiguration
 logging:
   level:
     root: INFO

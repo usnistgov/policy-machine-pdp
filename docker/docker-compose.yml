@@ -21,37 +21,43 @@ services:
       - pm_pdp
 
   admin-pdp-epp:
-    image: csd773/pm.server.admin-pdp-epp:latest
-    pull_policy: always
+    build:
+      context: ../src/admin-pdp-epp
+      dockerfile: Dockerfile
     environment:
-      - ADMIN_GRPC_SERVER_PORT=50052
-      - ESDB_HOST=eventstore
-      - ESDB_PORT=2113
-      - BOOTSTRAP_FILE_PATH=/config/bootstrap.pml
-      - BOOTSTRAP_USER=u1
+      - GRPC_SERVER_PORT=50052
+      - PM_PDP_ADMIN_BOOTSTRAP_FILE_PATH=./src/admin-pdp-epp/src/main/resources/bootstrap.pml
+      - PM_PDP_ADMIN_BOOTSTRAP_USER=u1
+      - PM_PDP_ADMIN_NEO4J_DB_PATH=/tmp/neo4j
+      - PM_PDP_ADMIN_ESDB_CONSUMER_GROUP=admin-pdp-epp-cg
+      - PM_PDP_ADMIN_SNAPSHOT_INTERVAL=1000
+      - PM_PDP_ADMIN_SHUTDOWN_AFTER_BOOTSTRAP=false
+      - PM_PDP_ESDB_HOSTNAME=localhost
+      - PM_PDP_ESDB_PORT=2113
+      - PM_PDP_ESDB_EVENT_STREAM=pm-events-v1
+      - PM_PDP_ESDB_SNAPSHOT_STREAM=pm-snapshot-v1
     ports:
       - "50052:50052"
-    depends_on:
-      - eventstore
     volumes:
-      - ./bootstrap.pml:/config/bootstrap.pml
+      - ./bootstrap.json:/config/bootstrap.json
     restart: unless-stopped
     networks:
       - pm_pdp
 
   resource-pdp:
-    image: csd773/pm.server.resource-pdp:latest
-    pull_policy: always
+    build:
+      context: ../src/resource-pdp
+      dockerfile: Dockerfile
     environment:
-      - RESOURCE_GRPC_SERVER_PORT=50051
-      - ADMIN_GRPC_SERVER_HOST=admin-pdp-epp
-      - ADMIN_GRPC_SERVER_PORT=50052
-      - ESDB_HOST=eventstore
-      - ESDB_PORT=2113
+      - GRPC_SERVER_PORT=50051
+      - PM_PDP_RESOURCE_ADMIN_HOSTNAME=localhost
+      - PM_PDP_RESOURCE_ADMIN_PORT=50052
+      - PM_PDP_ESDB_HOSTNAME=eventstore
+      - PM_PDP_ESDB_PORT=2113
+      - PM_PDP_ESDB_EVENT_STREAM=pm-events-v1
+      - PM_PDP_ESDB_SNAPSHOT_STREAM=pm-snapshot-v1
     ports:
       - "50051:50051"
-    depends_on:
-      - eventstore
     restart: unless-stopped
     networks:
       - pm_pdp

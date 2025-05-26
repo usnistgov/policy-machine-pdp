@@ -4,8 +4,6 @@ grpc:
 pm:
   pdp:
     admin:
-      hostname: localhost
-      port: 50052
       bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/bootstrap.pml"
       bootstrap-user: "u1"
       neo4j-db-path: "/tmp/neo4j"
