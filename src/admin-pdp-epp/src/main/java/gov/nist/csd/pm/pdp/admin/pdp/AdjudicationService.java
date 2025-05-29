@@ -1,5 +1,6 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
+import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
 import gov.nist.csd.pm.core.pdp.adjudication.AdjudicationResponse;
 import gov.nist.csd.pm.core.pdp.adjudication.Decision;
 import gov.nist.csd.pm.pdp.proto.adjudication.*;
@@ -16,9 +17,11 @@ import java.util.Map;
 public class AdjudicationService extends AdjudicationServiceGrpc.AdjudicationServiceImplBase {
 
 	private final Adjudicator adjudicator;
+	private final Neo4jEmbeddedPAP pap;
 
-	public AdjudicationService(Adjudicator adjudicator) {
+	public AdjudicationService(Adjudicator adjudicator, Neo4jEmbeddedPAP pap) {
 		this.adjudicator = adjudicator;
+		this.pap = pap;
 	}
 
 	@Override
@@ -47,7 +50,7 @@ public class AdjudicationService extends AdjudicationServiceGrpc.AdjudicationSer
 			if (response.getDecision() == Decision.GRANT) {
 				responseObserver.onNext(AdjudicationResponseUtil.grant(response));
 			} else {
-				responseObserver.onNext(AdjudicationResponseUtil.deny(response));
+				responseObserver.onNext(AdjudicationResponseUtil.deny(response, pap.query()));
 			}
 
 			responseObserver.onCompleted();
@@ -66,7 +69,7 @@ public class AdjudicationService extends AdjudicationServiceGrpc.AdjudicationSer
 			if (response.getDecision() == Decision.GRANT) {
 				responseObserver.onNext(AdjudicationResponseUtil.grant(response));
 			} else {
-				responseObserver.onNext(AdjudicationResponseUtil.deny(response));
+				responseObserver.onNext(AdjudicationResponseUtil.deny(response, pap.query()));
 			}
 
 			responseObserver.onCompleted();

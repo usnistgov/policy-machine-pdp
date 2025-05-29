@@ -12,7 +12,7 @@ import gov.nist.csd.pm.core.pap.query.GraphQuery;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pap.serialization.json.JSONDeserializer;
 import gov.nist.csd.pm.pdp.proto.event.PMSnapshot;
-import gov.nist.csd.pm.pdp.sharedtest.TestEventStoreContainer;
+import gov.nist.csd.pm.pdp.sharedtest.EventStoreTestContainer;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -26,8 +26,8 @@ class SnapshotServiceTest {
 	@Test
 	void snapshot_Success() throws PMException, ExecutionException, InterruptedException, InvalidProtocolBufferException {
 		// create test event store container
-		try (TestEventStoreContainer testEventStoreContainer = new TestEventStoreContainer()) {
-			testEventStoreContainer.start();
+		try (EventStoreTestContainer eventStoreTestContainer = new EventStoreTestContainer()) {
+			eventStoreTestContainer.start();
 
 			MemoryPAP pap = new MemoryPAP();
 			pap.executePML(new UserContext(0), """
@@ -42,8 +42,8 @@ class SnapshotServiceTest {
 			EventStoreDBConfig config = new EventStoreDBConfig(
 					"test-events",
 					"test-snapshots",
-					testEventStoreContainer.getHost(),
-					testEventStoreContainer.getPort()
+					eventStoreTestContainer.getHost(),
+					eventStoreTestContainer.getPort()
 			);
 
 			EventStoreConnectionManager eventStoreConnectionManager = new EventStoreConnectionManager(config);
@@ -79,7 +79,7 @@ class SnapshotServiceTest {
 	@Test
 	void  snapshot_whenEventStoreIsUnavailable_exceptionThrown() throws PMException, ExecutionException, InterruptedException, InvalidProtocolBufferException {
 		// create test event store container
-		try (TestEventStoreContainer testEventStoreContainer = new TestEventStoreContainer()) {
+		try (EventStoreTestContainer eventStoreTestContainer = new EventStoreTestContainer()) {
 			MemoryPAP pap = new MemoryPAP();
 			pap.executePML(new UserContext(0), """
 					create pc "pc1"
@@ -116,8 +116,8 @@ class SnapshotServiceTest {
 
 	@Test
 	void restoreLatestSnapshot_Success() throws PMException, ExecutionException, InterruptedException, InvalidProtocolBufferException {
-		try (TestEventStoreContainer testEventStoreContainer = new TestEventStoreContainer()) {
-			testEventStoreContainer.start();
+		try (EventStoreTestContainer eventStoreTestContainer = new EventStoreTestContainer()) {
+			eventStoreTestContainer.start();
 
 			MemoryPAP pap = new MemoryPAP();
 			pap.executePML(new UserContext(0), """
@@ -131,8 +131,8 @@ class SnapshotServiceTest {
 			EventStoreDBConfig config = new EventStoreDBConfig(
 					"test-events",
 					"test-snapshots",
-					testEventStoreContainer.getHost(),
-					testEventStoreContainer.getPort()
+					eventStoreTestContainer.getHost(),
+					eventStoreTestContainer.getPort()
 			);
 			EventStoreConnectionManager eventStoreConnectionManager = new EventStoreConnectionManager(config);
 			SnapshotService snapshotService = new SnapshotService(

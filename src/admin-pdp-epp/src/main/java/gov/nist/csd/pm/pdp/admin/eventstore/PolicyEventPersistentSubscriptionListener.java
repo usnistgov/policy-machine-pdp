@@ -9,6 +9,8 @@ import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import gov.nist.csd.pm.pdp.shared.eventstore.PolicyEventHandler;
 import gov.nist.csd.pm.pdp.shared.eventstore.SnapshotService;
+import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -20,26 +22,29 @@ public class PolicyEventPersistentSubscriptionListener extends PersistentSubscri
 
     private static final Logger logger = LoggerFactory.getLogger(PolicyEventPersistentSubscriptionListener.class);
 
-    private final Neo4jEmbeddedPAP pap;
+    private final PolicyEventHandler policyEventHandler;
     private final SnapshotService snapshotService;
     private final CurrentRevisionService currentRevision;
     private final AdminPDPConfig adminPDPConfig;
+    private final GraphDatabaseService graphDatabaseService;
 
     public PolicyEventPersistentSubscriptionListener(Neo4jEmbeddedPAP pap,
                                                      CurrentRevisionService currentRevision,
                                                      SnapshotService snapshotService,
-                                                     AdminPDPConfig adminPDPConfig) {
-        this.pap = pap;
+                                                     AdminPDPConfig adminPDPConfig,
+                                                     PluginLoader pluginLoader,
+                                                     GraphDatabaseService graphDatabaseService) {
+        this.policyEventHandler = new PolicyEventHandler(pap, pluginLoader);
         this.currentRevision = currentRevision;
         this.snapshotService = snapshotService;
         this.adminPDPConfig = adminPDPConfig;
+        this.graphDatabaseService = graphDatabaseService;
     }
 
     @Override
     public void onEvent(PersistentSubscription subscription, int retryCount, ResolvedEvent event) {
         RecordedEvent originalEvent = event.getEvent();
         long revision = originalEvent.getRevision();
-        PolicyEventHandler policyEventHandler = new PolicyEventHandler(pap);
 
         try {
             PMEvent pmEvent = PMEvent.parseFrom(originalEvent.getEventData());

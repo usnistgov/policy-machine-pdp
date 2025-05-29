@@ -1,5 +1,6 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
+import static gov.nist.csd.pm.pdp.admin.util.TestProtoUtil.testNode;
 import static org.junit.jupiter.api.Assertions.*;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
@@ -10,10 +11,10 @@ import gov.nist.csd.pm.core.pap.pml.PMLCompiler;
 import gov.nist.csd.pm.core.pap.pml.expression.literal.StringLiteralExpression;
 import gov.nist.csd.pm.core.pap.pml.statement.PMLStatement;
 import gov.nist.csd.pm.core.pap.pml.statement.operation.CreatePolicyClassStatement;
+import gov.nist.csd.pm.core.pap.query.PolicyQuery;
 import gov.nist.csd.pm.core.pdp.PDPTx;
 import gov.nist.csd.pm.core.pdp.modification.*;
 import gov.nist.csd.pm.pdp.proto.adjudication.*;
-import gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto;
 import gov.nist.csd.pm.pdp.proto.model.ProhibitionProto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -89,9 +90,9 @@ class CommandHandlerTest {
 	void handleAssociate() throws PMException {
 		AssociateCmd a = AssociateCmd.newBuilder()
 				.setUaId(1).setTargetId(2)
-				.setArset(AccessRightSetProto.newBuilder().addSet("read").build())
+				.addArset("read")
 				.build();
-		
+
 		commandHandler.handleCommand(pdpTx, AdminCommand.newBuilder().setAssociateCmd(a).build(), Map.of());
 
 		verify(graphModificationAdjudicator).associate(1L,2L,new AccessRightSet(List.of("read")));
@@ -109,16 +110,19 @@ class CommandHandlerTest {
 
 	@Test
 	void handleCreateProhibitionCmd_nodeSubject() throws PMException {
-		ProhibitionProto.ContainerCondition cc = ProhibitionProto.ContainerCondition.newBuilder()
-				.setContainerId(10).setComplement(true).build();
-		ProhibitionProto p = ProhibitionProto.newBuilder()
-				.setName("p1")
-				.setNodeId(5)
-				.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("r1", "r2")))
-				.setIntersection(false)
-				.addContainerConditions(cc)
-				.build();
-		AdminCommand ac = AdminCommand.newBuilder().setCreateProhibitionCmd(p).build();
+		AdminCommand ac = AdminCommand.newBuilder().setCreateProhibitionCmd(
+				CreateProhibitionCmd.newBuilder()
+						.setName("p1")
+						.setNodeId(5)
+						.addAllArset(List.of("r1", "r2"))
+						.setIntersection(false)
+						.addContainerConditions(CreateProhibitionCmd.ContainerCondition
+								                        .newBuilder()
+								                        .setContainerId(10)
+								                        .setComplement(true)
+								                        .build())
+						.build()
+		).build();
 
 		commandHandler.handleCommand(pdpTx, ac, Map.of());
 
@@ -141,10 +145,10 @@ class CommandHandlerTest {
 
 	@Test
 	void handleCreateProhibitionCmd_processSubject() throws PMException {
-		ProhibitionProto p = ProhibitionProto.newBuilder()
+		CreateProhibitionCmd p = CreateProhibitionCmd.newBuilder()
 				.setName("p2")
 				.setProcess("proc")
-				.setArset(AccessRightSetProto.newBuilder().addSet("op"))
+				.addArset("op")
 				.setIntersection(true)
 				.build();
 		AdminCommand ac = AdminCommand.newBuilder().setCreateProhibitionCmd(p).build();
@@ -164,8 +168,8 @@ class CommandHandlerTest {
 	void handleDeleteProhibitionCmd() throws PMException {
 		DeleteProhibitionCmd cmd = DeleteProhibitionCmd.newBuilder().setName("x").build();
 		commandHandler.handleCommand(pdpTx,
-		                      AdminCommand.newBuilder().setDeleteProhibitionCmd(cmd).build(),
-		                      Map.of()
+		                             AdminCommand.newBuilder().setDeleteProhibitionCmd(cmd).build(),
+		                             Map.of()
 		);
 		verify(prohibitionsModificationAdjudicator).deleteProhibition("x");
 	}
@@ -182,8 +186,8 @@ class CommandHandlerTest {
 		when(pdpTx.compilePML(pml)).thenReturn(pmlStatements);
 
 		commandHandler.handleCommand(pdpTx,
-		                      AdminCommand.newBuilder().setCreateObligationCmd(cmd).build(),
-		                      Map.of()
+		                             AdminCommand.newBuilder().setCreateObligationCmd(cmd).build(),
+		                             Map.of()
 		);
 
 		verify(pdpTx).executePML(pml);
@@ -202,8 +206,8 @@ class CommandHandlerTest {
 		PMException ex = assertThrows(
 				PMException.class,
 				() -> commandHandler.handleCommand(pdpTx,
-				                            AdminCommand.newBuilder().setCreateObligationCmd(cmd).build(),
-				                            Map.of()
+				                                   AdminCommand.newBuilder().setCreateObligationCmd(cmd).build(),
+				                                   Map.of()
 				)
 		);
 		assertTrue(ex.getMessage().contains("only one create obligation"));
@@ -293,8 +297,8 @@ class CommandHandlerTest {
 				.setPml("create pc \"pc1\"")
 				.build();
 		commandHandler.handleCommand(pdpTx,
-		                      AdminCommand.newBuilder().setExecutePmlCmd(cmd).build(),
-		                      Map.of()
+		                             AdminCommand.newBuilder().setExecutePmlCmd(cmd).build(),
+		                             Map.of()
 		);
 		verify(pdpTx).executePML("create pc \"pc1\"");
 	}

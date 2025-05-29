@@ -3,9 +3,9 @@ package gov.nist.csd.pm.pdp.sharedtest;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
-public class TestEventStoreContainer extends GenericContainer<TestEventStoreContainer> {
+public class EventStoreTestContainer extends GenericContainer<EventStoreTestContainer> {
 
-	public TestEventStoreContainer() {
+	public EventStoreTestContainer() {
 		super("eventstore/eventstore:24.10");
 
 		withEnv("EVENTSTORE_HTTP_PORT", "2113")

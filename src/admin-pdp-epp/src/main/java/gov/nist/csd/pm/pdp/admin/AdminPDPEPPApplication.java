@@ -12,11 +12,16 @@ import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -43,7 +48,6 @@ public class AdminPDPEPPApplication {
 
     @Bean
     public List<AdminFunction<?, ?>> adminFunctionPlugins() {
-        // TODO get from plugin dir using pf4j
         return new ArrayList<>();
     }
 
@@ -60,15 +64,6 @@ public class AdminPDPEPPApplication {
     }
 
     @Bean
-    @Qualifier("txSupportPolicyStore")
-    public NoCommitNeo4jPolicyStore txSupportPolicyStore(GraphDatabaseService graphDb) throws PMException {
-        Neo4jEmbeddedPolicyStore.createIndexes(graphDb);
-
-        return new NoCommitNeo4jPolicyStore(graphDb);
-    }
-
-    @Bean
-    @Qualifier("eventListenerPolicyStore")
     public Neo4jEmbeddedPolicyStore eventListenerPolicyStore(GraphDatabaseService graphDb) throws PMException {
         Neo4jEmbeddedPolicyStore.createIndexes(graphDb);
 
@@ -76,7 +71,7 @@ public class AdminPDPEPPApplication {
     }
 
     @Bean
-    public Neo4jEmbeddedPAP pap(@Qualifier("eventListenerPolicyStore") Neo4jEmbeddedPolicyStore eventListenerPolicyStore) throws PMException {
+    public Neo4jEmbeddedPAP pap(Neo4jEmbeddedPolicyStore eventListenerPolicyStore) throws PMException {
         return new Neo4jEmbeddedPAP(eventListenerPolicyStore);
     }
 }

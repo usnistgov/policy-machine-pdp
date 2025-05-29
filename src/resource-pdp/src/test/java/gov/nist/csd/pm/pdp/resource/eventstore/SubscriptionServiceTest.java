@@ -12,7 +12,7 @@ import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
 import gov.nist.csd.pm.pdp.shared.eventstore.SnapshotService;
-import gov.nist.csd.pm.pdp.sharedtest.TestEventStoreContainer;
+import gov.nist.csd.pm.pdp.sharedtest.EventStoreTestContainer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -30,7 +30,7 @@ class SubscriptionServiceTest {
 	@Nested
 	class InitSubscription {
 
-		private TestEventStoreContainer testEventStoreContainer;
+		private EventStoreTestContainer eventStoreTestContainer;
 		private CurrentRevisionService currentRevisionService;
 		private PAP pap;
 		private SnapshotService snapshotService;
@@ -42,14 +42,14 @@ class SubscriptionServiceTest {
 
 		@BeforeEach
 		void setUp() throws PMException {
-			testEventStoreContainer = new TestEventStoreContainer();
-			testEventStoreContainer.start();
+			eventStoreTestContainer = new EventStoreTestContainer();
+			eventStoreTestContainer.start();
 
 			config = new EventStoreDBConfig(
 					"events",
 					"snapshots",
 					"localhost",
-					testEventStoreContainer.getPort()
+					eventStoreTestContainer.getPort()
 			);
 
 			eventStoreConnectionManager = new EventStoreConnectionManager(config);
@@ -69,7 +69,7 @@ class SubscriptionServiceTest {
 
 		@AfterEach
 		public void teardown() {
-			testEventStoreContainer.stop();
+			eventStoreTestContainer.stop();
 		}
 
 		@Test

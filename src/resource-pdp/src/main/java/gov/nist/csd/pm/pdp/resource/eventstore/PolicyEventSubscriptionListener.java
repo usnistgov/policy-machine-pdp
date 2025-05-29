@@ -7,6 +7,7 @@ import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import gov.nist.csd.pm.pdp.shared.eventstore.PolicyEventHandler;
+import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -27,8 +28,9 @@ public class PolicyEventSubscriptionListener extends SubscriptionListener {
 	private final Map<Long, CompletableFuture<Void>> pendingTxs;
 
 	public PolicyEventSubscriptionListener(PAP pap,
-	                                       CurrentRevisionService currentRevision) {
-		this.policyEventHandler = new PolicyEventHandler(pap);
+	                                       CurrentRevisionService currentRevision,
+	                                       PluginLoader pluginLoader) {
+		this.policyEventHandler = new PolicyEventHandler(pap, pluginLoader);
 		this.currentRevision = currentRevision;
 		this.queuedTxs = new HashMap<>();
 		this.pendingTxs = new HashMap<>();

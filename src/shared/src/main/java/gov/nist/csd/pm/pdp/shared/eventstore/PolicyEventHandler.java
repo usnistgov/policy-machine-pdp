@@ -6,12 +6,17 @@ import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
 import gov.nist.csd.pm.core.common.prohibition.ContainerCondition;
 import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
 import gov.nist.csd.pm.core.pap.PAP;
+import gov.nist.csd.pm.core.pap.id.RandomIdGenerator;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pap.store.PolicyStore;
 
 import java.util.*;
 
+import gov.nist.csd.pm.core.pdp.bootstrap.JSONBootstrapper;
+import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapper;
+import gov.nist.csd.pm.core.pdp.bootstrap.PolicyBootstrapper;
 import gov.nist.csd.pm.pdp.proto.event.*;
+import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,9 +25,11 @@ public class PolicyEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(PolicyEventHandler.class);
 
     private final PAP pap;
+    private final PluginLoader pluginLoader;
 
-    public PolicyEventHandler(PAP pap) {
+    public PolicyEventHandler(PAP pap, PluginLoader pluginLoader) {
         this.pap = pap;
+        this.pluginLoader = pluginLoader;
     }
 
     public synchronized void handleEvents(Iterable<PMEvent> events) throws PMException {
@@ -64,12 +71,37 @@ public class PolicyEventHandler {
             case OBLIGATIONCREATED -> handleObligationCreated(pmEvent.getObligationCreated());
             case OBLIGATIONDELETED -> handleObligationDeleted(pmEvent.getObligationDeleted(), policyStore);
             case ADMINOPERATIONCREATED -> handleAdminOperationCreated(pmEvent.getAdminOperationCreated());
-            case ADMINOPERATIONDELETED -> handleAdminOperationDeleted(pmEvent.getAdminOperationDeleted(), policyStore);
+            case ADMINOPERATIONDELETED -> handleAdminOperationDeleted(pmEvent.getAdminOperationDeleted());
             case RESOURCEOPERATIONSSET -> handleResourceOperationsSet(pmEvent.getResourceOperationsSet(), policyStore);
             case ADMINROUTINECREATED -> handleAdminRoutineCreated(pmEvent.getAdminRoutineCreated());
-            case ADMINROUTINEDELETED -> handleAdminRoutineDeleted(pmEvent.getAdminRoutineDeleted(), policyStore);
+            case ADMINROUTINEDELETED -> handleAdminRoutineDeleted(pmEvent.getAdminRoutineDeleted());
+            case BOOTSTRAPPED -> handleBootstrap(pmEvent.getBootstrapped());
             case EVENT_NOT_SET -> logger.debug("event not set for {}", pmEvent);
         }
+    }
+
+    private void handleBootstrap(Bootstrapped bootstrapped) throws PMException {
+        // build the bootstrapper needed to handle the event
+        String type = bootstrapped.getType();
+        PolicyBootstrapper policyBootstrapper;
+        if (type.equalsIgnoreCase("pml")) {
+            policyBootstrapper = new PMLBootstrapper(
+                    pluginLoader.loadOperationPlugins(),
+                    pluginLoader.loadRoutinePlugins(),
+                    bootstrapped.getBootstrapUserName(),
+                    bootstrapped.getValue());
+        } else if (type.equalsIgnoreCase("json")) {
+            policyBootstrapper = new JSONBootstrapper(
+                    pluginLoader.loadOperationPlugins(),
+                    pluginLoader.loadRoutinePlugins(),
+                    bootstrapped.getValue());
+        } else {
+            throw new IllegalStateException("Unsupported bootstrap type: " + type);
+        }
+
+        // bootstrap the local PAP
+        pap.withIdGenerator(new BootstrappedRandomIdGenerator(bootstrapped.getCreatedNodesMap()));
+        pap.bootstrap(policyBootstrapper);
     }
 
     private void handleAssignmentCreated(AssignmentCreated assignmentCreated, PolicyStore policyStore) throws PMException {
@@ -169,7 +201,7 @@ public class PolicyEventHandler {
         pap.executePML(new UserContext(0), adminOperationCreated.getPml());
     }
 
-    private void handleAdminOperationDeleted(AdminOperationDeleted adminOperationDeleted, PolicyStore policyStore) throws PMException {
+    private void handleAdminOperationDeleted(AdminOperationDeleted adminOperationDeleted) throws PMException {
         pap.modify().operations().deleteAdminOperation(adminOperationDeleted.getName());
     }
 
@@ -177,7 +209,25 @@ public class PolicyEventHandler {
         pap.executePML(new UserContext(0), adminRoutineCreated.getPml());
     }
 
-    private void handleAdminRoutineDeleted(AdminRoutineDeleted adminRoutineDeleted, PolicyStore policyStore) throws PMException {
+    private void handleAdminRoutineDeleted(AdminRoutineDeleted adminRoutineDeleted) throws PMException {
         pap.modify().routines().deleteAdminRoutine(adminRoutineDeleted.getName());
+    }
+
+    static class BootstrappedRandomIdGenerator extends RandomIdGenerator {
+
+        private final Map<String, Long> createdNodes;
+
+        public BootstrappedRandomIdGenerator(Map<String, Long> createdNodes) {
+            this.createdNodes = createdNodes;
+        }
+
+        @Override
+        public long generateId(String name, NodeType type) {
+            if (createdNodes.containsKey(name)) {
+                return createdNodes.get(name);
+            }
+
+            return super.generateId(name, type);
+        }
     }
 }

@@ -56,19 +56,13 @@ public class EventTrackingPAP extends PAP {
     }
 
     public List<PMEvent> publishToEventStore(EventStoreDBClient esClient, String stream, long revision) {
-        AppendToStreamOptions options;
-        if (revision == 0) {
-            options = AppendToStreamOptions.get()
-                    .expectedRevision(ExpectedRevision.noStream());
-        } else {
-            options = AppendToStreamOptions.get()
+        AppendToStreamOptions options = AppendToStreamOptions.get()
                     .expectedRevision(revision);
-        }
 
         List<PMEvent> events = modify().getEvents();
         List<EventData> eventDataList = pmEventsToEventDataList(events);
 
-        logger.info("publishing {} events to event store ar revision {}", events.size(), revision);
+        logger.info("publishing {} events to event store at revision {}", events.size(), revision);
         try {
             esClient.appendToStream(stream, options, eventDataList.iterator())
                     .get();

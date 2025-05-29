@@ -2,8 +2,10 @@ package gov.nist.csd.pm.pdp.admin.pap;
 
 import com.eventstore.dbclient.*;
 import gov.nist.csd.pm.core.common.exception.PMException;
+import gov.nist.csd.pm.core.common.graph.node.Node;
+import gov.nist.csd.pm.core.common.graph.node.NodeType;
 import gov.nist.csd.pm.core.pap.function.AdminFunction;
-import gov.nist.csd.pm.core.pdp.PDP;
+import gov.nist.csd.pm.core.pap.query.GraphQuery;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.core.pdp.bootstrap.JSONBootstrapper;
 import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapper;
@@ -12,13 +14,17 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import javax.annotation.PostConstruct;
 
+import gov.nist.csd.pm.pdp.proto.event.Bootstrapped;
+import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -31,18 +37,18 @@ public class Neo4jBootstrapper {
     private final AdminPDPConfig adminPDPConfig;
     private final EventStoreDBConfig eventStoreDBConfig;
     private final EventStoreConnectionManager eventStoreConnectionManager;
-    private final NoCommitNeo4jPolicyStore policyStore;
     private final List<AdminFunction<?, ?>> adminFunctions;
+    private final GraphDatabaseService graphDb;
 
     public Neo4jBootstrapper(AdminPDPConfig adminPDPConfig,
                              EventStoreDBConfig eventStoreDBConfig,
                              EventStoreConnectionManager eventStoreConnectionManager,
-                             NoCommitNeo4jPolicyStore policyStore,
+                             GraphDatabaseService graphDb,
                              List<AdminFunction<?, ?>> adminFunctions) {
         this.adminPDPConfig = adminPDPConfig;
         this.eventStoreDBConfig = eventStoreDBConfig;
         this.eventStoreConnectionManager = eventStoreConnectionManager;
-        this.policyStore = policyStore;
+        this.graphDb = graphDb;
         this.adminFunctions = adminFunctions;
     }
 
@@ -73,19 +79,50 @@ public class Neo4jBootstrapper {
             throw new PMException("Bootstrap file is empty: " + bootstrapFilePath);
         }
 
-        // bootstrap file in PDP, tracking policy events
         PolicyBootstrapper policyBootstrapper = getPolicyBootstrapper(bootstrapFilePath, data);
-        EventTrackingPAP eventTrackingPAP = new EventTrackingPAP(policyStore, adminFunctions);
-        PDP pdp = new PDP(eventTrackingPAP);
-        pdp.bootstrap(policyBootstrapper);
+        EventTrackingPAP eventTrackingPAP = new EventTrackingPAP(new NoCommitNeo4jPolicyStore(graphDb), adminFunctions);
+        eventTrackingPAP.beginTx();
+        eventTrackingPAP.bootstrap(policyBootstrapper);
+        publishToEventStore(eventTrackingPAP.query().graph(), policyBootstrapper, data);
+        eventTrackingPAP.commit();
+    }
 
-        // send policy updates to event store
+    private void publishToEventStore(GraphQuery graphQuery, PolicyBootstrapper policyBootstrapper, String input) throws PMException, ExecutionException, InterruptedException {
         logger.debug("sending events from bootstrapping to event store");
-        eventTrackingPAP.publishToEventStore(
-            eventStoreConnectionManager.getOrInitClient(),
-            eventStoreDBConfig.getEventStream(),
-            0
-        );
+
+        Collection<Node> search = graphQuery.search(NodeType.ANY, new HashMap<>());
+        Map<String, Long> nodeIds = new HashMap<>();
+        for (Node node : search) {
+            nodeIds.put(node.getName(), node.getId());
+        }
+
+        String type;
+        if (policyBootstrapper instanceof PMLBootstrapper) {
+            type = "pml";
+        } else {
+            type = "json";
+        }
+
+        PMEvent pmEvent = PMEvent.newBuilder()
+                .setBootstrapped(
+                        Bootstrapped.newBuilder()
+                                .setType(type)
+                                .setValue(input)
+                                .putAllCreatedNodes(nodeIds)
+                )
+                .build();
+        EventData eventData = EventData.builderAsBinary(pmEvent.getDescriptorForType().getName(),
+                                                        pmEvent.toByteArray()).build();
+
+        AppendToStreamOptions options = AppendToStreamOptions.get()
+                .expectedRevision(ExpectedRevision.noStream());
+        eventStoreConnectionManager.getOrInitClient()
+                .appendToStream(
+                        eventStoreDBConfig.getEventStream(),
+                        options,
+                        eventData
+                )
+                .get();
     }
 
     private PolicyBootstrapper getPolicyBootstrapper(String bootstrapFilePath, String data) throws PMException {
@@ -109,12 +146,12 @@ public class Neo4jBootstrapper {
     protected boolean eventsInStream() throws ExecutionException, InterruptedException {
         String eventStream = eventStoreDBConfig.getEventStream();
         ReadStreamOptions options = ReadStreamOptions.get()
-            .maxCount(1)
-            .fromStart();
+                .maxCount(1)
+                .fromStart();
 
         try {
             ReadResult result = eventStoreConnectionManager.getOrInitClient()
-                .readStream(eventStream, options).get();
+                    .readStream(eventStream, options).get();
             List<ResolvedEvent> events = result.getEvents();
 
             if (events.isEmpty()) {

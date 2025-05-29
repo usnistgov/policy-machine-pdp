@@ -15,14 +15,14 @@ service PolicyQueryService {
   rpc GetNodeId(IdOrNameQuery) returns (NodeIdResponse);
   rpc SearchNodes(SearchQuery)  returns (SearchResponse);
   rpc GetPolicyClasses(google.protobuf.Empty) returns (PolicyClassesResponse);
-  rpc GetAdjacentDescendants(GetAdjacentAssignmentsQuery) returns (NodeIdListResponse);
-  rpc GetAdjacentAscendants(GetAdjacentAssignmentsQuery) returns (NodeIdListResponse);
-  rpc GetAssociationsWithSource(GetAssociationsQuery) returns (AssociationList);
-  rpc GetAssociationsWithTarget(GetAssociationsQuery) returns (AssociationList);
+  rpc GetAdjacentDescendants(GetAdjacentAssignmentsQuery) returns (NodeListResponse);
+  rpc GetAdjacentAscendants(GetAdjacentAssignmentsQuery) returns (NodeListResponse);
+  rpc GetAssociationsWithSource(GetAssociationsQuery) returns (AssociationListResponse);
+  rpc GetAssociationsWithTarget(GetAssociationsQuery) returns (AssociationListResponse);
   rpc GetAscendantSubgraph(GetSubgraphQuery) returns (SubgraphProto);
   rpc GetDescendantSubgraph(GetSubgraphQuery) returns (SubgraphProto);
-  rpc GetAttributeDescendants(GetDescendantsQuery) returns (NodeIdListResponse);
-  rpc GetPolicyClassDescendants(GetDescendantsQuery) returns (NodeIdListResponse);
+  rpc GetAttributeDescendants(GetDescendantsQuery) returns (NodeListResponse);
+  rpc GetPolicyClassDescendants(GetDescendantsQuery) returns (NodeListResponse);
   rpc IsAscendant(IsAncestorQuery) returns (BooleanResponse);
   rpc IsDescendant(IsAncestorQuery) returns (BooleanResponse);
 
@@ -39,7 +39,7 @@ service PolicyQueryService {
   rpc GetObligationsByAuthor(GetObligationByAuthorQuery) returns (ObligationListResponse);
 
   // operation queries
-  rpc GetResourceOperations(google.protobuf.Empty) returns (gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto);
+  rpc GetResourceOperations(google.protobuf.Empty) returns (gov.nist.csd.pm.pdp.proto.model.StringList);
   rpc GetAdminOperationNames(google.protobuf.Empty) returns (GetAdminOperationNamesResponse);
   rpc GetAdminOperation(GetAdminOperationQuery) returns (OperationResponse);
 
@@ -48,8 +48,8 @@ service PolicyQueryService {
   rpc GetAdminRoutine(GetAdminRoutineQuery) returns (RoutineResponse);
 
   // access queries
-  rpc ComputePrivileges(ComputePrivilegesQuery) returns (gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto);
-  rpc ComputeDeniedPrivileges(ComputeDeniedPrivilegesQuery) returns (gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto);
+  rpc ComputePrivileges(ComputePrivilegesQuery) returns (gov.nist.csd.pm.pdp.proto.model.StringList);
+  rpc ComputeDeniedPrivileges(ComputeDeniedPrivilegesQuery) returns (gov.nist.csd.pm.pdp.proto.model.StringList);
   rpc ComputeCapabilityList(ComputeCapabilityListQuery) returns (AccessQueryMappingResponse);
   rpc ComputeACL(ComputeACLQuery) returns (AccessQueryMappingResponse);
   rpc ComputeDestinationAttributes(ComputeDestinationAttributesQuery) returns (AccessQueryMappingResponse);
@@ -60,7 +60,7 @@ service PolicyQueryService {
   rpc ComputePersonalObjectSystem(ComputePOSQuery) returns (NodePrivilegeList);
 
   // self (caller) access queries
-  rpc SelfComputePrivileges(TargetContextProto) returns (gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto);
+  rpc SelfComputePrivileges(TargetContextProto) returns (gov.nist.csd.pm.pdp.proto.model.StringList);
   rpc SelfComputeSubgraphPrivileges(SelfAccessWithRootQuery) returns (SubgraphPrivilegesProto);
   rpc SelfComputeAdjacentAscendantPrivileges(SelfAccessWithRootQuery) returns (NodePrivilegeList);
   rpc SelfComputeAdjacentDescendantPrivileges(SelfAccessWithRootQuery) returns (NodePrivilegeList);
@@ -87,7 +87,7 @@ message SearchResponse {
 }
 
 message PolicyClassesResponse {
-  repeated int64 ids = 1;
+  repeated gov.nist.csd.pm.pdp.proto.model.NodeProto nodes = 1;
 }
 
 message GetAdjacentAssignmentsQuery {
@@ -97,13 +97,14 @@ message GetAdjacentAssignmentsQuery {
 message GetAssociationsQuery {
   int64 node_id = 1;
 }
-message AssociationList {
+message AssociationListResponse {
   repeated AssociationProto associations = 1;
 }
+
 message AssociationProto {
-  int64 ua_id = 1;
-  int64 target_id = 2;
-  gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto arset = 3;
+  gov.nist.csd.pm.pdp.proto.model.NodeProto ua = 1;
+  gov.nist.csd.pm.pdp.proto.model.NodeProto target = 2;
+  repeated string arset = 3;
 }
 
 message GetSubgraphQuery {
@@ -118,8 +119,8 @@ message GetDescendantsQuery {
   int64 node_id = 1;
 }
 
-message NodeIdListResponse {
-  repeated int64 ids = 1;
+message NodeListResponse {
+  repeated gov.nist.csd.pm.pdp.proto.model.NodeProto nodes = 1;
 }
 
 message IsAncestorQuery {
@@ -133,7 +134,7 @@ message BooleanResponse {
 
 message ObligationProto {
   string name = 1;
-  int64  author_id = 2;
+  gov.nist.csd.pm.pdp.proto.model.NodeProto  author = 2;
   string pml = 3;
 }
 
@@ -238,7 +239,12 @@ message ComputeDestinationAttributesQuery {
 }
 
 message AccessQueryMappingResponse {
-  map<int64, gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto> map = 1;
+  map<int64, AccessQueryMappingEntry> map = 1;
+}
+
+message AccessQueryMappingEntry {
+  gov.nist.csd.pm.pdp.proto.model.NodeProto node = 1;
+  repeated string arset = 2;
 }
 
 message AccessWithRootQuery {
@@ -257,13 +263,13 @@ message ComputePOSQuery {
 
 message SubgraphPrivilegesProto {
   gov.nist.csd.pm.pdp.proto.model.NodeProto node = 1;
-  gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto arset = 2;
+  repeated string arset = 2;
   repeated SubgraphPrivilegesProto ascendants = 3;
 }
 
 message NodePrivilege {
   gov.nist.csd.pm.pdp.proto.model.NodeProto node = 1;
-  gov.nist.csd.pm.pdp.proto.model.AccessRightSetProto arset = 2;
+  repeated string arset = 2;
 }
 
 message NodePrivilegeList {

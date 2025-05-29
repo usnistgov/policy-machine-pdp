@@ -7,6 +7,9 @@ import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
 import gov.nist.csd.pm.core.common.prohibition.ContainerCondition;
 import gov.nist.csd.pm.core.common.prohibition.Prohibition;
 import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
+import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
+import gov.nist.csd.pm.core.pap.query.GraphQuery;
+import gov.nist.csd.pm.core.pap.query.PolicyQuery;
 import gov.nist.csd.pm.core.pap.query.model.context.TargetContext;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pap.query.model.explain.Explain;
@@ -24,6 +27,8 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 
+import static gov.nist.csd.pm.core.common.graph.node.NodeType.OA;
+import static gov.nist.csd.pm.core.common.graph.node.NodeType.U;
 import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -35,10 +40,10 @@ class ProtoUtilTest {
 	@Test
 	void testBuildExplainResponse_NullExplain() {
 		// Test when the input `explain` object is null
-		ExplainResponse result = ProtoUtil.buildExplainResponse(null);
+		ExplainResponse result = ProtoUtil.buildExplainResponse(null, mock(PolicyQuery.class));
 		assertNotNull(result);
-		assertFalse(result.hasPrivileges());
-		assertFalse(result.hasDeniedPrivileges());
+		assertTrue(result.getPrivilegesList().isEmpty());
+		assertTrue(result.getDeniedPrivilegesList().isEmpty());
 		assertTrue(result.getPolicyClassesList().isEmpty());
 		assertTrue(result.getProhibitionsList().isEmpty());
 	}
@@ -54,9 +59,9 @@ class ProtoUtilTest {
 		when(explain.getDeniedPrivileges()).thenReturn(new AccessRightSet());
 
 		// Run the method and validate results
-		ExplainResponse result = ProtoUtil.buildExplainResponse(explain);
-		assertTrue(result.hasPrivileges());
-		assertEquals(List.of("read", "write"), result.getPrivileges().getSetList());
+		ExplainResponse result = ProtoUtil.buildExplainResponse(explain, mock(PolicyQuery.class));
+		assertFalse(result.getPrivilegesList().isEmpty());
+		assertEquals(List.of("read", "write"), result.getPrivilegesList());
 		assertTrue(result.getPolicyClassesList().isEmpty());
 		assertTrue(result.getProhibitionsList().isEmpty());
 	}
@@ -80,18 +85,18 @@ class ProtoUtilTest {
 		when(explain.getDeniedPrivileges()).thenReturn(new AccessRightSet());
 
 		// Run the method and validate constructed paths
-		ExplainResponse result = ProtoUtil.buildExplainResponse(explain);
+		ExplainResponse result = ProtoUtil.buildExplainResponse(explain, mock(PolicyQuery.class));
 		assertEquals(1, result.getPolicyClassesCount());
 		PolicyClassExplainProto pcProto = result.getPolicyClasses(0);
 		assertEquals(1L, pcProto.getPc().getId());
 		assertEquals("PolicyClass1", pcProto.getPc().getName());
-		assertEquals(List.of("read"), pcProto.getArset().getSetList());
+		assertEquals(List.of("read"), pcProto.getArsetList());
 		assertEquals(1, pcProto.getPathsCount());
 		assertEquals(1L, pcProto.getPaths(0).getNodes(0).getNode().getId());
 	}
 
 	@Test
-	void testBuildExplainResponse_WithProhibitions() {
+	void testBuildExplainResponse_WithProhibitions() throws PMException {
 		// Mock a prohibition
 		Prohibition prohibition = new Prohibition(
 				"Prohibition1", new ProhibitionSubject(1L),
@@ -104,13 +109,17 @@ class ProtoUtilTest {
 		when(explain.getProhibitions()).thenReturn(List.of(prohibition));
 		when(explain.getDeniedPrivileges()).thenReturn(new AccessRightSet());
 
+		PolicyQuery policyQuery = mock(PolicyQuery.class);
+		when(policyQuery.graph()).thenReturn(mock(GraphQuery.class));
+		when(policyQuery.graph().getNodeById(1L)).thenReturn(new Node(1L, "test", U));
+
 		// Run the method and validate prohibition results
-		ExplainResponse result = ProtoUtil.buildExplainResponse(explain);
+		ExplainResponse result = ProtoUtil.buildExplainResponse(explain, policyQuery);
 		assertEquals(1, result.getProhibitionsCount());
 		ProhibitionProto prohibitionProto = result.getProhibitions(0);
 		assertEquals("Prohibition1", prohibitionProto.getName());
-		assertEquals(1L, prohibitionProto.getNodeId());
-		assertEquals(List.of("execute"), prohibitionProto.getArset().getSetList());
+		assertEquals(1L, prohibitionProto.getNode().getId());
+		assertEquals(List.of("execute"), prohibitionProto.getArsetList());
 		assertFalse(prohibitionProto.getIntersection());
 	}
 
@@ -125,9 +134,9 @@ class ProtoUtilTest {
 		when(explain.getDeniedPrivileges()).thenReturn(mockDeniedPrivileges);
 
 		// Run the method and validate denied privileges
-		ExplainResponse result = ProtoUtil.buildExplainResponse(explain);
-		assertTrue(result.hasDeniedPrivileges());
-		assertEquals(List.of("delete", "update"), result.getDeniedPrivileges().getSetList());
+		ExplainResponse result = ProtoUtil.buildExplainResponse(explain, mock(PolicyQuery.class));
+		assertFalse(result.getDeniedPrivilegesList().isEmpty());
+		assertEquals(List.of("delete", "update"), result.getDeniedPrivilegesList());
 	}
 
 	@Test
@@ -255,7 +264,7 @@ class ProtoUtilTest {
 		Node node = mock(Node.class);
 		when(node.getId()).thenReturn(789L);
 		when(node.getName()).thenReturn("MockedNode");
-		when(node.getType()).thenReturn(NodeType.U);
+		when(node.getType()).thenReturn(U);
 		when(node.getProperties()).thenReturn(Map.of("key", "value"));
 
 		// Calling the method to be tested
@@ -270,21 +279,25 @@ class ProtoUtilTest {
 	}
 
 	@Test
-	void testToProhibitionProto_NodeSubject() {
+	void testToProhibitionProto_NodeSubject() throws PMException {
 		// Creating a prohibition with a node subject
 		Prohibition prohibition = new Prohibition(
-				"testProhibition", new ProhibitionSubject(123L),
+				"testProhibition", new ProhibitionSubject(1L),
 				new AccessRightSet(List.of("read", "write")), true, List.of()
 		);
 
+		PolicyQuery policyQuery = mock(PolicyQuery.class);
+		when(policyQuery.graph()).thenReturn(mock(GraphQuery.class));
+		when(policyQuery.graph().getNodeById(1L)).thenReturn(new Node(1L, "test", U));
+
 		// Calling the method to be tested
-		ProhibitionProto result = ProtoUtil.toProhibitionProto(prohibition);
+		ProhibitionProto result = ProtoUtil.toProhibitionProto(prohibition, policyQuery);
 
 		// Asserting values from the result
 		assertEquals("testProhibition", result.getName());
-		assertEquals(123L, result.getNodeId());
+		assertEquals(1L, result.getNode().getId());
 		assertFalse(result.hasProcess());
-		assertEquals(List.of("read", "write"), result.getArset().getSetList());
+		assertEquals(List.of("read", "write"), result.getArsetList());
 		assertTrue(result.getIntersection());
 		assertEquals(0, result.getContainerConditionsCount());
 	}
@@ -298,62 +311,72 @@ class ProtoUtilTest {
 		);
 
 		// Calling the method to be tested
-		ProhibitionProto result = ProtoUtil.toProhibitionProto(prohibition);
+		ProhibitionProto result = ProtoUtil.toProhibitionProto(prohibition, mock(PolicyQuery.class));
 
 		// Asserting values from the result
 		assertEquals("testProhibition", result.getName());
 		assertEquals("testProcess", result.getProcess());
-		assertFalse(result.hasNodeId());
-		assertEquals(List.of("execute"), result.getArset().getSetList());
+		assertFalse(result.hasNode());
+		assertEquals(List.of("execute"), result.getArsetList());
 		assertFalse(result.getIntersection());
 		assertEquals(0, result.getContainerConditionsCount());
 	}
 
 	@Test
-	void testToProhibitionProto_EmptyContainerConditions() {
+	void testToProhibitionProto_EmptyContainerConditions() throws PMException {
 		// Creating a prohibition with no container conditions
 		Prohibition prohibition = new Prohibition(
-				"testProhibition", new ProhibitionSubject(123L),
+				"testProhibition", new ProhibitionSubject(1L),
 				new AccessRightSet(List.of("read")), false, List.of()
 		);
 
+		PolicyQuery policyQuery = mock(PolicyQuery.class);
+		when(policyQuery.graph()).thenReturn(mock(GraphQuery.class));
+		when(policyQuery.graph().getNodeById(1L)).thenReturn(new Node(1L, "test", U));
+
 		// Calling the method to be tested
-		ProhibitionProto result = ProtoUtil.toProhibitionProto(prohibition);
+		ProhibitionProto result = ProtoUtil.toProhibitionProto(prohibition, policyQuery);
 
 		// Asserting values from the result
 		assertEquals("testProhibition", result.getName());
-		assertEquals(123L, result.getNodeId());
+		assertEquals(1L, result.getNode().getId());
 		assertFalse(result.hasProcess());
-		assertEquals(List.of("read"), result.getArset().getSetList());
+		assertEquals(List.of("read"), result.getArsetList());
 		assertFalse(result.getIntersection());
 		assertEquals(0, result.getContainerConditionsCount());
 	}
 
 	@Test
-	void testToProhibitionProto_WithContainerConditions() {
+	void testToProhibitionProto_WithContainerConditions() throws PMException {
 		// Creating container conditions
 		ContainerCondition cc1 = new ContainerCondition(1L, true);
 		ContainerCondition cc2 = new ContainerCondition(2L, false);
 
 		// Creating a prohibition with container conditions
 		Prohibition prohibition = new Prohibition(
-				"testProhibition", new ProhibitionSubject(456L),
+				"testProhibition", new ProhibitionSubject(3L),
 				new AccessRightSet(List.of("write")), true, List.of(cc1, cc2)
 		);
 
+		PolicyQuery policyQuery = mock(PolicyQuery.class);
+		when(policyQuery.graph()).thenReturn(mock(GraphQuery.class));
+		when(policyQuery.graph().getNodeById(1L)).thenReturn(new Node(1L, "test", OA));
+		when(policyQuery.graph().getNodeById(2L)).thenReturn(new Node(2L, "test", OA));
+		when(policyQuery.graph().getNodeById(3L)).thenReturn(new Node(3L, "test", U));
+
 		// Calling the method to be tested
-		ProhibitionProto result = ProtoUtil.toProhibitionProto(prohibition);
+		ProhibitionProto result = ProtoUtil.toProhibitionProto(prohibition, policyQuery);
 
 		// Asserting values from the result
 		assertEquals("testProhibition", result.getName());
-		assertEquals(456L, result.getNodeId());
+		assertEquals(3L, result.getNode().getId());
 		assertFalse(result.hasProcess());
-		assertEquals(List.of("write"), result.getArset().getSetList());
+		assertEquals(List.of("write"), result.getArsetList());
 		assertTrue(result.getIntersection());
 		assertEquals(2, result.getContainerConditionsCount());
-		assertEquals(1L, result.getContainerConditions(0).getContainerId());
+		assertEquals(1L, result.getContainerConditions(0).getContainer().getId());
 		assertTrue(result.getContainerConditions(0).getComplement());
-		assertEquals(2L, result.getContainerConditions(1).getContainerId());
+		assertEquals(2L, result.getContainerConditions(1).getContainer().getId());
 		assertFalse(result.getContainerConditions(1).getComplement());
 	}
 }

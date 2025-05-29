@@ -31,11 +31,12 @@ message PMEvent {
 
     AdminRoutineCreated adminRoutineCreated = 19;
     AdminRoutineDeleted adminRoutineDeleted = 20;
+    Bootstrapped bootstrapped = 21;
   }
 }
 
 message PMSnapshot {
-  uint64 revision = 1;
+  int64 revision = 1;
   string json = 2;
 }
 
@@ -147,4 +148,11 @@ message AdminRoutineCreated {
 
 message AdminRoutineDeleted {
   string name = 1;
+}
+
+message Bootstrapped {
+  string value = 1;
+  string type = 2;
+  string bootstrapUserName = 3;
+  map<string, int64> createdNodes = 4;
 }

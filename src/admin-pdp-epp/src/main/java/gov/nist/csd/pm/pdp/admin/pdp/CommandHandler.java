@@ -10,7 +10,6 @@ import gov.nist.csd.pm.core.pap.pml.statement.operation.OperationDefinitionState
 import gov.nist.csd.pm.core.pap.pml.statement.operation.RoutineDefinitionStatement;
 import gov.nist.csd.pm.core.pdp.PDPTx;
 import gov.nist.csd.pm.pdp.proto.adjudication.*;
-import gov.nist.csd.pm.pdp.proto.model.ProhibitionProto;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -116,7 +115,7 @@ public class CommandHandler {
         pdpTx.modify().graph().associate(
                 cmd.getUaId(),
                 cmd.getTargetId(),
-                new AccessRightSet(cmd.getArset().getSetList())
+                new AccessRightSet(cmd.getArsetList())
         );
     }
 
@@ -127,7 +126,7 @@ public class CommandHandler {
         );
     }
 
-    private void handleCreateProhibitionCmd(PDPTx pdpTx, ProhibitionProto cmd) throws PMException {
+    private void handleCreateProhibitionCmd(PDPTx pdpTx, CreateProhibitionCmd cmd) throws PMException {
         ProhibitionSubject subject = switch (cmd.getSubjectCase()) {
             case NODE_ID -> new ProhibitionSubject(cmd.getNodeId());
             case PROCESS -> new ProhibitionSubject(cmd.getProcess());
@@ -135,7 +134,7 @@ public class CommandHandler {
         };
 
         List<ContainerCondition> containerConditions = new ArrayList<>();
-        for (ProhibitionProto.ContainerCondition ccProto : cmd.getContainerConditionsList()) {
+        for (CreateProhibitionCmd.ContainerCondition ccProto : cmd.getContainerConditionsList()) {
             containerConditions.add(new ContainerCondition(
                     ccProto.getContainerId(),
                     ccProto.getComplement()
@@ -145,7 +144,7 @@ public class CommandHandler {
         pdpTx.modify().prohibitions().createProhibition(
                 cmd.getName(),
                 subject,
-                new AccessRightSet(cmd.getArset().getSetList()),
+                new AccessRightSet(cmd.getArsetList()),
                 cmd.getIntersection(),
                 containerConditions
         );

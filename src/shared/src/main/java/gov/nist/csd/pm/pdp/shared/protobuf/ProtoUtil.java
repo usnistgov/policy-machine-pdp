@@ -6,10 +6,14 @@ import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
 import gov.nist.csd.pm.core.common.prohibition.ContainerCondition;
 import gov.nist.csd.pm.core.common.prohibition.Prohibition;
 import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
+import gov.nist.csd.pm.core.pap.PAP;
+import gov.nist.csd.pm.core.pap.obligation.Obligation;
+import gov.nist.csd.pm.core.pap.query.PolicyQuery;
 import gov.nist.csd.pm.core.pap.query.model.context.TargetContext;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pap.query.model.explain.*;
 import gov.nist.csd.pm.pdp.proto.model.*;
+import gov.nist.csd.pm.pdp.proto.query.ObligationProto;
 import gov.nist.csd.pm.pdp.proto.query.TargetContextProto;
 import gov.nist.csd.pm.pdp.proto.query.UserContextProto;
 
@@ -44,34 +48,47 @@ public class ProtoUtil {
 				.build();
 	}
 
-	public static ProhibitionProto toProhibitionProto(Prohibition prohibition) {
+	public static ProhibitionProto toProhibitionProto(Prohibition prohibition, PolicyQuery query) {
 		ProhibitionProto.Builder builder = ProhibitionProto.newBuilder()
 				.setName(prohibition.getName())
-				.setArset(AccessRightSetProto.newBuilder().addAllSet(prohibition.getAccessRightSet()).build())
+				.addAllArset(prohibition.getAccessRightSet())
 				.setIntersection(prohibition.isIntersection());
 
-		ProhibitionSubject subject = prohibition.getSubject();
-		if (subject.isNode()) {
-			builder.setNodeId(subject.getNodeId());
-		} else {
-			builder.setProcess(subject.getProcess());
-		}
+		try {
+			ProhibitionSubject subject = prohibition.getSubject();
 
-		List<ProhibitionProto.ContainerCondition> containerConditions = new ArrayList<>();
-		for (ContainerCondition cc : prohibition.getContainers()) {
-			containerConditions.add(
-					ProhibitionProto.ContainerCondition.newBuilder()
-							.setContainerId(cc.getId())
-							.setComplement(cc.isComplement())
-							.build()
-			);
-		}
+			if (subject.isNode()) {
+				builder.setNode(toNodeProto(query.graph().getNodeById(subject.getNodeId())));
+			} else {
+				builder.setProcess(subject.getProcess());
+			}
 
-		return builder.addAllContainerConditions(containerConditions)
-				.build();
+			List<ProhibitionProto.ContainerCondition> containerConditions = new ArrayList<>();
+			for (ContainerCondition cc : prohibition.getContainers()) {
+				containerConditions.add(
+						ProhibitionProto.ContainerCondition.newBuilder()
+								.setContainer(toNodeProto(query.graph().getNodeById(cc.getId())))
+								.setComplement(cc.isComplement())
+								.build()
+				);
+			}
+
+			return builder.addAllContainerConditions(containerConditions)
+					.build();
+		} catch (PMException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
-	public static ExplainResponse buildExplainResponse(Explain explain) {
+	public static ObligationProto toObligationProto(Obligation obligation, PAP pap) throws PMException {
+		ObligationProto.Builder builder = ObligationProto.newBuilder()
+				.setName(obligation.getName())
+				.setAuthor(ProtoUtil.toNodeProto(pap.query().graph().getNodeById(obligation.getAuthorId())))
+				.setPml(obligation.toString());
+		return builder.build();
+	}
+
+	public static ExplainResponse buildExplainResponse(Explain explain, PolicyQuery query) {
 		if (explain == null) {
 			return ExplainResponse.newBuilder().build();
 		}
@@ -105,7 +122,7 @@ public class ProtoUtil {
 
 						explainAssociationProtos.add(ExplainAssociationProto.newBuilder()
 								                             .setUa(toNodeProto(explainAssociation.ua()))
-								                             .setArset(AccessRightSetProto.newBuilder().addAllSet(explainAssociation.arset()))
+								                             .addAllArset(explainAssociation.arset())
 								                             .addAllUserPaths(userPathProtos)
 								                             .build());
 					}
@@ -123,19 +140,19 @@ public class ProtoUtil {
 
 			policyClassProtos.add(PolicyClassExplainProto.newBuilder()
 					                      .setPc(toNodeProto(pcNode))
-					                      .setArset(AccessRightSetProto.newBuilder().addAllSet(pc.arset()))
+					                      .addAllArset(pc.arset())
 					                      .addAllPaths(pathProtos)
 					                      .build());
 		}
 
 		List<ProhibitionProto> prohibitionProtos = new ArrayList<>();
 		for (Prohibition p : prohibitions) {
-			prohibitionProtos.add(toProhibitionProto(p));
+			prohibitionProtos.add(toProhibitionProto(p, query));
 		}
 
 		return ExplainResponse.newBuilder()
-				.setPrivileges(AccessRightSetProto.newBuilder().addAllSet(privileges))
-				.setDeniedPrivileges(AccessRightSetProto.newBuilder().addAllSet(deniedPrivileges))
+				.addAllPrivileges(privileges)
+				.addAllDeniedPrivileges(deniedPrivileges)
 				.addAllPolicyClasses(policyClassProtos)
 				.addAllProhibitions(prohibitionProtos)
 				.build();

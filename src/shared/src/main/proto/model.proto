@@ -24,21 +24,17 @@ message NodeProto {
 message ProhibitionProto {
   string name = 1;
   oneof subject {
-    int64 node_id = 2;
+    NodeProto node = 2;
     string process = 3;
   }
-  AccessRightSetProto arset = 4;
+  repeated string arset = 4;
   bool intersection = 5;
   repeated ContainerCondition container_conditions = 6;
 
   message ContainerCondition {
-    int64 container_id = 1;
+    NodeProto container = 1;
     bool complement = 2;
   }
-}
-
-message AccessRightSetProto {
-  repeated string set = 1;
 }
 
 message PathProto {
@@ -47,7 +43,7 @@ message PathProto {
 
 message ExplainAssociationProto {
   NodeProto ua = 1;
-  AccessRightSetProto arset = 2;
+  repeated string arset = 2;
   repeated PathProto user_paths = 3;
 }
 
@@ -62,14 +58,14 @@ message ExplainNodePathProto {
 
 message PolicyClassExplainProto {
   NodeProto pc = 1;
- AccessRightSetProto arset = 2;
+  repeated string arset = 2;
   repeated ExplainNodePathProto paths = 3;
 }
 
 message ExplainResponse {
-  AccessRightSetProto privileges = 1;
+  repeated string privileges = 1;
   repeated PolicyClassExplainProto policy_classes = 2;
-  AccessRightSetProto denied_privileges = 3;
+  repeated string denied_privileges = 3;
   repeated ProhibitionProto prohibitions = 4;
 }
 

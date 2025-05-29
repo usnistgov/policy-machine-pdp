@@ -5,6 +5,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.Node;
 import gov.nist.csd.pm.core.pap.PAP;
+import gov.nist.csd.pm.core.pap.query.PolicyQuery;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.adjudication.AdjudicationResponse;
@@ -51,7 +52,7 @@ public class ResourcePDPService extends ResourcePDPServiceGrpc.ResourcePDPServic
                 responseObserver.onNext(grant(targetId, adjudicationResponse));
             } else {
                 logger.debug("adjudication denied {}", adjudicationResponse.getExplain());
-                responseObserver.onNext(deny(adjudicationResponse));
+                responseObserver.onNext(deny(adjudicationResponse, pap.query()));
             }
 
             responseObserver.onCompleted();
@@ -71,8 +72,8 @@ public class ResourcePDPService extends ResourcePDPServiceGrpc.ResourcePDPServic
 
     }
 
-    private AdjudicateResourceOperationResponse deny(AdjudicationResponse adjudicationResponse) throws PMException {
-        AdjudicateGenericResponse deny = AdjudicationResponseUtil.deny(adjudicationResponse);
+    private AdjudicateResourceOperationResponse deny(AdjudicationResponse adjudicationResponse, PolicyQuery query) throws PMException {
+        AdjudicateGenericResponse deny = AdjudicationResponseUtil.deny(adjudicationResponse, query);
         return AdjudicateResourceOperationResponse.newBuilder()
                 .setDecision(deny.getDecision())
                 .setExplain(deny.getExplain())

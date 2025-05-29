@@ -9,11 +9,15 @@ import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
 import gov.nist.csd.pm.core.common.graph.relationship.Association;
 import gov.nist.csd.pm.core.common.prohibition.Prohibition;
 import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
+import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
+import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.function.op.Operation;
 import gov.nist.csd.pm.core.pap.function.routine.Routine;
 import gov.nist.csd.pm.core.pap.obligation.Obligation;
 import gov.nist.csd.pm.core.pap.pml.function.operation.PMLStmtsOperation;
 import gov.nist.csd.pm.core.pap.pml.function.routine.PMLStmtsRoutine;
+import gov.nist.csd.pm.core.pap.query.GraphQuery;
+import gov.nist.csd.pm.core.pap.query.PolicyQuery;
 import gov.nist.csd.pm.core.pap.query.model.context.TargetContext;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pap.query.model.explain.Explain;
@@ -38,6 +42,7 @@ import org.mockito.quality.Strictness;
 
 import java.util.*;
 
+import static gov.nist.csd.pm.pdp.admin.util.TestProtoUtil.testNode;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.*;
@@ -68,11 +73,17 @@ public class PolicyQueryServiceTest {
 	private AccessQueryAdjudicator accessQueryAdjudicator;
 	@Mock
 	private SelfAccessQueryAdjudicator selfAccessQueryAdjudicator;
+	@Mock
+	private Neo4jEmbeddedPAP pap;
+	@Mock
+	private PolicyQuery policyQuery;
+	@Mock
+	private GraphQuery graphQuery;
 
 	private PolicyQueryService service;
 
 	@BeforeEach
-	void setUp() {
+	void setUp() throws PMException {
 		when(pdpTx.query()).thenReturn(policyQueryAdjudicator);
 		when(policyQueryAdjudicator.graph()).thenReturn(graphQueryAdjudicator);
 		when(policyQueryAdjudicator.prohibitions()).thenReturn(prohibitionsQueryAdjudicator);
@@ -82,7 +93,13 @@ public class PolicyQueryServiceTest {
 		when(policyQueryAdjudicator.access()).thenReturn(accessQueryAdjudicator);
 		when(policyQueryAdjudicator.selfAccess()).thenReturn(selfAccessQueryAdjudicator);
 
-		service = new PolicyQueryService(adjudicator);
+		when(pap.query()).thenReturn(policyQuery);
+		when(policyQuery.graph()).thenReturn(graphQuery);
+		when(graphQuery.getNodeById(1)).thenReturn(new Node(1L, "testNode1", NodeType.OA));
+		when(graphQuery.getNodeById(2)).thenReturn(new Node(2L, "testNode2", NodeType.OA));
+		when(graphQuery.getNodeById(3)).thenReturn(new Node(3L, "testNode3", NodeType.OA));
+
+		service = new PolicyQueryService(adjudicator, pap);
 	}
 
 	@FunctionalInterface
@@ -359,7 +376,7 @@ public class PolicyQueryServiceTest {
 			verify(graphQueryAdjudicator).getPolicyClasses();
 			verify(observer).onNext(
 					PolicyClassesResponse.newBuilder()
-							.addAllIds(expectedIds)
+							.addAllNodes(List.of(testNode(1L), testNode(2L), testNode(3L)))
 							.build()
 			);
 			verify(observer).onCompleted();
@@ -400,26 +417,26 @@ public class PolicyQueryServiceTest {
 	class GetAdjacentDescendantsTests {
 
 		@Mock
-		private StreamObserver<NodeIdListResponse> observer;
+		private StreamObserver<NodeListResponse> observer;
 
 		@Test
 		void shouldReturnDescendantIds() throws PMException {
 			GetAdjacentAssignmentsQuery request = GetAdjacentAssignmentsQuery.newBuilder()
 					.setNodeId(1)
 					.build();
-			List<Long> ids = List.of(1L, 2L, 3L);
 
 			stubAdjudicatorTx(adjudicator -> {
 				when(adjudicator.graph().getAdjacentDescendants(request.getNodeId()))
-						.thenReturn(ids);
+						.thenReturn(List.of(1L, 2L, 3L));
 			});
 
 			service.getAdjacentDescendants(request, observer);
 
 			verify(graphQueryAdjudicator).getAdjacentDescendants(request.getNodeId());
+			
 			verify(observer).onNext(
-					NodeIdListResponse.newBuilder()
-							.addAllIds(ids)
+					NodeListResponse.newBuilder()
+							.addAllNodes(List.of(testNode(1L), testNode(2L), testNode(3L)))
 							.build()
 			);
 			verify(observer).onCompleted();
@@ -440,7 +457,7 @@ public class PolicyQueryServiceTest {
 			service.getAdjacentDescendants(request, observer);
 
 			verify(graphQueryAdjudicator).getAdjacentDescendants(request.getNodeId());
-			verify(observer).onNext(NodeIdListResponse.newBuilder().build());
+			verify(observer).onNext(NodeListResponse.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -463,7 +480,7 @@ public class PolicyQueryServiceTest {
 	class GetAdjacentAscendantsTests {
 
 		@Mock
-		private StreamObserver<NodeIdListResponse> observer;
+		private StreamObserver<NodeListResponse> observer;
 
 		@Test
 		void shouldReturnAscendantIds() throws PMException {
@@ -481,8 +498,8 @@ public class PolicyQueryServiceTest {
 
 			verify(graphQueryAdjudicator).getAdjacentAscendants(request.getNodeId());
 			verify(observer).onNext(
-					NodeIdListResponse.newBuilder()
-							.addAllIds(ids)
+					NodeListResponse.newBuilder()
+							.addAllNodes(List.of(testNode(1L), testNode(2L), testNode(3L)))
 							.build()
 			);
 			verify(observer).onCompleted();
@@ -503,7 +520,7 @@ public class PolicyQueryServiceTest {
 			service.getAdjacentAscendants(request, observer);
 
 			verify(graphQueryAdjudicator).getAdjacentAscendants(request.getNodeId());
-			verify(observer).onNext(NodeIdListResponse.newBuilder().build());
+			verify(observer).onNext(NodeListResponse.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -526,7 +543,7 @@ public class PolicyQueryServiceTest {
 	class GetAssociationsWithSourceTests {
 
 		@Mock
-		private StreamObserver<AssociationList> observer;
+		private StreamObserver<AssociationListResponse> observer;
 
 		@Test
 		void shouldReturnAssociationProtos() throws PMException {
@@ -550,20 +567,20 @@ public class PolicyQueryServiceTest {
 			});
 
 			AssociationProto proto1 = AssociationProto.newBuilder()
-					.setUaId(1L)
-					.setTargetId(2L)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("read")))
+					.setUa(testNode(1L))
+					.setTarget(testNode(2L))
+					.addAllArset(List.of("read"))
 					.build();
 			AssociationProto proto2 = AssociationProto.newBuilder()
-					.setUaId(1L)
-					.setTargetId(3L)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("write")))
+					.setUa(testNode(1L))
+					.setTarget(testNode(3L))
+					.addAllArset(List.of("write"))
 					.build();
 
 			service.getAssociationsWithSource(request, observer);
 
 			verify(graphQueryAdjudicator).getAssociationsWithSource(request.getNodeId());
-			AssociationList expected = AssociationList.newBuilder()
+			AssociationListResponse expected = AssociationListResponse.newBuilder()
 					.addAssociations(proto1)
 					.addAssociations(proto2)
 					.build();
@@ -586,7 +603,7 @@ public class PolicyQueryServiceTest {
 			service.getAssociationsWithSource(request, observer);
 
 			verify(graphQueryAdjudicator).getAssociationsWithSource(request.getNodeId());
-			verify(observer).onNext(AssociationList.newBuilder().build());
+			verify(observer).onNext(AssociationListResponse.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -609,7 +626,7 @@ public class PolicyQueryServiceTest {
 	class GetAssociationsWithTargetTests {
 
 		@Mock
-		private StreamObserver<AssociationList> observer;
+		private StreamObserver<AssociationListResponse> observer;
 
 		@Test
 		void shouldReturnAssociationProtos() throws PMException {
@@ -633,20 +650,20 @@ public class PolicyQueryServiceTest {
 			});
 
 			AssociationProto proto1 = AssociationProto.newBuilder()
-					.setUaId(1L)
-					.setTargetId(3L)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("read")))
+					.setUa(testNode(1))
+					.setTarget(testNode(3))
+					.addAllArset(List.of("read"))
 					.build();
 			AssociationProto proto2 = AssociationProto.newBuilder()
-					.setUaId(2L)
-					.setTargetId(3L)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("write")))
+					.setUa(testNode(2))
+					.setTarget(testNode(3))
+					.addAllArset(List.of("write"))
 					.build();
 
 			service.getAssociationsWithTarget(request, observer);
 
 			verify(graphQueryAdjudicator).getAssociationsWithTarget(request.getNodeId());
-			AssociationList expected = AssociationList.newBuilder()
+			AssociationListResponse expected = AssociationListResponse.newBuilder()
 					.addAssociations(proto1)
 					.addAssociations(proto2)
 					.build();
@@ -669,7 +686,7 @@ public class PolicyQueryServiceTest {
 			service.getAssociationsWithTarget(request, observer);
 
 			verify(graphQueryAdjudicator).getAssociationsWithTarget(request.getNodeId());
-			verify(observer).onNext(AssociationList.newBuilder().build());
+			verify(observer).onNext(AssociationListResponse.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -880,26 +897,25 @@ public class PolicyQueryServiceTest {
 	class GetAttributeDescendantsTests {
 
 		@Mock
-		private StreamObserver<NodeIdListResponse> observer;
+		private StreamObserver<NodeListResponse> observer;
 
 		@Test
 		void shouldReturnAttributeDescendantIds() throws PMException {
 			GetDescendantsQuery request = GetDescendantsQuery.newBuilder()
 					.setNodeId(1)
 					.build();
-			List<Long> ids = List.of(1L, 2L, 3L);
 
 			stubAdjudicatorTx(adjudicator -> {
 				when(adjudicator.graph().getAttributeDescendants(request.getNodeId()))
-						.thenReturn(ids);
+						.thenReturn(List.of(1L, 2L, 3L));
 			});
 
 			service.getAttributeDescendants(request, observer);
 
 			verify(graphQueryAdjudicator).getAttributeDescendants(request.getNodeId());
 			verify(observer).onNext(
-					NodeIdListResponse.newBuilder()
-							.addAllIds(ids)
+					NodeListResponse.newBuilder()
+							.addAllNodes(List.of(testNode(1L), testNode(2L), testNode(3L)))
 							.build()
 			);
 			verify(observer).onCompleted();
@@ -920,7 +936,7 @@ public class PolicyQueryServiceTest {
 			service.getAttributeDescendants(request, observer);
 
 			verify(graphQueryAdjudicator).getAttributeDescendants(request.getNodeId());
-			verify(observer).onNext(NodeIdListResponse.newBuilder().build());
+			verify(observer).onNext(NodeListResponse.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -943,26 +959,25 @@ public class PolicyQueryServiceTest {
 	class GetPolicyClassDescendantsTests {
 
 		@Mock
-		private StreamObserver<NodeIdListResponse> observer;
+		private StreamObserver<NodeListResponse> observer;
 
 		@Test
 		void shouldReturnPolicyClassDescendantIds() throws PMException {
 			GetDescendantsQuery request = GetDescendantsQuery.newBuilder()
 					.setNodeId(1)
 					.build();
-			List<Long> ids = List.of(1L, 2L, 3L);
 
 			stubAdjudicatorTx(adjudicator -> {
 				when(adjudicator.graph().getPolicyClassDescendants(request.getNodeId()))
-						.thenReturn(ids);
+						.thenReturn(List.of(1L, 2L, 3L));
 			});
 
 			service.getPolicyClassDescendants(request, observer);
 
 			verify(graphQueryAdjudicator).getPolicyClassDescendants(request.getNodeId());
 			verify(observer).onNext(
-					NodeIdListResponse.newBuilder()
-							.addAllIds(ids)
+					NodeListResponse.newBuilder()
+							.addAllNodes(List.of(testNode(1L), testNode(2L), testNode(3L)))
 							.build()
 			);
 			verify(observer).onCompleted();
@@ -983,7 +998,7 @@ public class PolicyQueryServiceTest {
 			service.getPolicyClassDescendants(request, observer);
 
 			verify(graphQueryAdjudicator).getPolicyClassDescendants(request.getNodeId());
-			verify(observer).onNext(NodeIdListResponse.newBuilder().build());
+			verify(observer).onNext(NodeListResponse.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -1140,8 +1155,8 @@ public class PolicyQueryServiceTest {
 			});
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
-				pu.when(() -> ProtoUtil.toProhibitionProto(p1)).thenReturn(proto1);
-				pu.when(() -> ProtoUtil.toProhibitionProto(p2)).thenReturn(proto2);
+				pu.when(() -> ProtoUtil.toProhibitionProto(p1, pap.query())).thenReturn(proto1);
+				pu.when(() -> ProtoUtil.toProhibitionProto(p2, pap.query())).thenReturn(proto2);
 
 				service.getProhibitions(Empty.getDefaultInstance(), observer);
 
@@ -1203,7 +1218,7 @@ public class PolicyQueryServiceTest {
 			});
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
-				pu.when(() -> ProtoUtil.toProhibitionProto(p)).thenReturn(proto);
+				pu.when(() -> ProtoUtil.toProhibitionProto(p, pap.query())).thenReturn(proto);
 
 				service.getProhibitionsBySubject(request, observer);
 
@@ -1233,7 +1248,7 @@ public class PolicyQueryServiceTest {
 			});
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
-				pu.when(() -> ProtoUtil.toProhibitionProto(p)).thenReturn(proto);
+				pu.when(() -> ProtoUtil.toProhibitionProto(p, pap.query())).thenReturn(proto);
 
 				service.getProhibitionsBySubject(request, observer);
 
@@ -1280,7 +1295,7 @@ public class PolicyQueryServiceTest {
 			});
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
-				pu.when(() -> ProtoUtil.toProhibitionProto(p)).thenReturn(proto);
+				pu.when(() -> ProtoUtil.toProhibitionProto(p, pap.query())).thenReturn(proto);
 
 				service.getProhibition(request, observer);
 
@@ -1326,7 +1341,7 @@ public class PolicyQueryServiceTest {
 			});
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
-				pu.when(() -> ProtoUtil.toProhibitionProto(p)).thenReturn(proto);
+				pu.when(() -> ProtoUtil.toProhibitionProto(p, pap.query())).thenReturn(proto);
 
 				service.getInheritedProhibitions(request, observer);
 
@@ -1396,7 +1411,7 @@ public class PolicyQueryServiceTest {
 			});
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
-				pu.when(() -> ProtoUtil.toProhibitionProto(p)).thenReturn(proto);
+				pu.when(() -> ProtoUtil.toProhibitionProto(p, pap.query())).thenReturn(proto);
 
 				service.getProhibitionsWithContainer(request, observer);
 
@@ -1470,9 +1485,9 @@ public class PolicyQueryServiceTest {
 			verify(obligationsQueryAdjudicator).getObligations();
 
 			ObligationProto proto1 = ObligationProto.newBuilder()
-					.setName("test").setAuthorId(1L).setPml("pml1").build();
+					.setName("test").setAuthor(testNode(1L)).setPml("pml1").build();
 			ObligationProto proto2 = ObligationProto.newBuilder()
-					.setName("test").setAuthorId(2L).setPml("pml2").build();
+					.setName("test").setAuthor(testNode(2L)).setPml("pml2").build();
 			ObligationListResponse expected = ObligationListResponse.newBuilder()
 					.addObligations(proto1)
 					.addObligations(proto2)
@@ -1533,7 +1548,7 @@ public class PolicyQueryServiceTest {
 			verify(obligationsQueryAdjudicator).getObligation(request.getName());
 
 			ObligationProto expected = ObligationProto.newBuilder()
-					.setName("test").setAuthorId(1L).setPml("pml").build();
+					.setName("test").setAuthor(testNode(1L)).setPml("pml").build();
 			verify(observer).onNext(expected);
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
@@ -1577,7 +1592,7 @@ public class PolicyQueryServiceTest {
 			verify(obligationsQueryAdjudicator).getObligationsWithAuthor(request.getAuthorId());
 
 			ObligationProto proto = ObligationProto.newBuilder()
-					.setName("test").setAuthorId(1L).setPml("pml").build();
+					.setName("test").setAuthor(testNode(1L)).setPml("pml").build();
 			ObligationListResponse expected = ObligationListResponse.newBuilder()
 					.addObligations(proto)
 					.build();
@@ -1621,7 +1636,7 @@ public class PolicyQueryServiceTest {
 	@Nested
 	class GetResourceOperationsTests {
 		@Mock
-		StreamObserver<AccessRightSetProto> observer;
+		StreamObserver<StringList> observer;
 
 		@Test
 		void shouldReturnResourceOperations() throws PMException {
@@ -1634,8 +1649,8 @@ public class PolicyQueryServiceTest {
 			service.getResourceOperations(Empty.getDefaultInstance(), observer);
 
 			verify(operationsQueryAdjudicator).getResourceOperations();
-			AccessRightSetProto expected = AccessRightSetProto.newBuilder()
-					.addAllSet(arset)
+			StringList expected = StringList.newBuilder()
+					.addAllValues(arset)
 					.build();
 			verify(observer).onNext(expected);
 			verify(observer).onCompleted();
@@ -1652,7 +1667,7 @@ public class PolicyQueryServiceTest {
 			service.getResourceOperations(Empty.getDefaultInstance(), observer);
 
 			verify(operationsQueryAdjudicator).getResourceOperations();
-			verify(observer).onNext(AccessRightSetProto.newBuilder().build());
+			verify(observer).onNext(StringList.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -1863,7 +1878,7 @@ public class PolicyQueryServiceTest {
 	class ComputePrivilegesTests {
 
 		@Mock
-		private StreamObserver<AccessRightSetProto> observer;
+		private StreamObserver<StringList> observer;
 
 		@Test
 		void shouldReturnPrivilegesSet() throws PMException {
@@ -1887,8 +1902,8 @@ public class PolicyQueryServiceTest {
 
 			verify(accessQueryAdjudicator).computePrivileges(userContext, targetContext);
 			verify(observer).onNext(
-					AccessRightSetProto.newBuilder()
-							.addAllSet(privs)
+					StringList.newBuilder()
+							.addAllValues(privs)
 							.build()
 			);
 			verify(observer).onCompleted();
@@ -1914,7 +1929,7 @@ public class PolicyQueryServiceTest {
 			service.computePrivileges(request, observer);
 
 			verify(accessQueryAdjudicator).computePrivileges(userContext, targetContext);
-			verify(observer).onNext(AccessRightSetProto.newBuilder().build());
+			verify(observer).onNext(StringList.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -1935,7 +1950,7 @@ public class PolicyQueryServiceTest {
 	class ComputeDeniedPrivilegesTests {
 
 		@Mock
-		private StreamObserver<AccessRightSetProto> observer;
+		private StreamObserver<StringList> observer;
 
 		@Test
 		void shouldReturnDeniedPrivileges() throws PMException {
@@ -1958,8 +1973,8 @@ public class PolicyQueryServiceTest {
 
 			verify(accessQueryAdjudicator).computeDeniedPrivileges(userContext, targetContext);
 			verify(observer).onNext(
-					AccessRightSetProto.newBuilder()
-							.addAllSet(List.of("test"))
+					StringList.newBuilder()
+							.addAllValues(List.of("test"))
 							.build()
 			);
 			verify(observer).onCompleted();
@@ -1985,7 +2000,7 @@ public class PolicyQueryServiceTest {
 			service.computeDeniedPrivileges(request, observer);
 
 			verify(accessQueryAdjudicator).computeDeniedPrivileges(userContext, targetContext);
-			verify(observer).onNext(AccessRightSetProto.newBuilder().build());
+			verify(observer).onNext(StringList.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -2027,8 +2042,7 @@ public class PolicyQueryServiceTest {
 
 			verify(accessQueryAdjudicator).computeCapabilityList(userContext);
 			AccessQueryMappingResponse expected = AccessQueryMappingResponse.newBuilder()
-					.putAllMap(Map.of(1L,
-					                  AccessRightSetProto.newBuilder().addAllSet(List.of("test")).build()))
+					.putAllMap(Map.of(1L, AccessQueryMappingEntry.newBuilder().addArset("test").setNode(testNode(1)).build()))
 					.build();
 			verify(observer).onNext(expected);
 			verify(observer).onCompleted();
@@ -2092,8 +2106,7 @@ public class PolicyQueryServiceTest {
 
 			verify(accessQueryAdjudicator).computeACL(targetContext);
 			AccessQueryMappingResponse expected = AccessQueryMappingResponse.newBuilder()
-					.putAllMap(Map.of(1L,
-					                  AccessRightSetProto.newBuilder().addAllSet(List.of("test")).build()))
+					.putAllMap(Map.of(1L, AccessQueryMappingEntry.newBuilder().addArset("test").setNode(testNode(1)).build()))
 					.build();
 			verify(observer).onNext(expected);
 			verify(observer).onCompleted();
@@ -2158,8 +2171,7 @@ public class PolicyQueryServiceTest {
 
 			verify(accessQueryAdjudicator).computeDestinationAttributes(userContext);
 			AccessQueryMappingResponse expected = AccessQueryMappingResponse.newBuilder()
-					.putAllMap(Map.of(1L,
-					                  AccessRightSetProto.newBuilder().addAllSet(List.of("test")).build()))
+					.putAllMap(Map.of(1L, AccessQueryMappingEntry.newBuilder().addArset("test").setNode(testNode(1)).build()))
 					.build();
 			verify(observer).onNext(expected);
 			verify(observer).onCompleted();
@@ -2243,7 +2255,7 @@ public class PolicyQueryServiceTest {
 
 				SubgraphPrivilegesProto expected = SubgraphPrivilegesProto.newBuilder()
 						.setNode(nodeProto)
-						.setArset(AccessRightSetProto.newBuilder().addSet("read").build())
+						.addAllArset(List.of("read"))
 						.build();
 				verify(observer).onNext(expected);
 				verify(observer).onCompleted();
@@ -2257,11 +2269,11 @@ public class PolicyQueryServiceTest {
 			Node childNode  = mock(Node.class);
 			var childModel = new SubgraphPrivileges(childNode,
 			                                        new AccessRightSet("read"),
-			                                        List.of()
+			                                        new ArrayList<>()
 			);
 			var parentModel = new SubgraphPrivileges(parentNode,
 			                                         new AccessRightSet("read"),
-			                                         List.of(childModel)
+			                                         new ArrayList<>(List.of(childModel))
 			);
 
 			UserContext userCtx = mock(UserContext.class);
@@ -2291,11 +2303,11 @@ public class PolicyQueryServiceTest {
 
 				SubgraphPrivilegesProto expectedChild = SubgraphPrivilegesProto.newBuilder()
 						.setNode(childProto)
-						.setArset(AccessRightSetProto.newBuilder().addSet("read").build())
+						.addAllArset(List.of("read"))
 						.build();
 				SubgraphPrivilegesProto expected = SubgraphPrivilegesProto.newBuilder()
 						.setNode(parentProto)
-						.setArset(AccessRightSetProto.newBuilder().addSet("read").build())
+						.addAllArset(List.of("read"))
 						.addAscendants(expectedChild)
 						.build();
 				verify(observer).onNext(expected);
@@ -2336,11 +2348,11 @@ public class PolicyQueryServiceTest {
 			NodeProto p2 = NodeProto.newBuilder().setName("n2").build();
 			NodePrivilege np1 = NodePrivilege.newBuilder()
 					.setNode(p1)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("read")).build())
+					.addAllArset(List.of("read"))
 					.build();
 			NodePrivilege np2 = NodePrivilege.newBuilder()
 					.setNode(p2)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("write")).build())
+					.addAllArset(List.of("write"))
 					.build();
 
 			UserContext userCtx = mock(UserContext.class);
@@ -2430,11 +2442,11 @@ public class PolicyQueryServiceTest {
 			NodeProto p2 = NodeProto.newBuilder().setName("n2").build();
 			NodePrivilege np1 = NodePrivilege.newBuilder()
 					.setNode(p1)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("create")).build())
+					.addAllArset(List.of("create"))
 					.build();
 			NodePrivilege np2 = NodePrivilege.newBuilder()
 					.setNode(p2)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("delete")).build())
+					.addAllArset(List.of("delete"))
 					.build();
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
@@ -2514,7 +2526,7 @@ public class PolicyQueryServiceTest {
 		void shouldReturnExplainResponse() throws PMException {
 			Explain explainModel = mock(Explain.class);
 			ExplainResponse expectedResponse = ExplainResponse.newBuilder()
-					.setPrivileges(AccessRightSetProto.newBuilder().addSet("x").build())
+					.addPrivileges("read")
 					.build();
 
 			UserContext userCtx = mock(UserContext.class);
@@ -2531,7 +2543,7 @@ public class PolicyQueryServiceTest {
 							.thenReturn(explainModel);
 				});
 
-				pu.when(() -> ProtoUtil.buildExplainResponse(explainModel))
+				pu.when(() -> ProtoUtil.buildExplainResponse(explainModel, pap.query()))
 						.thenReturn(expectedResponse);
 
 				service.explain(request, observer);
@@ -2576,11 +2588,11 @@ public class PolicyQueryServiceTest {
 			NodeProto p2 = NodeProto.newBuilder().setName("n2").build();
 			NodePrivilege np1 = NodePrivilege.newBuilder()
 					.setNode(p1)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("read")).build())
+					.addAllArset(List.of("read"))
 					.build();
 			NodePrivilege np2 = NodePrivilege.newBuilder()
 					.setNode(p2)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("write")).build())
+					.addAllArset(List.of("write"))
 					.build();
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
@@ -2645,7 +2657,7 @@ public class PolicyQueryServiceTest {
 	@Nested
 	class SelfComputePrivilegesTests {
 		@Mock
-		private StreamObserver<AccessRightSetProto> observer;
+		private StreamObserver<StringList> observer;
 
 		private final TargetContextProto request =
 				TargetContextProto.newBuilder().setId(1).build();
@@ -2667,8 +2679,8 @@ public class PolicyQueryServiceTest {
 				service.selfComputePrivileges(request, observer);
 
 					verify(selfAccessQueryAdjudicator).computePrivileges(targetCtx);
-				AccessRightSetProto expected = AccessRightSetProto.newBuilder()
-						.addAllSet(privs)
+				StringList expected = StringList.newBuilder()
+						.addAllValues(privs)
 						.build();
 				verify(observer).onNext(expected);
 				verify(observer).onCompleted();
@@ -2694,7 +2706,7 @@ public class PolicyQueryServiceTest {
 				service.selfComputePrivileges(request, observer);
 
 					verify(selfAccessQueryAdjudicator).computePrivileges(targetCtx);
-				verify(observer).onNext(AccessRightSetProto.newBuilder().build());
+				verify(observer).onNext(StringList.newBuilder().build());
 				verify(observer).onCompleted();
 				verifyNoMoreInteractions(observer);
 			}
@@ -2742,7 +2754,7 @@ public class PolicyQueryServiceTest {
 						.computeSubgraphPrivileges(request.getRoot());
 				SubgraphPrivilegesProto expected = SubgraphPrivilegesProto.newBuilder()
 						.setNode(nodeProto)
-						.setArset(AccessRightSetProto.newBuilder().addSet("read").build())
+						.addAllArset(List.of("read"))
 						.build();
 				verify(observer).onNext(expected);
 				verify(observer).onCompleted();
@@ -2754,10 +2766,10 @@ public class PolicyQueryServiceTest {
 		void shouldReturnNestedNodes() throws PMException {
 			Node parent = mock(Node.class), child = mock(Node.class);
 			var childModel = new SubgraphPrivileges(child,
-			                                        new AccessRightSet("read"), Collections.emptyList()
+			                                        new AccessRightSet("read"), new ArrayList<>()
 			);
 			var parentModel = new SubgraphPrivileges(parent,
-			                                         new AccessRightSet("read"), List.of(childModel)
+			                                         new AccessRightSet("read"), new ArrayList<>(List.of(childModel))
 			);
 
 			stubAdjudicatorTx(adjudicator -> {
@@ -2779,11 +2791,11 @@ public class PolicyQueryServiceTest {
 						.computeSubgraphPrivileges(request.getRoot());
 				SubgraphPrivilegesProto expectedChild = SubgraphPrivilegesProto.newBuilder()
 						.setNode(childProto)
-						.setArset(AccessRightSetProto.newBuilder().addSet("read").build())
+						.addAllArset(List.of("read"))
 						.build();
 				SubgraphPrivilegesProto expected = SubgraphPrivilegesProto.newBuilder()
 						.setNode(parentProto)
-						.setArset(AccessRightSetProto.newBuilder().addSet("read").build())
+						.addAllArset(List.of("read"))
 						.addAscendants(expectedChild)
 						.build();
 				verify(observer).onNext(expected);
@@ -2827,11 +2839,11 @@ public class PolicyQueryServiceTest {
 			NodeProto p2 = NodeProto.newBuilder().setName("t2").build();
 			NodePrivilege np1 = NodePrivilege.newBuilder()
 					.setNode(p1)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("create")).build())
+					.addAllArset(List.of("create"))
 					.build();
 			NodePrivilege np2 = NodePrivilege.newBuilder()
 					.setNode(p2)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("delete")).build())
+					.addAllArset(List.of("delete"))
 					.build();
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
@@ -2906,11 +2918,11 @@ public class PolicyQueryServiceTest {
 			NodeProto p2 = NodeProto.newBuilder().setName("t2").build();
 			NodePrivilege np1 = NodePrivilege.newBuilder()
 					.setNode(p1)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("create")).build())
+					.addAllArset(List.of("create"))
 					.build();
 			NodePrivilege np2 = NodePrivilege.newBuilder()
 					.setNode(p2)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("delete")).build())
+					.addAllArset(List.of("delete"))
 					.build();
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
@@ -2983,11 +2995,11 @@ public class PolicyQueryServiceTest {
 			NodeProto p2 = NodeProto.newBuilder().setName("B").build();
 			NodePrivilege np1 = NodePrivilege.newBuilder()
 					.setNode(p1)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("read")).build())
+					.addAllArset(List.of("read"))
 					.build();
 			NodePrivilege np2 = NodePrivilege.newBuilder()
 					.setNode(p2)
-					.setArset(AccessRightSetProto.newBuilder().addAllSet(List.of("write")).build())
+					.addAllArset(List.of("write"))
 					.build();
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {

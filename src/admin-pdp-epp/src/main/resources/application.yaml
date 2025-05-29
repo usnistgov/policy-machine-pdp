@@ -1,15 +1,16 @@
 grpc:
   server:
     port: 50052
+    address: "::"
 pm:
   pdp:
     admin:
-      bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/bootstrap.pml"
+      bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/bootstrap2.json"
       bootstrap-user: "u1"
-      neo4j-db-path: "/tmp/neo4j"
+      neo4j-db-path: "neo4j/data"
       esdb-consumer-group: admin-pdp-epp-cg
       snapshot-interval: 1000
-      shutdown-after-bootstrap: true
+      shutdown-after-bootstrap: false
     esdb:
       hostname: localhost
       port: 2113

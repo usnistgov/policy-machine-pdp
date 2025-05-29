@@ -55,9 +55,7 @@ public class SubscriptionService {
 
     @PostConstruct
     public void initSubscription() {
-        logger.info("Initializing persistent subscription to event store");
         startSubscription();
-        logger.info("Persistent subscription initialized");
     }
 
     @Pointcut("execution(* gov.nist.csd.pm.pdp.admin.eventstore.PolicyEventPersistentSubscriptionListener.onCancelled(..))")
@@ -72,7 +70,7 @@ public class SubscriptionService {
 
     public void startSubscription() {
         retry.executeRunnable(() -> {
-            logger.info("Attempting to retry subscription...");
+            logger.info("Starting persistent subscription...");
             try {
                 subscribeToStream();
                 logger.info("Persistent subscription up");
@@ -132,13 +130,13 @@ public class SubscriptionService {
                 .get();
 
         if(info.isPresent()) {
-            Optional<Long> lastCheckpointedEventRevision = info.get().getStats().getLastCheckpointedEventRevision();
-            if (lastCheckpointedEventRevision.isPresent()) {
-                long lastCheckpointedRevisionValue = lastCheckpointedEventRevision.get();
-                logger.info("lastCheckpointedEventRevision is {}", lastCheckpointedRevisionValue);
+            Optional<Long> lastKnownEventRevision = info.get().getStats().getLastKnownEventRevision();
+            if (lastKnownEventRevision.isPresent()) {
+                long lastCheckpointedRevisionValue = lastKnownEventRevision.get();
+                logger.info("lastKnownEventRevision is {}", lastCheckpointedRevisionValue);
                 currentRevisionService.set(lastCheckpointedRevisionValue);
             } else {
-                logger.info("lastCheckpointedEventRevision not found for stream={} and group={}", eventStream, group);
+                logger.info("lastKnownEventRevision not found for stream={} and group={}", eventStream, group);
             }
         } else {
             logger.error("Getting info on stream={} and group={} returned null, indicating an error with the subscription.",

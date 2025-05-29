@@ -1,6 +1,8 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
+import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
+import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pdp.adjudication.AdjudicationResponse;
 import gov.nist.csd.pm.core.pdp.adjudication.Decision;
 import gov.nist.csd.pm.pdp.proto.adjudication.*;
@@ -24,7 +26,7 @@ class AdjudicationServiceTest {
 	void setUp() {
 		adjudicator     = mock(Adjudicator.class);
 
-		service = new AdjudicationService(adjudicator);
+		service = new AdjudicationService(adjudicator, mock(Neo4jEmbeddedPAP.class));
 	}
 
 	@Test
