@@ -17,12 +17,14 @@ import gov.nist.csd.pm.core.pap.obligation.Obligation;
 import gov.nist.csd.pm.core.pap.query.model.explain.Explain;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.Subgraph;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.SubgraphPrivileges;
+import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.pdp.proto.model.ExplainProto;
 import gov.nist.csd.pm.pdp.proto.model.NodeProto;
 import gov.nist.csd.pm.pdp.proto.model.ProhibitionProto;
 import gov.nist.csd.pm.pdp.proto.model.StringList;
 import gov.nist.csd.pm.pdp.proto.query.*;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 
@@ -41,587 +43,821 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 	@Override
 	public void nodeExists(IdOrNameQuery request, StreamObserver<BooleanResponse> responseObserver) {
-		boolean exists = adjudicator.adjudicateQuery(pdpTx -> pdpTx.query().graph().nodeExists(request.getId()));
+		try {
+			boolean exists = adjudicator.adjudicateQuery(pdpTx -> pdpTx.query().graph().nodeExists(request.getId()));
 
-		responseObserver.onNext(BooleanResponse.newBuilder().setResult(exists).build());
-		responseObserver.onCompleted();
+			responseObserver.onNext(BooleanResponse.newBuilder().setResult(exists).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void getNode(IdOrNameQuery request, StreamObserver<NodeProto> responseObserver) {
-		Node node =  adjudicator.adjudicateQuery(pdpTx -> switch (request.getIdOrNameCase()) {
-			case ID -> pdpTx.query().graph().getNodeById(request.getId());
-			case NAME -> pdpTx.query().graph().getNodeByName(request.getName());
-			case IDORNAME_NOT_SET -> throw new PMException("IdOrName not set");
-		});
+		try {
+			Node node =  adjudicator.adjudicateQuery(pdpTx -> switch (request.getIdOrNameCase()) {
+				case ID -> pdpTx.query().graph().getNodeById(request.getId());
+				case NAME -> pdpTx.query().graph().getNodeByName(request.getName());
+				case IDORNAME_NOT_SET -> throw new PMException("IdOrName not set");
+			});
 
-		responseObserver.onNext(ProtoUtil.toNodeProto(node));
-		responseObserver.onCompleted();
+			responseObserver.onNext(ProtoUtil.toNodeProto(node));
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void getNodeId(IdOrNameQuery request, StreamObserver<NodeIdResponse> responseObserver) {
-		long id = adjudicator.adjudicateQuery(pdpTx -> pdpTx.query().graph().getNodeId(request.getName()));
+		try {
+			long id = adjudicator.adjudicateQuery(pdpTx -> pdpTx.query().graph().getNodeId(request.getName()));
 
-		responseObserver.onNext(NodeIdResponse.newBuilder().setId(id).build());
-		responseObserver.onCompleted();
-
+			responseObserver.onNext(NodeIdResponse.newBuilder().setId(id).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void searchNodes(SearchQuery request, StreamObserver<NodeList> responseObserver) {
-		Collection<Node> nodes = adjudicator.adjudicateQuery(pdpTx -> pdpTx.query().graph().search(
-				NodeType.toNodeType(request.getType().name()),
-				request.getPropertiesMap()
-		));
+		try {
+			Collection<Node> nodes = adjudicator.adjudicateQuery(pdpTx -> pdpTx.query().graph().search(
+					NodeType.toNodeType(request.getType().name()),
+					request.getPropertiesMap()
+			));
 
-		List<NodeProto> nodeProtos = new ArrayList<>();
-		for (Node node : nodes) {
-			nodeProtos.add(ProtoUtil.toNodeProto(node));
+			List<NodeProto> nodeProtos = new ArrayList<>();
+			for (Node node : nodes) {
+				nodeProtos.add(ProtoUtil.toNodeProto(node));
+			}
+
+			responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeProtos).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
 		}
-
-		responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeProtos).build());
-		responseObserver.onCompleted();
 	}
 
 	@Override
 	public void getPolicyClasses(Empty request, StreamObserver<NodeList> responseObserver) {
-		Collection<Long> pcs = adjudicator.adjudicateQuery(pdpTx -> pdpTx.query().graph().getPolicyClasses());
-		List<NodeProto> nodeProtos = nodeIdsToNodeProtoList(pcs);
+		try {
+			Collection<Long> pcs = adjudicator.adjudicateQuery(pdpTx -> pdpTx.query().graph().getPolicyClasses());
+			List<NodeProto> nodeProtos = nodeIdsToNodeProtoList(pcs);
 
-		responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeProtos).build());
-		responseObserver.onCompleted();
-
+			responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeProtos).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void getAdjacentDescendants(GetAdjacentAssignmentsQuery request,
 	                                   StreamObserver<NodeList> responseObserver) {
-		Collection<Long> descs = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().graph().getAdjacentDescendants(request.getNodeId());
-		});
-		List<NodeProto> nodeProtos = nodeIdsToNodeProtoList(descs);
+		try {
+			Collection<Long> descs = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().graph().getAdjacentDescendants(request.getNodeId());
+			});
+			List<NodeProto> nodeProtos = nodeIdsToNodeProtoList(descs);
 
-		responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeProtos).build());
-		responseObserver.onCompleted();
-
+			responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeProtos).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void getAdjacentAscendants(GetAdjacentAssignmentsQuery request,
 	                                  StreamObserver<NodeList> responseObserver) {
-		Collection<Long> ascs = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().graph().getAdjacentAscendants(request.getNodeId());
-		});
-		List<NodeProto> nodeProtos = nodeIdsToNodeProtoList(ascs);
+		try {
+			Collection<Long> ascs = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().graph().getAdjacentAscendants(request.getNodeId());
+			});
+			List<NodeProto> nodeProtos = nodeIdsToNodeProtoList(ascs);
 
-		responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeProtos).build());
-		responseObserver.onCompleted();
+			responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeProtos).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void getAssociationsWithSource(GetAssociationsQuery request,
 	                                      StreamObserver<AssociationList> responseObserver) {
-		Collection<Association> associations = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().graph().getAssociationsWithSource(request.getNodeId());
-		});
+		try {
+			Collection<Association> associations = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().graph().getAssociationsWithSource(request.getNodeId());
+			});
 
-		List<AssociationProto> associationProtoList = toAssociationProtoList(associations);
+			List<AssociationProto> associationProtoList = toAssociationProtoList(associations);
 
-		responseObserver.onNext(AssociationList.newBuilder().addAllAssociations(associationProtoList).build());
-		responseObserver.onCompleted();
+			responseObserver.onNext(AssociationList.newBuilder().addAllAssociations(associationProtoList).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void getAssociationsWithTarget(GetAssociationsQuery request,
 	                                      StreamObserver<AssociationList> responseObserver) {
-		Collection<Association> associations = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().graph().getAssociationsWithTarget(request.getNodeId());
-		});
+		try {
+			Collection<Association> associations = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().graph().getAssociationsWithTarget(request.getNodeId());
+			});
 
-		List<AssociationProto> associationProtoList = toAssociationProtoList(associations);
+			List<AssociationProto> associationProtoList = toAssociationProtoList(associations);
 
-		responseObserver.onNext(AssociationList.newBuilder().addAllAssociations(associationProtoList).build());
-		responseObserver.onCompleted();
+			responseObserver.onNext(AssociationList.newBuilder().addAllAssociations(associationProtoList).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void getAscendantSubgraph(GetSubgraphQuery request, StreamObserver<SubgraphProto> responseObserver) {
-		Subgraph subgraph = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().graph().getAscendantSubgraph(request.getNodeId());
-		});
+		try {
+			Subgraph subgraph = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().graph().getAscendantSubgraph(request.getNodeId());
+			});
 
-		responseObserver.onNext(toSubgraphProto(subgraph));
-		responseObserver.onCompleted();
+			responseObserver.onNext(toSubgraphProto(subgraph));
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void getDescendantSubgraph(GetSubgraphQuery request, StreamObserver<SubgraphProto> responseObserver) {
-		Subgraph subgraph = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().graph().getDescendantSubgraph(request.getNodeId());
-		});
+		try {
+			Subgraph subgraph = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().graph().getDescendantSubgraph(request.getNodeId());
+			});
 
-		responseObserver.onNext(toSubgraphProto(subgraph));
-		responseObserver.onCompleted();
+			responseObserver.onNext(toSubgraphProto(subgraph));
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void getAttributeDescendants(GetDescendantsQuery request,
 	                                    StreamObserver<NodeList> responseObserver) {
-		Collection<Long> descs = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().graph().getAttributeDescendants(request.getNodeId());
-		});
+		try {
+			Collection<Long> descs = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().graph().getAttributeDescendants(request.getNodeId());
+			});
 
-		responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeIdsToNodeProtoList(descs)).build());
-		responseObserver.onCompleted();
-
+			responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeIdsToNodeProtoList(descs)).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void getPolicyClassDescendants(GetDescendantsQuery request,
 	                                      StreamObserver<NodeList> responseObserver) {
-		Collection<Long> descs = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().graph().getPolicyClassDescendants(request.getNodeId());
-		});
+		try {
+			Collection<Long> descs = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().graph().getPolicyClassDescendants(request.getNodeId());
+			});
 
-		responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeIdsToNodeProtoList(descs)).build());
-		responseObserver.onCompleted();
-
+			responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeIdsToNodeProtoList(descs)).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void isAscendant(IsAncestorQuery request, StreamObserver<BooleanResponse> responseObserver) {
-		boolean isAscendant = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().graph().isAscendant(request.getAscendantId(), request.getDescendantId());
-		});
+		try {
+			boolean isAscendant = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().graph().isAscendant(request.getAscendantId(), request.getDescendantId());
+			});
 
-		responseObserver.onNext(BooleanResponse.newBuilder().setResult(isAscendant).build());
-		responseObserver.onCompleted();
-
+			responseObserver.onNext(BooleanResponse.newBuilder().setResult(isAscendant).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void isDescendant(IsAncestorQuery request, StreamObserver<BooleanResponse> responseObserver) {
-		boolean isDescendant = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().graph().isDescendant(request.getAscendantId(), request.getDescendantId());
-		});
+		try {
+			boolean isDescendant = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().graph().isDescendant(request.getAscendantId(), request.getDescendantId());
+			});
 
-		responseObserver.onNext(BooleanResponse.newBuilder().setResult(isDescendant).build());
-		responseObserver.onCompleted();
+			responseObserver.onNext(BooleanResponse.newBuilder().setResult(isDescendant).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void getProhibitions(Empty request, StreamObserver<ProhibitionList> responseObserver) {
-		Collection<Prohibition> prohibitions = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().prohibitions().getProhibitions();
-		});
+		try {
+			Collection<Prohibition> prohibitions = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().prohibitions().getProhibitions();
+			});
 
-		List<ProhibitionProto> prohibitionProtos = new ArrayList<>();
-		for (Prohibition prohibition : prohibitions) {
-			prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
+			List<ProhibitionProto> prohibitionProtos = new ArrayList<>();
+			for (Prohibition prohibition : prohibitions) {
+				prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
+			}
+
+			responseObserver.onNext(ProhibitionList.newBuilder().addAllProhibitions(prohibitionProtos).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
 		}
-
-		responseObserver.onNext(ProhibitionList.newBuilder().addAllProhibitions(prohibitionProtos).build());
-		responseObserver.onCompleted();
-
 	}
 
 	@Override
 	public void getProhibitionsBySubject(GetProhibitionBySubjectQuery request,
 	                                     StreamObserver<ProhibitionList> responseObserver) {
-		Collection<Prohibition> prohibitions = adjudicator.adjudicateQuery(pdpTx -> {
-			ProhibitionSubject subject = switch (request.getSubjectCase()) {
-				case NODE_ID -> new ProhibitionSubject(request.getNodeId());
-				case PROCESS -> new ProhibitionSubject(request.getProcess());
-				case SUBJECT_NOT_SET -> throw new PMException("subject not set");
-			};
+		try {
+			Collection<Prohibition> prohibitions = adjudicator.adjudicateQuery(pdpTx -> {
+				ProhibitionSubject subject = switch (request.getSubjectCase()) {
+					case NODE_ID -> new ProhibitionSubject(request.getNodeId());
+					case PROCESS -> new ProhibitionSubject(request.getProcess());
+					case SUBJECT_NOT_SET -> throw new PMException("subject not set");
+				};
 
-			return pdpTx.query().prohibitions().getProhibitionsWithSubject(subject);
-		});
+				return pdpTx.query().prohibitions().getProhibitionsWithSubject(subject);
+			});
 
-		List<ProhibitionProto> prohibitionProtos = new ArrayList<>();
-		for (Prohibition prohibition : prohibitions) {
-			prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
+			List<ProhibitionProto> prohibitionProtos = new ArrayList<>();
+			for (Prohibition prohibition : prohibitions) {
+				prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
+			}
+
+			responseObserver.onNext(ProhibitionList.newBuilder().addAllProhibitions(prohibitionProtos).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
 		}
-
-		responseObserver.onNext(ProhibitionList.newBuilder().addAllProhibitions(prohibitionProtos).build());
-		responseObserver.onCompleted();
-
 	}
 
 	@Override
 	public void getProhibition(GetByNameQuery request, StreamObserver<ProhibitionProto> responseObserver) {
-		Prohibition prohibition = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().prohibitions().getProhibition(request.getName());
-		});
+		try {
+			Prohibition prohibition = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().prohibitions().getProhibition(request.getName());
+			});
 
-		responseObserver.onNext(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
-		responseObserver.onCompleted();
-
+			responseObserver.onNext(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void getInheritedProhibitions(GetInheritedProhibitionsQuery request,
 	                                     StreamObserver<ProhibitionList> responseObserver) {
-		Collection<Prohibition> prohibitions = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().prohibitions().getInheritedProhibitionsFor(request.getSubjectId());
-		});
+		try {
+			Collection<Prohibition> prohibitions = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().prohibitions().getInheritedProhibitionsFor(request.getSubjectId());
+			});
 
+			List<ProhibitionProto> prohibitionProtos = new ArrayList<>();
+			for (Prohibition prohibition : prohibitions) {
+				prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
+			}
 
-		List<ProhibitionProto> prohibitionProtos = new ArrayList<>();
-		for (Prohibition prohibition : prohibitions) {
-			prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
+			responseObserver.onNext(ProhibitionList.newBuilder().addAllProhibitions(prohibitionProtos).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
 		}
-
-		responseObserver.onNext(ProhibitionList.newBuilder().addAllProhibitions(prohibitionProtos).build());
-		responseObserver.onCompleted();
-
 	}
 
 	@Override
 	public void getProhibitionsWithContainer(GetProhibitionsWithContainerQuery request,
 	                                         StreamObserver<ProhibitionList> responseObserver) {
-		Collection<Prohibition> prohibitions = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().prohibitions().getProhibitionsWithContainer(request.getContainerId());
-		});
+		try {
+			Collection<Prohibition> prohibitions = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().prohibitions().getProhibitionsWithContainer(request.getContainerId());
+			});
 
-		List<ProhibitionProto> prohibitionProtos = new ArrayList<>();
-		for (Prohibition prohibition : prohibitions) {
-			prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
+			List<ProhibitionProto> prohibitionProtos = new ArrayList<>();
+			for (Prohibition prohibition : prohibitions) {
+				prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
+			}
+
+			responseObserver.onNext(ProhibitionList.newBuilder().addAllProhibitions(prohibitionProtos).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
 		}
-
-		responseObserver.onNext(ProhibitionList.newBuilder().addAllProhibitions(prohibitionProtos).build());
-		responseObserver.onCompleted();
-
 	}
 
 	@Override
 	public void getObligations(Empty request, StreamObserver<ObligationList> responseObserver) {
-		Collection<Obligation> obligations = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().obligations().getObligations();
-		});
+		try {
+			Collection<Obligation> obligations = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().obligations().getObligations();
+			});
 
-		responseObserver.onNext(ObligationList.newBuilder().addAllObligations(toObligationProtoList(obligations)).build());
-		responseObserver.onCompleted();
+			responseObserver.onNext(ObligationList.newBuilder().addAllObligations(toObligationProtoList(obligations)).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void getObligation(GetByNameQuery request, StreamObserver<ObligationProto> responseObserver) {
-		Obligation obligation = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().obligations().getObligation(request.getName());
-		});
-
 		try {
+			Obligation obligation = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().obligations().getObligation(request.getName());
+			});
+
 			responseObserver.onNext(ProtoUtil.toObligationProto(obligation, pap));
 			responseObserver.onCompleted();
-		} catch (PMException e) {
-			throw new RuntimeException(e);
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
 		}
 	}
 
 	@Override
 	public void getObligationsByAuthor(GetObligationByAuthorQuery request,
 	                                   StreamObserver<ObligationList> responseObserver) {
-		Collection<Obligation> obligations = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().obligations().getObligationsWithAuthor(request.getAuthorId());
-		});
+		try {
+			Collection<Obligation> obligations = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().obligations().getObligationsWithAuthor(request.getAuthorId());
+			});
 
-		responseObserver.onNext(ObligationList.newBuilder().addAllObligations(toObligationProtoList(obligations)).build());
-		responseObserver.onCompleted();
+			responseObserver.onNext(ObligationList.newBuilder().addAllObligations(toObligationProtoList(obligations)).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void getResourceOperations(Empty request, StreamObserver<StringList> responseObserver) {
-		AccessRightSet resourceOps = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().operations().getResourceOperations();
-		});
+		try {
+			AccessRightSet resourceOps = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().operations().getResourceOperations();
+			});
 
-		responseObserver.onNext(StringList.newBuilder().addAllValues(resourceOps).build());
-		responseObserver.onCompleted();
-
+			responseObserver.onNext(StringList.newBuilder().addAllValues(resourceOps).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void getAdminOperationSignatures(Empty request,
 	                                        StreamObserver<SignatureList> responseObserver) {
-		Collection<Operation<?, ?>> adminOperations = adjudicator.adjudicateQuery(pdpTx -> {
-			Collection<String> names = pdpTx.query().operations().getAdminOperationNames();
-			List<Operation<?, ?>> operations = new ArrayList<>();
-			for (String name : names) {
-				Operation<?, ?> op = pap.query().operations().getAdminOperation(name);
-				operations.add(op);
+		try {
+			Collection<Operation<?, ?>> adminOperations = adjudicator.adjudicateQuery(pdpTx -> {
+				Collection<String> names = pdpTx.query().operations().getAdminOperationNames();
+				List<Operation<?, ?>> operations = new ArrayList<>();
+				for (String name : names) {
+					Operation<?, ?> op = pap.query().operations().getAdminOperation(name);
+					operations.add(op);
+				}
+				return operations;
+			});
+
+			List<Signature> signatures = new ArrayList<>();
+			for (Operation<?, ?> op : adminOperations) {
+				signatures.add(Signature.newBuilder()
+						               .setName(op.getName())
+						               .addAllParams(convertParamsToProtoParams(op.getFormalParameters()))
+						               .build());
 			}
-			return operations;
-		});
 
-		List<Signature> signatures = new ArrayList<>();
-		for (Operation<?, ?> op : adminOperations) {
-			signatures.add(Signature.newBuilder()
-					               .setName(op.getName())
-					               .addAllParams(convertParamsToProtoParams(op.getFormalParameters()))
-					               .build());
+			SignatureList signatureList = SignatureList.newBuilder()
+					.addAllSignatures(signatures)
+					.build();
+			responseObserver.onNext(signatureList);
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
 		}
-
-		SignatureList signatureList = SignatureList.newBuilder()
-				.addAllSignatures(signatures)
-				.build();
-		responseObserver.onNext(signatureList);
-		responseObserver.onCompleted();
 	}
 
 	@Override
 	public void getAdminOperationSignature(GetByNameQuery request, StreamObserver<Signature> responseObserver) {
-		Operation<?, ?> operation = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().operations().getAdminOperation(request.getName());
-		});
+		try {
+			Operation<?, ?> operation = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().operations().getAdminOperation(request.getName());
+			});
 
-		Signature signature = Signature.newBuilder()
-				.setName(operation.getName())
-				.addAllParams(convertParamsToProtoParams(operation.getFormalParameters()))
-				.build();
+			Signature signature = Signature.newBuilder()
+					.setName(operation.getName())
+					.addAllParams(convertParamsToProtoParams(operation.getFormalParameters()))
+					.build();
 
-		responseObserver.onNext(signature);
-		responseObserver.onCompleted();
+			responseObserver.onNext(signature);
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
-
 
 	@Override
 	public void getAdminRoutineSignatures(Empty request,
 	                                      StreamObserver<SignatureList> responseObserver) {
-		Collection<Routine<?, ?>> adminRoutines = adjudicator.adjudicateQuery(pdpTx -> {
-			Collection<String> names = pdpTx.query().routines().getAdminRoutineNames();
-			List<Routine<?, ?>> routines = new ArrayList<>();
-			for (String name : names) {
-				Routine<?, ?> op = pap.query().routines().getAdminRoutine(name);
-				routines.add(op);
+		try {
+			Collection<Routine<?, ?>> adminRoutines = adjudicator.adjudicateQuery(pdpTx -> {
+				Collection<String> names = pdpTx.query().routines().getAdminRoutineNames();
+				List<Routine<?, ?>> routines = new ArrayList<>();
+				for (String name : names) {
+					Routine<?, ?> op = pap.query().routines().getAdminRoutine(name);
+					routines.add(op);
+				}
+				return routines;
+			});
+
+			List<Signature> signatures = new ArrayList<>();
+			for (Routine<?, ?> routine : adminRoutines) {
+				signatures.add(Signature.newBuilder()
+						               .setName(routine.getName())
+						               .addAllParams(convertParamsToProtoParams(routine.getFormalParameters()))
+						               .build());
 			}
-			return routines;
-		});
 
-		List<Signature> signatures = new ArrayList<>();
-		for (Routine<?, ?> routine : adminRoutines) {
-			signatures.add(Signature.newBuilder()
-					               .setName(routine.getName())
-					               .addAllParams(convertParamsToProtoParams(routine.getFormalParameters()))
-					               .build());
+			SignatureList signatureList = SignatureList.newBuilder()
+					.addAllSignatures(signatures)
+					.build();
+			responseObserver.onNext(signatureList);
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
 		}
-
-		SignatureList signatureList = SignatureList.newBuilder()
-				.addAllSignatures(signatures)
-				.build();
-		responseObserver.onNext(signatureList);
-		responseObserver.onCompleted();
 	}
 
 	@Override
 	public void getAdminRoutineSignature(GetByNameQuery request, StreamObserver<Signature> responseObserver) {
-		Routine<?, ?> routine = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().routines().getAdminRoutine(request.getName());
-		});
+		try {
+			Routine<?, ?> routine = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().routines().getAdminRoutine(request.getName());
+			});
 
-		Signature signature = Signature.newBuilder()
-				.setName(routine.getName())
-				.addAllParams(convertParamsToProtoParams(routine.getFormalParameters()))
-				.build();
+			Signature signature = Signature.newBuilder()
+					.setName(routine.getName())
+					.addAllParams(convertParamsToProtoParams(routine.getFormalParameters()))
+					.build();
 
-		responseObserver.onNext(signature);
-		responseObserver.onCompleted();
+			responseObserver.onNext(signature);
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void computePrivileges(ComputePrivilegesQuery request,
 	                              StreamObserver<StringList> responseObserver) {
-		AccessRightSet privs = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().access().computePrivileges(
-					ProtoUtil.fromUserContextProto(request.getUserCtx()),
-					ProtoUtil.fromTargetContextProto(request.getTargetCtx())
-			);
-		});
+		try {
+			AccessRightSet privs = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().access().computePrivileges(
+						ProtoUtil.fromUserContextProto(request.getUserCtx()),
+						ProtoUtil.fromTargetContextProto(request.getTargetCtx())
+				);
+			});
 
-		responseObserver.onNext(StringList.newBuilder().addAllValues(privs).build());
-		responseObserver.onCompleted();
-
+			responseObserver.onNext(StringList.newBuilder().addAllValues(privs).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void computeDeniedPrivileges(ComputeDeniedPrivilegesQuery request,
 	                                    StreamObserver<StringList> responseObserver) {
-		AccessRightSet denied = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().access().computeDeniedPrivileges(
-					ProtoUtil.fromUserContextProto(request.getUserCtx()),
-					ProtoUtil.fromTargetContextProto(request.getTargetCtx())
-			);
-		});
+		try {
+			AccessRightSet denied = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().access().computeDeniedPrivileges(
+						ProtoUtil.fromUserContextProto(request.getUserCtx()),
+						ProtoUtil.fromTargetContextProto(request.getTargetCtx())
+				);
+			});
 
-		responseObserver.onNext(StringList.newBuilder().addAllValues(denied).build());
-		responseObserver.onCompleted();
-
+			responseObserver.onNext(StringList.newBuilder().addAllValues(denied).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void computeCapabilityList(ComputeCapabilityListQuery request,
 	                                  StreamObserver<AccessQueryMapping> responseObserver) {
-		Map<Long, AccessRightSet> capList = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().access().computeCapabilityList(
-					ProtoUtil.fromUserContextProto(request.getUserCtx())
-			);
-		});
+		try {
+			Map<Long, AccessRightSet> capList = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().access().computeCapabilityList(
+						ProtoUtil.fromUserContextProto(request.getUserCtx())
+				);
+			});
 
-		Map<Long, AccessQueryMappingEntry> arsetProtoMap = toArsetProtoMap(capList);
+			Map<Long, AccessQueryMappingEntry> arsetProtoMap = toArsetProtoMap(capList);
 
-		responseObserver.onNext(AccessQueryMapping.newBuilder().putAllMap(arsetProtoMap).build());
-		responseObserver.onCompleted();
+			responseObserver.onNext(AccessQueryMapping.newBuilder().putAllMap(arsetProtoMap).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void computeACL(ComputeACLQuery request, StreamObserver<AccessQueryMapping> responseObserver) {
-		Map<Long, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().access().computeACL(
-					ProtoUtil.fromTargetContextProto(request.getTargetCtx())
-			);
-		});
+		try {
+			Map<Long, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().access().computeACL(
+						ProtoUtil.fromTargetContextProto(request.getTargetCtx())
+				);
+			});
 
-		Map<Long, AccessQueryMappingEntry> arsetProtoMap = toArsetProtoMap(map);
+			Map<Long, AccessQueryMappingEntry> arsetProtoMap = toArsetProtoMap(map);
 
-		responseObserver.onNext(AccessQueryMapping.newBuilder().putAllMap(arsetProtoMap).build());
-		responseObserver.onCompleted();
+			responseObserver.onNext(AccessQueryMapping.newBuilder().putAllMap(arsetProtoMap).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void computeDestinationAttributes(ComputeDestinationAttributesQuery request,
 	                                         StreamObserver<AccessQueryMapping> responseObserver) {
-		Map<Long, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().access().computeDestinationAttributes(
-					ProtoUtil.fromUserContextProto(request.getUserCtx())
-			);
-		});
+		try {
+			Map<Long, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().access().computeDestinationAttributes(
+						ProtoUtil.fromUserContextProto(request.getUserCtx())
+				);
+			});
 
-		Map<Long, AccessQueryMappingEntry> arsetProtoMap = toArsetProtoMap(map);
+			Map<Long, AccessQueryMappingEntry> arsetProtoMap = toArsetProtoMap(map);
 
-		responseObserver.onNext(AccessQueryMapping.newBuilder().putAllMap(arsetProtoMap).build());
-		responseObserver.onCompleted();
+			responseObserver.onNext(AccessQueryMapping.newBuilder().putAllMap(arsetProtoMap).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void computeSubgraphPrivileges(AccessWithRootQuery request,
 	                                      StreamObserver<SubgraphPrivilegesProto> responseObserver) {
-		SubgraphPrivileges subgraphPrivileges = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().access().computeSubgraphPrivileges(
-					ProtoUtil.fromUserContextProto(request.getUserCtx()),
-					request.getRoot()
-			);
-		});
+		try {
+			SubgraphPrivileges subgraphPrivileges = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().access().computeSubgraphPrivileges(
+						ProtoUtil.fromUserContextProto(request.getUserCtx()),
+						request.getRoot()
+				);
+			});
 
-		responseObserver.onNext(toSubgraphPrivilegesProto(subgraphPrivileges));
-		responseObserver.onCompleted();
-
+			responseObserver.onNext(toSubgraphPrivilegesProto(subgraphPrivileges));
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void computeAdjacentAscendantPrivileges(AccessWithRootQuery request,
 	                                               StreamObserver<NodePrivilegeList> responseObserver) {
-		Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().access().computeAdjacentAscendantPrivileges(
-					ProtoUtil.fromUserContextProto(request.getUserCtx()),
-					request.getRoot()
-			);
-		});
+		try {
+			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().access().computeAdjacentAscendantPrivileges(
+						ProtoUtil.fromUserContextProto(request.getUserCtx()),
+						request.getRoot()
+				);
+			});
 
-		nodePrivilegeResponse(responseObserver, map);
+			nodePrivilegeResponse(responseObserver, map);
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void computeAdjacentDescendantPrivileges(AccessWithRootQuery request,
 	                                                StreamObserver<NodePrivilegeList> responseObserver) {
-		Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().access().computeAdjacentDescendantPrivileges(
-					ProtoUtil.fromUserContextProto(request.getUserCtx()),
-					request.getRoot()
-			);
-		});
+		try {
+			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().access().computeAdjacentDescendantPrivileges(
+						ProtoUtil.fromUserContextProto(request.getUserCtx()),
+						request.getRoot()
+				);
+			});
 
-		nodePrivilegeResponse(responseObserver, map);
+			nodePrivilegeResponse(responseObserver, map);
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void explain(ExplainQuery request, StreamObserver<ExplainProto> responseObserver) {
-		Explain explain = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().access().explain(
-					ProtoUtil.fromUserContextProto(request.getUserCtx()),
-					ProtoUtil.fromTargetContextProto(request.getTargetCtx())
-			);
-		});
+		try {
+			Explain explain = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().access().explain(
+						ProtoUtil.fromUserContextProto(request.getUserCtx()),
+						ProtoUtil.fromTargetContextProto(request.getTargetCtx())
+				);
+			});
 
-		responseObserver.onNext(ProtoUtil.buildExplainProto(explain, pap.query()));
-		responseObserver.onCompleted();
-
+			responseObserver.onNext(ProtoUtil.buildExplainProto(explain, pap.query()));
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void computePersonalObjectSystem(ComputePOSQuery request,
 	                                        StreamObserver<NodePrivilegeList> responseObserver) {
-		Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().access().computePersonalObjectSystem(
-					ProtoUtil.fromUserContextProto(request.getUserCtx())
-			);
-		});
+		try {
+			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().access().computePersonalObjectSystem(
+						ProtoUtil.fromUserContextProto(request.getUserCtx())
+				);
+			});
 
-		nodePrivilegeResponse(responseObserver, map);
+			nodePrivilegeResponse(responseObserver, map);
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void selfComputePrivileges(TargetContextProto request,
 	                                  StreamObserver<StringList> responseObserver) {
-		AccessRightSet privs = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().selfAccess().computePrivileges(
-					ProtoUtil.fromTargetContextProto(request)
-			);
-		});
+		try {
+			AccessRightSet privs = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().selfAccess().computePrivileges(
+						ProtoUtil.fromTargetContextProto(request)
+				);
+			});
 
-		responseObserver.onNext(StringList.newBuilder().addAllValues(privs).build());
-		responseObserver.onCompleted();
-
+			responseObserver.onNext(StringList.newBuilder().addAllValues(privs).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void selfComputeSubgraphPrivileges(SelfAccessWithRootQuery request,
 	                                          StreamObserver<SubgraphPrivilegesProto> responseObserver) {
-		SubgraphPrivileges subgraphPrivileges = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().selfAccess().computeSubgraphPrivileges(request.getRoot());
-		});
+		try {
+			SubgraphPrivileges subgraphPrivileges = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().selfAccess().computeSubgraphPrivileges(request.getRoot());
+			});
 
-		responseObserver.onNext(toSubgraphPrivilegesProto(subgraphPrivileges));
-		responseObserver.onCompleted();
-
+			responseObserver.onNext(toSubgraphPrivilegesProto(subgraphPrivileges));
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void selfComputeAdjacentAscendantPrivileges(SelfAccessWithRootQuery request,
 	                                                   StreamObserver<NodePrivilegeList> responseObserver) {
-		Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().selfAccess().computeAdjacentAscendantPrivileges(request.getRoot());
-		});
+		try {
+			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().selfAccess().computeAdjacentAscendantPrivileges(request.getRoot());
+			});
 
-		nodePrivilegeResponse(responseObserver, map);
+			nodePrivilegeResponse(responseObserver, map);
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void selfComputeAdjacentDescendantPrivileges(SelfAccessWithRootQuery request,
 	                                                    StreamObserver<NodePrivilegeList> responseObserver) {
-		Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().selfAccess().computeAdjacentDescendantPrivileges(request.getRoot());
-		});
+		try {
+			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().selfAccess().computeAdjacentDescendantPrivileges(request.getRoot());
+			});
 
-		nodePrivilegeResponse(responseObserver, map);
+			nodePrivilegeResponse(responseObserver, map);
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	@Override
 	public void selfComputePersonalObjectSystem(Empty request, StreamObserver<NodePrivilegeList> responseObserver) {
-		Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().selfAccess().computePersonalObjectSystem();
-		});
+		try {
+			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.query().selfAccess().computePersonalObjectSystem();
+			});
 
-		nodePrivilegeResponse(responseObserver, map);
+			nodePrivilegeResponse(responseObserver, map);
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
 	}
 
 	private SubgraphProto toSubgraphProto(Subgraph subgraph) {

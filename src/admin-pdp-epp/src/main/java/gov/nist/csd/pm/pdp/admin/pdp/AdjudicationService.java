@@ -1,8 +1,11 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
+import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.pdp.proto.adjudication.*;
 import gov.nist.csd.pm.pdp.shared.protobuf.ObjectToStruct;
+import gov.nist.csd.pm.core.common.exception.PMException;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 
@@ -33,8 +36,16 @@ public class AdjudicationService extends AdjudicationServiceGrpc.AdjudicationSer
 							.build()
 			);
 			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED
+					                         .withDescription(e.getMessage())
+					                         .withCause(e)
+					                         .asRuntimeException());
 		} catch (Exception e) {
-			responseObserver.onError(e);
+			responseObserver.onError(Status.INTERNAL
+					                         .withDescription(e.getMessage())
+					                         .withCause(e)
+					                         .asRuntimeException());
 		}
 	}
 
@@ -48,8 +59,13 @@ public class AdjudicationService extends AdjudicationServiceGrpc.AdjudicationSer
 					                        .setValue(ObjectToStruct.convert(response))
 					                        .build());
 			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED
+					                         .withDescription(e.getMessage())
+					                         .withCause(e)
+					                         .asRuntimeException());
 		} catch (Exception e) {
-			responseObserver.onError(e);
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).asRuntimeException());
 		}
 	}
 
@@ -63,8 +79,13 @@ public class AdjudicationService extends AdjudicationServiceGrpc.AdjudicationSer
 					                        .setValue(ObjectToStruct.convert(response))
 					                        .build());
 			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED
+					                         .withDescription(e.getMessage())
+					                         .withCause(e)
+					                         .asRuntimeException());
 		} catch (Exception e) {
-			responseObserver.onError(e);
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).asRuntimeException());
 		}
 	}
 
