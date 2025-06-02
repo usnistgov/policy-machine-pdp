@@ -80,7 +80,13 @@ public class Neo4jBootstrapper {
         }
 
         PolicyBootstrapper policyBootstrapper = getPolicyBootstrapper(bootstrapFilePath, data);
-        EventTrackingPAP eventTrackingPAP = new EventTrackingPAP(new NoCommitNeo4jPolicyStore(graphDb), adminFunctions);
+        NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb);
+
+        // need to start a transaction so the initial policy admin verification succeeds
+        noCommitNeo4jPolicyStore.beginTx();
+        EventTrackingPAP eventTrackingPAP = new EventTrackingPAP(noCommitNeo4jPolicyStore, adminFunctions);
+        noCommitNeo4jPolicyStore.commit();
+
         eventTrackingPAP.beginTx();
         eventTrackingPAP.bootstrap(policyBootstrapper);
         publishToEventStore(eventTrackingPAP.query().graph(), policyBootstrapper, data);
