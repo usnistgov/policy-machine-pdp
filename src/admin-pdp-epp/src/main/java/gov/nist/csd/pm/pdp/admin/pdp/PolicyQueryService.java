@@ -2,7 +2,6 @@ package gov.nist.csd.pm.pdp.admin.pdp;
 
 import com.google.protobuf.Empty;
 import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.common.exception.PMRuntimeException;
 import gov.nist.csd.pm.core.common.graph.node.Node;
 import gov.nist.csd.pm.core.common.graph.node.NodeType;
 import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
@@ -10,15 +9,15 @@ import gov.nist.csd.pm.core.common.graph.relationship.Association;
 import gov.nist.csd.pm.core.common.prohibition.Prohibition;
 import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
+import gov.nist.csd.pm.core.pap.function.arg.FormalParameter;
+import gov.nist.csd.pm.core.pap.function.arg.type.Type;
 import gov.nist.csd.pm.core.pap.function.op.Operation;
 import gov.nist.csd.pm.core.pap.function.routine.Routine;
 import gov.nist.csd.pm.core.pap.obligation.Obligation;
-import gov.nist.csd.pm.core.pap.pml.function.operation.PMLStmtsOperation;
-import gov.nist.csd.pm.core.pap.pml.function.routine.PMLStmtsRoutine;
 import gov.nist.csd.pm.core.pap.query.model.explain.Explain;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.Subgraph;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.SubgraphPrivileges;
-import gov.nist.csd.pm.pdp.proto.model.ExplainResponse;
+import gov.nist.csd.pm.pdp.proto.model.ExplainProto;
 import gov.nist.csd.pm.pdp.proto.model.NodeProto;
 import gov.nist.csd.pm.pdp.proto.model.ProhibitionProto;
 import gov.nist.csd.pm.pdp.proto.model.StringList;
@@ -70,7 +69,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
-	public void searchNodes(SearchQuery request, StreamObserver<SearchResponse> responseObserver) {
+	public void searchNodes(SearchQuery request, StreamObserver<NodeList> responseObserver) {
 		Collection<Node> nodes = adjudicator.adjudicateQuery(pdpTx -> pdpTx.query().graph().search(
 				NodeType.toNodeType(request.getType().name()),
 				request.getPropertiesMap()
@@ -81,68 +80,68 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 			nodeProtos.add(ProtoUtil.toNodeProto(node));
 		}
 
-		responseObserver.onNext(SearchResponse.newBuilder().addAllNodes(nodeProtos).build());
+		responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeProtos).build());
 		responseObserver.onCompleted();
 	}
 
 	@Override
-	public void getPolicyClasses(Empty request, StreamObserver<PolicyClassesResponse> responseObserver) {
+	public void getPolicyClasses(Empty request, StreamObserver<NodeList> responseObserver) {
 		Collection<Long> pcs = adjudicator.adjudicateQuery(pdpTx -> pdpTx.query().graph().getPolicyClasses());
 		List<NodeProto> nodeProtos = nodeIdsToNodeProtoList(pcs);
 
-		responseObserver.onNext(PolicyClassesResponse.newBuilder().addAllNodes(nodeProtos).build());
+		responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeProtos).build());
 		responseObserver.onCompleted();
 
 	}
 
 	@Override
 	public void getAdjacentDescendants(GetAdjacentAssignmentsQuery request,
-	                                   StreamObserver<NodeListResponse> responseObserver) {
+	                                   StreamObserver<NodeList> responseObserver) {
 		Collection<Long> descs = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().graph().getAdjacentDescendants(request.getNodeId());
 		});
 		List<NodeProto> nodeProtos = nodeIdsToNodeProtoList(descs);
 
-		responseObserver.onNext(NodeListResponse.newBuilder().addAllNodes(nodeProtos).build());
+		responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeProtos).build());
 		responseObserver.onCompleted();
 
 	}
 
 	@Override
 	public void getAdjacentAscendants(GetAdjacentAssignmentsQuery request,
-	                                  StreamObserver<NodeListResponse> responseObserver) {
+	                                  StreamObserver<NodeList> responseObserver) {
 		Collection<Long> ascs = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().graph().getAdjacentAscendants(request.getNodeId());
 		});
 		List<NodeProto> nodeProtos = nodeIdsToNodeProtoList(ascs);
 
-		responseObserver.onNext(NodeListResponse.newBuilder().addAllNodes(nodeProtos).build());
+		responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeProtos).build());
 		responseObserver.onCompleted();
 	}
 
 	@Override
 	public void getAssociationsWithSource(GetAssociationsQuery request,
-	                                      StreamObserver<AssociationListResponse> responseObserver) {
+	                                      StreamObserver<AssociationList> responseObserver) {
 		Collection<Association> associations = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().graph().getAssociationsWithSource(request.getNodeId());
 		});
 
 		List<AssociationProto> associationProtoList = toAssociationProtoList(associations);
 
-		responseObserver.onNext(AssociationListResponse.newBuilder().addAllAssociations(associationProtoList).build());
+		responseObserver.onNext(AssociationList.newBuilder().addAllAssociations(associationProtoList).build());
 		responseObserver.onCompleted();
 	}
 
 	@Override
 	public void getAssociationsWithTarget(GetAssociationsQuery request,
-	                                      StreamObserver<AssociationListResponse> responseObserver) {
+	                                      StreamObserver<AssociationList> responseObserver) {
 		Collection<Association> associations = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().graph().getAssociationsWithTarget(request.getNodeId());
 		});
 
 		List<AssociationProto> associationProtoList = toAssociationProtoList(associations);
 
-		responseObserver.onNext(AssociationListResponse.newBuilder().addAllAssociations(associationProtoList).build());
+		responseObserver.onNext(AssociationList.newBuilder().addAllAssociations(associationProtoList).build());
 		responseObserver.onCompleted();
 	}
 
@@ -168,24 +167,24 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 	@Override
 	public void getAttributeDescendants(GetDescendantsQuery request,
-	                                    StreamObserver<NodeListResponse> responseObserver) {
+	                                    StreamObserver<NodeList> responseObserver) {
 		Collection<Long> descs = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().graph().getAttributeDescendants(request.getNodeId());
 		});
 
-		responseObserver.onNext(NodeListResponse.newBuilder().addAllNodes(nodeIdsToNodeProtoList(descs)).build());
+		responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeIdsToNodeProtoList(descs)).build());
 		responseObserver.onCompleted();
 
 	}
 
 	@Override
 	public void getPolicyClassDescendants(GetDescendantsQuery request,
-	                                      StreamObserver<NodeListResponse> responseObserver) {
+	                                      StreamObserver<NodeList> responseObserver) {
 		Collection<Long> descs = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().graph().getPolicyClassDescendants(request.getNodeId());
 		});
 
-		responseObserver.onNext(NodeListResponse.newBuilder().addAllNodes(nodeIdsToNodeProtoList(descs)).build());
+		responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeIdsToNodeProtoList(descs)).build());
 		responseObserver.onCompleted();
 
 	}
@@ -212,7 +211,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
-	public void getProhibitions(Empty request, StreamObserver<ProhibitionListResponse> responseObserver) {
+	public void getProhibitions(Empty request, StreamObserver<ProhibitionList> responseObserver) {
 		Collection<Prohibition> prohibitions = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().prohibitions().getProhibitions();
 		});
@@ -222,14 +221,14 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 			prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
 		}
 
-		responseObserver.onNext(ProhibitionListResponse.newBuilder().addAllProhibitions(prohibitionProtos).build());
+		responseObserver.onNext(ProhibitionList.newBuilder().addAllProhibitions(prohibitionProtos).build());
 		responseObserver.onCompleted();
 
 	}
 
 	@Override
 	public void getProhibitionsBySubject(GetProhibitionBySubjectQuery request,
-	                                     StreamObserver<ProhibitionListResponse> responseObserver) {
+	                                     StreamObserver<ProhibitionList> responseObserver) {
 		Collection<Prohibition> prohibitions = adjudicator.adjudicateQuery(pdpTx -> {
 			ProhibitionSubject subject = switch (request.getSubjectCase()) {
 				case NODE_ID -> new ProhibitionSubject(request.getNodeId());
@@ -245,7 +244,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 			prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
 		}
 
-		responseObserver.onNext(ProhibitionListResponse.newBuilder().addAllProhibitions(prohibitionProtos).build());
+		responseObserver.onNext(ProhibitionList.newBuilder().addAllProhibitions(prohibitionProtos).build());
 		responseObserver.onCompleted();
 
 	}
@@ -263,7 +262,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 	@Override
 	public void getInheritedProhibitions(GetInheritedProhibitionsQuery request,
-	                                     StreamObserver<ProhibitionListResponse> responseObserver) {
+	                                     StreamObserver<ProhibitionList> responseObserver) {
 		Collection<Prohibition> prohibitions = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().prohibitions().getInheritedProhibitionsFor(request.getSubjectId());
 		});
@@ -274,14 +273,14 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 			prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
 		}
 
-		responseObserver.onNext(ProhibitionListResponse.newBuilder().addAllProhibitions(prohibitionProtos).build());
+		responseObserver.onNext(ProhibitionList.newBuilder().addAllProhibitions(prohibitionProtos).build());
 		responseObserver.onCompleted();
 
 	}
 
 	@Override
 	public void getProhibitionsWithContainer(GetProhibitionsWithContainerQuery request,
-	                                         StreamObserver<ProhibitionListResponse> responseObserver) {
+	                                         StreamObserver<ProhibitionList> responseObserver) {
 		Collection<Prohibition> prohibitions = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().prohibitions().getProhibitionsWithContainer(request.getContainerId());
 		});
@@ -291,18 +290,18 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 			prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
 		}
 
-		responseObserver.onNext(ProhibitionListResponse.newBuilder().addAllProhibitions(prohibitionProtos).build());
+		responseObserver.onNext(ProhibitionList.newBuilder().addAllProhibitions(prohibitionProtos).build());
 		responseObserver.onCompleted();
 
 	}
 
 	@Override
-	public void getObligations(Empty request, StreamObserver<ObligationListResponse> responseObserver) {
+	public void getObligations(Empty request, StreamObserver<ObligationList> responseObserver) {
 		Collection<Obligation> obligations = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().obligations().getObligations();
 		});
 
-		responseObserver.onNext(ObligationListResponse.newBuilder().addAllObligations(toObligationProtoList(obligations)).build());
+		responseObserver.onNext(ObligationList.newBuilder().addAllObligations(toObligationProtoList(obligations)).build());
 		responseObserver.onCompleted();
 	}
 
@@ -322,12 +321,12 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 	@Override
 	public void getObligationsByAuthor(GetObligationByAuthorQuery request,
-	                                   StreamObserver<ObligationListResponse> responseObserver) {
+	                                   StreamObserver<ObligationList> responseObserver) {
 		Collection<Obligation> obligations = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().obligations().getObligationsWithAuthor(request.getAuthorId());
 		});
 
-		responseObserver.onNext(ObligationListResponse.newBuilder().addAllObligations(toObligationProtoList(obligations)).build());
+		responseObserver.onNext(ObligationList.newBuilder().addAllObligations(toObligationProtoList(obligations)).build());
 		responseObserver.onCompleted();
 	}
 
@@ -343,51 +342,89 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
-	public void getAdminOperationNames(Empty request, StreamObserver<GetAdminOperationNamesResponse> responseObserver) {
-		Collection<String> adminOps = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().operations().getAdminOperationNames();
+	public void getAdminOperationSignatures(Empty request,
+	                                        StreamObserver<SignatureList> responseObserver) {
+		Collection<Operation<?, ?>> adminOperations = adjudicator.adjudicateQuery(pdpTx -> {
+			Collection<String> names = pdpTx.query().operations().getAdminOperationNames();
+			List<Operation<?, ?>> operations = new ArrayList<>();
+			for (String name : names) {
+				Operation<?, ?> op = pap.query().operations().getAdminOperation(name);
+				operations.add(op);
+			}
+			return operations;
 		});
 
-		responseObserver.onNext(GetAdminOperationNamesResponse.newBuilder().addAllNames(adminOps).build());
-		responseObserver.onCompleted();
+		List<Signature> signatures = new ArrayList<>();
+		for (Operation<?, ?> op : adminOperations) {
+			signatures.add(Signature.newBuilder()
+					               .setName(op.getName())
+					               .addAllParams(convertParamsToProtoParams(op.getFormalParameters()))
+					               .build());
+		}
 
+		SignatureList signatureList = SignatureList.newBuilder()
+				.addAllSignatures(signatures)
+				.build();
+		responseObserver.onNext(signatureList);
+		responseObserver.onCompleted();
 	}
 
 	@Override
-	public void getAdminOperation(GetAdminOperationQuery request, StreamObserver<OperationResponse> responseObserver) {
+	public void getAdminOperationSignature(GetByNameQuery request, StreamObserver<Signature> responseObserver) {
 		Operation<?, ?> operation = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().operations().getAdminOperation(request.getOperationName());
+			return pdpTx.query().operations().getAdminOperation(request.getName());
 		});
 
-		if (!(operation instanceof PMLStmtsOperation pmlStmtsOperation)) {
-			throw new PMRuntimeException("operation " + request.getOperationName() + " is not a PML operation and cannot be serialized");
+		Signature signature = Signature.newBuilder()
+				.setName(operation.getName())
+				.addAllParams(convertParamsToProtoParams(operation.getFormalParameters()))
+				.build();
+
+		responseObserver.onNext(signature);
+		responseObserver.onCompleted();
+	}
+
+
+	@Override
+	public void getAdminRoutineSignatures(Empty request,
+	                                      StreamObserver<SignatureList> responseObserver) {
+		Collection<Routine<?, ?>> adminRoutines = adjudicator.adjudicateQuery(pdpTx -> {
+			Collection<String> names = pdpTx.query().routines().getAdminRoutineNames();
+			List<Routine<?, ?>> routines = new ArrayList<>();
+			for (String name : names) {
+				Routine<?, ?> op = pap.query().routines().getAdminRoutine(name);
+				routines.add(op);
+			}
+			return routines;
+		});
+
+		List<Signature> signatures = new ArrayList<>();
+		for (Routine<?, ?> routine : adminRoutines) {
+			signatures.add(Signature.newBuilder()
+					               .setName(routine.getName())
+					               .addAllParams(convertParamsToProtoParams(routine.getFormalParameters()))
+					               .build());
 		}
 
-		responseObserver.onNext(OperationResponse.newBuilder().setPml(pmlStmtsOperation.toString()).build());
+		SignatureList signatureList = SignatureList.newBuilder()
+				.addAllSignatures(signatures)
+				.build();
+		responseObserver.onNext(signatureList);
 		responseObserver.onCompleted();
 	}
 
 	@Override
-	public void getAdminRoutineNames(Empty request, StreamObserver<GetAdminRoutineNamesResponse> responseObserver) {
-		Collection<String> adminRoutines = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().routines().getAdminRoutineNames();
-		});
-
-		responseObserver.onNext(GetAdminRoutineNamesResponse.newBuilder().addAllNames(adminRoutines).build());
-		responseObserver.onCompleted();
-	}
-
-	@Override
-	public void getAdminRoutine(GetAdminRoutineQuery request, StreamObserver<RoutineResponse> responseObserver) {
+	public void getAdminRoutineSignature(GetByNameQuery request, StreamObserver<Signature> responseObserver) {
 		Routine<?, ?> routine = adjudicator.adjudicateQuery(pdpTx -> {
-			return pdpTx.query().routines().getAdminRoutine(request.getRoutineName());
+			return pdpTx.query().routines().getAdminRoutine(request.getName());
 		});
 
-		if (!(routine instanceof PMLStmtsRoutine pmlStmtsOperation)) {
-			throw new PMRuntimeException("routine " + request.getRoutineName() + " is not a PML operation and cannot be serialized");
-		}
+		Signature signature = Signature.newBuilder()
+				.setName(routine.getName())
+				.addAllParams(convertParamsToProtoParams(routine.getFormalParameters()))
+				.build();
 
-		responseObserver.onNext(RoutineResponse.newBuilder().setPml(pmlStmtsOperation.toString()).build());
+		responseObserver.onNext(signature);
 		responseObserver.onCompleted();
 	}
 
@@ -423,7 +460,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 	@Override
 	public void computeCapabilityList(ComputeCapabilityListQuery request,
-	                                  StreamObserver<AccessQueryMappingResponse> responseObserver) {
+	                                  StreamObserver<AccessQueryMapping> responseObserver) {
 		Map<Long, AccessRightSet> capList = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().access().computeCapabilityList(
 					ProtoUtil.fromUserContextProto(request.getUserCtx())
@@ -432,12 +469,12 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 		Map<Long, AccessQueryMappingEntry> arsetProtoMap = toArsetProtoMap(capList);
 
-		responseObserver.onNext(AccessQueryMappingResponse.newBuilder().putAllMap(arsetProtoMap).build());
+		responseObserver.onNext(AccessQueryMapping.newBuilder().putAllMap(arsetProtoMap).build());
 		responseObserver.onCompleted();
 	}
 
 	@Override
-	public void computeACL(ComputeACLQuery request, StreamObserver<AccessQueryMappingResponse> responseObserver) {
+	public void computeACL(ComputeACLQuery request, StreamObserver<AccessQueryMapping> responseObserver) {
 		Map<Long, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().access().computeACL(
 					ProtoUtil.fromTargetContextProto(request.getTargetCtx())
@@ -446,13 +483,13 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 		Map<Long, AccessQueryMappingEntry> arsetProtoMap = toArsetProtoMap(map);
 
-		responseObserver.onNext(AccessQueryMappingResponse.newBuilder().putAllMap(arsetProtoMap).build());
+		responseObserver.onNext(AccessQueryMapping.newBuilder().putAllMap(arsetProtoMap).build());
 		responseObserver.onCompleted();
 	}
 
 	@Override
 	public void computeDestinationAttributes(ComputeDestinationAttributesQuery request,
-	                                         StreamObserver<AccessQueryMappingResponse> responseObserver) {
+	                                         StreamObserver<AccessQueryMapping> responseObserver) {
 		Map<Long, AccessRightSet> map = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().access().computeDestinationAttributes(
 					ProtoUtil.fromUserContextProto(request.getUserCtx())
@@ -461,7 +498,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 		Map<Long, AccessQueryMappingEntry> arsetProtoMap = toArsetProtoMap(map);
 
-		responseObserver.onNext(AccessQueryMappingResponse.newBuilder().putAllMap(arsetProtoMap).build());
+		responseObserver.onNext(AccessQueryMapping.newBuilder().putAllMap(arsetProtoMap).build());
 		responseObserver.onCompleted();
 	}
 
@@ -507,7 +544,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
-	public void explain(ExplainQuery request, StreamObserver<ExplainResponse> responseObserver) {
+	public void explain(ExplainQuery request, StreamObserver<ExplainProto> responseObserver) {
 		Explain explain = adjudicator.adjudicateQuery(pdpTx -> {
 			return pdpTx.query().access().explain(
 					ProtoUtil.fromUserContextProto(request.getUserCtx()),
@@ -515,7 +552,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 			);
 		});
 
-		responseObserver.onNext(ProtoUtil.buildExplainResponse(explain, pap.query()));
+		responseObserver.onNext(ProtoUtil.buildExplainProto(explain, pap.query()));
 		responseObserver.onCompleted();
 
 	}
@@ -716,6 +753,63 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 		}
 
 		return obligationProtos;
+	}
+
+	private List<Param> convertParamsToProtoParams(List<FormalParameter<?>> formalParameters) {
+		List<Param> params = new ArrayList<>();
+
+		for (FormalParameter<?> formalParameter : formalParameters) {
+			params.add(Param.newBuilder()
+					           .setName(formalParameter.getName())
+					           .setType(typeToParamType(formalParameter.getType()))
+					           .build());
+		}
+
+		return params;
+	}
+
+	private ParamType typeToParamType(Type<?> type) {
+		switch (type) {
+			case gov.nist.csd.pm.core.pap.function.arg.type.StringType stringType -> {
+				return ParamType.newBuilder()
+						.setStringType(StringType.newBuilder().build())
+						.build();
+			}
+			case gov.nist.csd.pm.core.pap.function.arg.type.LongType longType -> {
+				return ParamType.newBuilder()
+						.setLongType(LongType.newBuilder().build())
+						.build();
+			}
+			case gov.nist.csd.pm.core.pap.function.arg.type.BooleanType booleanType -> {
+				return ParamType.newBuilder()
+						.setBooleanType(BooleanType.newBuilder().build())
+						.build();
+			}
+			case gov.nist.csd.pm.core.pap.function.arg.type.ListType<?> listType -> {
+				Type<?> elementType = listType.getElementType();
+				return ParamType.newBuilder()
+						.setListType(ListType.newBuilder()
+								             .setElementType(typeToParamType(elementType))
+								             .build())
+						.build();
+
+			}
+			case gov.nist.csd.pm.core.pap.function.arg.type.MapType<?, ?> mapType -> {
+				Type<?> keyType = mapType.getKeyType();
+				Type<?> valueType = mapType.getValueType();
+				return ParamType.newBuilder()
+						.setMapType(MapType.newBuilder()
+								            .setKeyType(typeToParamType(keyType))
+								            .setValueType(typeToParamType(valueType))
+								            .build())
+						.build();
+			}
+			case null, default -> {
+				return ParamType.newBuilder()
+						.setAnyType(AnyType.newBuilder().build())
+						.build();
+			}
+		}
 	}
 
 }

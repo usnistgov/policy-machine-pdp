@@ -3,7 +3,6 @@ package gov.nist.csd.pm.pdp.admin.pdp;
 import com.eventstore.dbclient.WrongExpectedVersionException;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.exception.PMRuntimeException;
-import gov.nist.csd.pm.core.pdp.adjudication.AdjudicationResponse;
 import gov.nist.csd.pm.pdp.admin.pap.EventTrackingPAP;
 import gov.nist.csd.pm.pdp.proto.adjudication.AdminCommand;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
@@ -22,9 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-/**
- * The Adjudicator is responsible for coordinating the execution of administrative operations.
- */
 @Component
 public class Adjudicator {
 
@@ -120,11 +116,11 @@ public class Adjudicator {
      * @param args The operation arguments
      * @return The adjudication response
      */
-    public AdjudicationResponse adjudicateAdminOperation(String opName, Map<String, Object> args) {
-        Supplier<AdjudicationResponse> supplier = () -> {
+    public Object adjudicateAdminOperation(String opName, Map<String, Object> args) {
+        Supplier<Object> supplier = () -> {
             try {
                 NGACContext ctx = contextFactory.createContext();
-                AdjudicationResponse adjudicationResponse = ctx.pdp().adjudicateAdminOperation(
+                Object adjudicationResponse = ctx.pdp().adjudicateAdminOperation(
                         ctx.userCtx(),
                         opName,
                         args
@@ -146,11 +142,11 @@ public class Adjudicator {
      * @param args The routine arguments
      * @return The adjudication response
      */
-    public AdjudicationResponse adjudicateAdminRoutine(String opName, Map<String, Object> args) {
-        Supplier<AdjudicationResponse> supplier = () -> {
+    public Object adjudicateAdminRoutine(String opName, Map<String, Object> args) {
+        Supplier<Object> supplier = () -> {
             try {
                 NGACContext ctx = contextFactory.createContext();
-                AdjudicationResponse adjudicationResponse = ctx.pdp().adjudicateAdminRoutine(
+                Object adjudicationResponse = ctx.pdp().adjudicateAdminRoutine(
                         ctx.userCtx(),
                         opName,
                         args

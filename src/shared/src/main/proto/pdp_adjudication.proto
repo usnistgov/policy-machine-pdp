@@ -15,7 +15,7 @@ service AdjudicationService {
 }
 
 service ResourcePDPService {
-  rpc AdjudicateResourceOperation(AdjudicateResourceOperationCmd) returns (AdjudicateResourceOperationResponse) {}
+  rpc AdjudicateResourceOperation(AdjudicateResourceOperationCmd) returns (gov.nist.csd.pm.pdp.proto.model.NodeProto) {}
 }
 
 message AdjudicateAdminCmdRequest {
@@ -27,16 +27,9 @@ message CreatedNodeIdsResponse {
   map<string, int64> node_ids = 1;
 }
 
-enum AdjudicateDecision {
-  GRANT = 0;
-  DENY = 1;
-}
-
 message AdjudicateGenericResponse {
-  AdjudicateDecision decision = 1;
   // generic Struct to handle any type of supported return value
-  optional google.protobuf.Struct value = 2;
-  optional gov.nist.csd.pm.pdp.proto.model.ExplainResponse explain = 3;
+  optional google.protobuf.Struct value = 1;
 }
 
 message AdminCommand {
@@ -184,12 +177,6 @@ message GenericAdminCmd {
 message AdjudicateResourceOperationCmd {
   string operation = 1;
   int64 target_id = 2;
-}
-
-message AdjudicateResourceOperationResponse {
-  AdjudicateDecision decision = 1;
-  gov.nist.csd.pm.pdp.proto.model.NodeProto node = 2;
-  optional gov.nist.csd.pm.pdp.proto.model.ExplainResponse explain = 3;
 }
 
 message Arg {

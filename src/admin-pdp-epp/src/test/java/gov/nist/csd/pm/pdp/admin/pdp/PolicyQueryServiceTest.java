@@ -10,7 +10,6 @@ import gov.nist.csd.pm.core.common.graph.relationship.Association;
 import gov.nist.csd.pm.core.common.prohibition.Prohibition;
 import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
-import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.function.op.Operation;
 import gov.nist.csd.pm.core.pap.function.routine.Routine;
 import gov.nist.csd.pm.core.pap.obligation.Obligation;
@@ -294,7 +293,7 @@ public class PolicyQueryServiceTest {
 	class SearchNodesTests {
 
 		@Mock
-		private StreamObserver<SearchResponse> observer;
+		private StreamObserver<NodeList> observer;
 
 		@Test
 		void shouldReturnProtoListForNodes() throws PMException {
@@ -317,7 +316,7 @@ public class PolicyQueryServiceTest {
 
 				verify(graphQueryAdjudicator).search(NodeType.PC, new HashMap<>());
 
-				SearchResponse expected = SearchResponse.newBuilder()
+				NodeList expected = NodeList.newBuilder()
 						.addNodes(proto1)
 						.addNodes(proto2)
 						.build();
@@ -339,7 +338,7 @@ public class PolicyQueryServiceTest {
 
 			verify(graphQueryAdjudicator).search(NodeType.PC, new HashMap<>());
 
-			verify(observer).onNext(SearchResponse.newBuilder().build());
+			verify(observer).onNext(NodeList.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -360,7 +359,7 @@ public class PolicyQueryServiceTest {
 	class GetPolicyClassesTests {
 
 		@Mock
-		private StreamObserver<PolicyClassesResponse> observer;
+		private StreamObserver<NodeList> observer;
 
 		@Test
 		void shouldReturnIdsList() throws PMException {
@@ -375,7 +374,7 @@ public class PolicyQueryServiceTest {
 
 			verify(graphQueryAdjudicator).getPolicyClasses();
 			verify(observer).onNext(
-					PolicyClassesResponse.newBuilder()
+					NodeList.newBuilder()
 							.addAllNodes(List.of(testNode(1L), testNode(2L), testNode(3L)))
 							.build()
 			);
@@ -395,7 +394,7 @@ public class PolicyQueryServiceTest {
 
 			verify(graphQueryAdjudicator).getPolicyClasses();
 			verify(observer).onNext(
-					PolicyClassesResponse.newBuilder().build()
+					NodeList.newBuilder().build()
 			);
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
@@ -417,7 +416,7 @@ public class PolicyQueryServiceTest {
 	class GetAdjacentDescendantsTests {
 
 		@Mock
-		private StreamObserver<NodeListResponse> observer;
+		private StreamObserver<NodeList> observer;
 
 		@Test
 		void shouldReturnDescendantIds() throws PMException {
@@ -435,7 +434,7 @@ public class PolicyQueryServiceTest {
 			verify(graphQueryAdjudicator).getAdjacentDescendants(request.getNodeId());
 			
 			verify(observer).onNext(
-					NodeListResponse.newBuilder()
+					NodeList.newBuilder()
 							.addAllNodes(List.of(testNode(1L), testNode(2L), testNode(3L)))
 							.build()
 			);
@@ -457,7 +456,7 @@ public class PolicyQueryServiceTest {
 			service.getAdjacentDescendants(request, observer);
 
 			verify(graphQueryAdjudicator).getAdjacentDescendants(request.getNodeId());
-			verify(observer).onNext(NodeListResponse.newBuilder().build());
+			verify(observer).onNext(NodeList.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -480,7 +479,7 @@ public class PolicyQueryServiceTest {
 	class GetAdjacentAscendantsTests {
 
 		@Mock
-		private StreamObserver<NodeListResponse> observer;
+		private StreamObserver<NodeList> observer;
 
 		@Test
 		void shouldReturnAscendantIds() throws PMException {
@@ -498,7 +497,7 @@ public class PolicyQueryServiceTest {
 
 			verify(graphQueryAdjudicator).getAdjacentAscendants(request.getNodeId());
 			verify(observer).onNext(
-					NodeListResponse.newBuilder()
+					NodeList.newBuilder()
 							.addAllNodes(List.of(testNode(1L), testNode(2L), testNode(3L)))
 							.build()
 			);
@@ -520,7 +519,7 @@ public class PolicyQueryServiceTest {
 			service.getAdjacentAscendants(request, observer);
 
 			verify(graphQueryAdjudicator).getAdjacentAscendants(request.getNodeId());
-			verify(observer).onNext(NodeListResponse.newBuilder().build());
+			verify(observer).onNext(NodeList.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -543,7 +542,7 @@ public class PolicyQueryServiceTest {
 	class GetAssociationsWithSourceTests {
 
 		@Mock
-		private StreamObserver<AssociationListResponse> observer;
+		private StreamObserver<AssociationList> observer;
 
 		@Test
 		void shouldReturnAssociationProtos() throws PMException {
@@ -580,7 +579,7 @@ public class PolicyQueryServiceTest {
 			service.getAssociationsWithSource(request, observer);
 
 			verify(graphQueryAdjudicator).getAssociationsWithSource(request.getNodeId());
-			AssociationListResponse expected = AssociationListResponse.newBuilder()
+			AssociationList expected = AssociationList.newBuilder()
 					.addAssociations(proto1)
 					.addAssociations(proto2)
 					.build();
@@ -603,7 +602,7 @@ public class PolicyQueryServiceTest {
 			service.getAssociationsWithSource(request, observer);
 
 			verify(graphQueryAdjudicator).getAssociationsWithSource(request.getNodeId());
-			verify(observer).onNext(AssociationListResponse.newBuilder().build());
+			verify(observer).onNext(AssociationList.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -626,7 +625,7 @@ public class PolicyQueryServiceTest {
 	class GetAssociationsWithTargetTests {
 
 		@Mock
-		private StreamObserver<AssociationListResponse> observer;
+		private StreamObserver<AssociationList> observer;
 
 		@Test
 		void shouldReturnAssociationProtos() throws PMException {
@@ -663,7 +662,7 @@ public class PolicyQueryServiceTest {
 			service.getAssociationsWithTarget(request, observer);
 
 			verify(graphQueryAdjudicator).getAssociationsWithTarget(request.getNodeId());
-			AssociationListResponse expected = AssociationListResponse.newBuilder()
+			AssociationList expected = AssociationList.newBuilder()
 					.addAssociations(proto1)
 					.addAssociations(proto2)
 					.build();
@@ -686,7 +685,7 @@ public class PolicyQueryServiceTest {
 			service.getAssociationsWithTarget(request, observer);
 
 			verify(graphQueryAdjudicator).getAssociationsWithTarget(request.getNodeId());
-			verify(observer).onNext(AssociationListResponse.newBuilder().build());
+			verify(observer).onNext(AssociationList.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -897,7 +896,7 @@ public class PolicyQueryServiceTest {
 	class GetAttributeDescendantsTests {
 
 		@Mock
-		private StreamObserver<NodeListResponse> observer;
+		private StreamObserver<NodeList> observer;
 
 		@Test
 		void shouldReturnAttributeDescendantIds() throws PMException {
@@ -914,7 +913,7 @@ public class PolicyQueryServiceTest {
 
 			verify(graphQueryAdjudicator).getAttributeDescendants(request.getNodeId());
 			verify(observer).onNext(
-					NodeListResponse.newBuilder()
+					NodeList.newBuilder()
 							.addAllNodes(List.of(testNode(1L), testNode(2L), testNode(3L)))
 							.build()
 			);
@@ -936,7 +935,7 @@ public class PolicyQueryServiceTest {
 			service.getAttributeDescendants(request, observer);
 
 			verify(graphQueryAdjudicator).getAttributeDescendants(request.getNodeId());
-			verify(observer).onNext(NodeListResponse.newBuilder().build());
+			verify(observer).onNext(NodeList.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -959,7 +958,7 @@ public class PolicyQueryServiceTest {
 	class GetPolicyClassDescendantsTests {
 
 		@Mock
-		private StreamObserver<NodeListResponse> observer;
+		private StreamObserver<NodeList> observer;
 
 		@Test
 		void shouldReturnPolicyClassDescendantIds() throws PMException {
@@ -976,7 +975,7 @@ public class PolicyQueryServiceTest {
 
 			verify(graphQueryAdjudicator).getPolicyClassDescendants(request.getNodeId());
 			verify(observer).onNext(
-					NodeListResponse.newBuilder()
+					NodeList.newBuilder()
 							.addAllNodes(List.of(testNode(1L), testNode(2L), testNode(3L)))
 							.build()
 			);
@@ -998,7 +997,7 @@ public class PolicyQueryServiceTest {
 			service.getPolicyClassDescendants(request, observer);
 
 			verify(graphQueryAdjudicator).getPolicyClassDescendants(request.getNodeId());
-			verify(observer).onNext(NodeListResponse.newBuilder().build());
+			verify(observer).onNext(NodeList.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -1141,7 +1140,7 @@ public class PolicyQueryServiceTest {
 	class GetProhibitionsTests {
 
 		@Mock
-		private StreamObserver<ProhibitionListResponse> observer;
+		private StreamObserver<ProhibitionList> observer;
 
 		@Test
 		void shouldReturnProhibitionProtos() throws PMException {
@@ -1162,7 +1161,7 @@ public class PolicyQueryServiceTest {
 
 				verify(prohibitionsQueryAdjudicator).getProhibitions();
 
-				ProhibitionListResponse expected = ProhibitionListResponse.newBuilder()
+				ProhibitionList expected = ProhibitionList.newBuilder()
 						.addAllProhibitions(List.of(proto1, proto2))
 						.build();
 				verify(observer).onNext(expected);
@@ -1181,7 +1180,7 @@ public class PolicyQueryServiceTest {
 			service.getProhibitions(Empty.getDefaultInstance(), observer);
 
 			verify(prohibitionsQueryAdjudicator).getProhibitions();
-			verify(observer).onNext(ProhibitionListResponse.newBuilder().build());
+			verify(observer).onNext(ProhibitionList.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -1201,7 +1200,7 @@ public class PolicyQueryServiceTest {
 	class GetProhibitionsBySubjectTests {
 
 		@Mock
-		private StreamObserver<ProhibitionListResponse> observer;
+		private StreamObserver<ProhibitionList> observer;
 
 		@Test
 		void shouldReturnProhibitionsForNodeSubject() throws PMException {
@@ -1224,7 +1223,7 @@ public class PolicyQueryServiceTest {
 
 				verify(prohibitionsQueryAdjudicator).getProhibitionsWithSubject(prohibitionSubject);
 
-				ProhibitionListResponse expected = ProhibitionListResponse.newBuilder()
+				ProhibitionList expected = ProhibitionList.newBuilder()
 						.addProhibitions(proto)
 						.build();
 				verify(observer).onNext(expected);
@@ -1254,7 +1253,7 @@ public class PolicyQueryServiceTest {
 
 				verify(prohibitionsQueryAdjudicator).getProhibitionsWithSubject(prohibitionSubject);
 
-				ProhibitionListResponse expected = ProhibitionListResponse.newBuilder()
+				ProhibitionList expected = ProhibitionList.newBuilder()
 						.addProhibitions(proto)
 						.build();
 				verify(observer).onNext(expected);
@@ -1325,7 +1324,7 @@ public class PolicyQueryServiceTest {
 	class GetInheritedProhibitionsTests {
 
 		@Mock
-		private StreamObserver<ProhibitionListResponse> observer;
+		private StreamObserver<ProhibitionList> observer;
 
 		@Test
 		void shouldReturnInheritedProhibitions() throws PMException {
@@ -1347,7 +1346,7 @@ public class PolicyQueryServiceTest {
 
 				verify(prohibitionsQueryAdjudicator).getInheritedProhibitionsFor(request.getSubjectId());
 
-				ProhibitionListResponse expected = ProhibitionListResponse.newBuilder()
+				ProhibitionList expected = ProhibitionList.newBuilder()
 						.addProhibitions(proto)
 						.build();
 				verify(observer).onNext(expected);
@@ -1370,7 +1369,7 @@ public class PolicyQueryServiceTest {
 			service.getInheritedProhibitions(request, observer);
 
 			verify(prohibitionsQueryAdjudicator).getInheritedProhibitionsFor(request.getSubjectId());
-			verify(observer).onNext(ProhibitionListResponse.newBuilder().build());
+			verify(observer).onNext(ProhibitionList.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -1393,7 +1392,7 @@ public class PolicyQueryServiceTest {
 	class GetProhibitionsWithContainerTests {
 
 		@Mock
-		private StreamObserver<ProhibitionListResponse> observer;
+		private StreamObserver<ProhibitionList> observer;
 
 		@Test
 		void shouldReturnProhibitionsWithContainer() throws PMException {
@@ -1417,7 +1416,7 @@ public class PolicyQueryServiceTest {
 
 				verify(prohibitionsQueryAdjudicator).getProhibitionsWithContainer(request.getContainerId());
 
-				ProhibitionListResponse expected = ProhibitionListResponse.newBuilder()
+				ProhibitionList expected = ProhibitionList.newBuilder()
 						.addProhibitions(proto)
 						.build();
 				verify(observer).onNext(expected);
@@ -1440,7 +1439,7 @@ public class PolicyQueryServiceTest {
 			service.getProhibitionsWithContainer(request, observer);
 
 			verify(prohibitionsQueryAdjudicator).getProhibitionsWithContainer(request.getContainerId());
-			verify(observer).onNext(ProhibitionListResponse.newBuilder().build());
+			verify(observer).onNext(ProhibitionList.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -1461,7 +1460,7 @@ public class PolicyQueryServiceTest {
 
 	@Nested
 	class GetObligationsTests {
-		@Mock StreamObserver<ObligationListResponse> observer;
+		@Mock StreamObserver<ObligationList> observer;
 
 		@Test
 		void shouldReturnListOfObligations() throws PMException {
@@ -1488,7 +1487,7 @@ public class PolicyQueryServiceTest {
 					.setName("test").setAuthor(testNode(1L)).setPml("pml1").build();
 			ObligationProto proto2 = ObligationProto.newBuilder()
 					.setName("test").setAuthor(testNode(2L)).setPml("pml2").build();
-			ObligationListResponse expected = ObligationListResponse.newBuilder()
+			ObligationList expected = ObligationList.newBuilder()
 					.addObligations(proto1)
 					.addObligations(proto2)
 					.build();
@@ -1508,7 +1507,7 @@ public class PolicyQueryServiceTest {
 			service.getObligations(Empty.getDefaultInstance(), observer);
 
 			verify(obligationsQueryAdjudicator).getObligations();
-			verify(observer).onNext(ObligationListResponse.newBuilder().build());
+			verify(observer).onNext(ObligationList.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -1570,7 +1569,7 @@ public class PolicyQueryServiceTest {
 
 	@Nested
 	class GetObligationsByAuthorTests {
-		@Mock StreamObserver<ObligationListResponse> observer;
+		@Mock StreamObserver<ObligationList> observer;
 
 		@Test
 		void shouldReturnObligationsForAuthor() throws PMException {
@@ -1593,7 +1592,7 @@ public class PolicyQueryServiceTest {
 
 			ObligationProto proto = ObligationProto.newBuilder()
 					.setName("test").setAuthor(testNode(1L)).setPml("pml").build();
-			ObligationListResponse expected = ObligationListResponse.newBuilder()
+			ObligationList expected = ObligationList.newBuilder()
 					.addObligations(proto)
 					.build();
 			verify(observer).onNext(expected);
@@ -1614,7 +1613,7 @@ public class PolicyQueryServiceTest {
 			);
 
 			verify(obligationsQueryAdjudicator).getObligationsWithAuthor(1L);
-			verify(observer).onNext(ObligationListResponse.newBuilder().build());
+			verify(observer).onNext(ObligationList.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -1679,197 +1678,6 @@ public class PolicyQueryServiceTest {
 
 			assertThrows(RuntimeException.class,
 			             () -> service.getResourceOperations(Empty.getDefaultInstance(), observer));
-			verifyNoMoreInteractions(observer);
-		}
-	}
-
-	@Nested
-	class GetAdminOperationNamesTests {
-		@Mock
-		StreamObserver<GetAdminOperationNamesResponse> observer;
-
-		@Test
-		void shouldReturnOperationNames() throws PMException {
-			stubAdjudicatorTx(adjudicator -> {
-				when(adjudicator.operations().getAdminOperationNames())
-						.thenReturn(List.of("op1", "op2"));
-			});
-
-			service.getAdminOperationNames(Empty.getDefaultInstance(), observer);
-
-			verify(operationsQueryAdjudicator).getAdminOperationNames();
-			GetAdminOperationNamesResponse expected = GetAdminOperationNamesResponse.newBuilder()
-					.addAllNames(List.of("op1", "op2"))
-					.build();
-			verify(observer).onNext(expected);
-			verify(observer).onCompleted();
-			verifyNoMoreInteractions(observer);
-		}
-
-		@Test
-		void shouldReturnEmptyWhenNoOperationNames() throws PMException {
-			stubAdjudicatorTx(adjudicator -> {
-				when(adjudicator.operations().getAdminOperationNames())
-						.thenReturn(Collections.emptyList());
-			});
-
-			service.getAdminOperationNames(Empty.getDefaultInstance(), observer);
-
-			verify(operationsQueryAdjudicator).getAdminOperationNames();
-			verify(observer).onNext(GetAdminOperationNamesResponse.newBuilder().build());
-			verify(observer).onCompleted();
-			verifyNoMoreInteractions(observer);
-		}
-
-		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
-
-			assertThrows(RuntimeException.class,
-			             () -> service.getAdminOperationNames(Empty.getDefaultInstance(), observer));
-			verifyNoMoreInteractions(observer);
-		}
-	}
-
-	@Nested
-	class GetAdminOperationTests {
-		@Mock
-		StreamObserver<OperationResponse> observer;
-
-		@Test
-		void shouldReturnPmlWhenOperationIsPML() throws PMException {
-			GetAdminOperationQuery request = GetAdminOperationQuery.newBuilder()
-					.setOperationName("test")
-					.build();
-			Operation operation = mock(PMLStmtsOperation.class);
-			when(operation.toString()).thenReturn("test");
-
-			stubAdjudicatorTx(adjudicator -> {
-				when(adjudicator.operations().getAdminOperation(request.getOperationName())).thenReturn(operation);
-			});
-
-			service.getAdminOperation(request, observer);
-
-			verify(operationsQueryAdjudicator).getAdminOperation(request.getOperationName());
-			OperationResponse expected = OperationResponse.newBuilder()
-					.setPml("test")
-					.build();
-			verify(observer).onNext(expected);
-			verify(observer).onCompleted();
-			verifyNoMoreInteractions(observer);
-		}
-
-		@Test
-		void shouldThrowWhenNotPMLOperation() {
-			GetAdminOperationQuery request = GetAdminOperationQuery.newBuilder()
-					.setOperationName("test")
-					.build();
-			Operation notPmlOp = mock(Operation.class);
-
-			stubAdjudicatorTx(adjudicator -> {
-				when(adjudicator.operations().getAdminOperation(request.getOperationName()))
-						.thenReturn(notPmlOp);
-			});
-
-			assertThrows(PMRuntimeException.class,
-			             () -> service.getAdminOperation(request, observer));
-			verifyNoMoreInteractions(observer);
-		}
-	}
-
-	@Nested
-	class GetAdminRoutineNamesTests {
-		@Mock
-		StreamObserver<GetAdminRoutineNamesResponse> observer;
-
-		@Test
-		void shouldReturnRoutineNames() throws PMException {
-			stubAdjudicatorTx(adjudicator -> {
-				when(adjudicator.routines().getAdminRoutineNames())
-						.thenReturn(List.of("r1", "r2"));
-			});
-
-			service.getAdminRoutineNames(Empty.getDefaultInstance(), observer);
-
-			verify(routinesQueryAdjudicator).getAdminRoutineNames();
-			GetAdminRoutineNamesResponse expected = GetAdminRoutineNamesResponse.newBuilder()
-					.addAllNames(List.of("r1", "r2"))
-					.build();
-			verify(observer).onNext(expected);
-			verify(observer).onCompleted();
-			verifyNoMoreInteractions(observer);
-		}
-
-		@Test
-		void shouldReturnEmptyWhenNoRoutineNames() throws PMException {
-			stubAdjudicatorTx(adjudicator -> {
-				when(adjudicator.routines().getAdminRoutineNames())
-						.thenReturn(Collections.emptyList());
-			});
-
-			service.getAdminRoutineNames(Empty.getDefaultInstance(), observer);
-
-			verify(routinesQueryAdjudicator).getAdminRoutineNames();
-			verify(observer).onNext(GetAdminRoutineNamesResponse.newBuilder().build());
-			verify(observer).onCompleted();
-			verifyNoMoreInteractions(observer);
-		}
-
-		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
-
-			assertThrows(RuntimeException.class,
-			             () -> service.getAdminRoutineNames(Empty.getDefaultInstance(), observer));
-			verifyNoMoreInteractions(observer);
-		}
-	}
-
-	@Nested
-	class GetAdminRoutineTests {
-		@Mock
-		StreamObserver<RoutineResponse> observer;
-
-		@Test
-		void shouldReturnPmlWhenRoutineIsPML() throws PMException {
-			GetAdminRoutineQuery request = GetAdminRoutineQuery.newBuilder()
-					.setRoutineName("test")
-					.build();
-			Routine routine = mock(PMLStmtsRoutine.class);
-			when(routine.toString()).thenReturn("test");
-
-			stubAdjudicatorTx(adjudicator -> {
-				when(adjudicator.routines().getAdminRoutine(request.getRoutineName()))
-						.thenReturn(routine);
-			});
-
-			service.getAdminRoutine(request, observer);
-
-			verify(routinesQueryAdjudicator).getAdminRoutine(request.getRoutineName());
-			RoutineResponse expected = RoutineResponse.newBuilder()
-					.setPml("test")
-					.build();
-			verify(observer).onNext(expected);
-			verify(observer).onCompleted();
-			verifyNoMoreInteractions(observer);
-		}
-
-		@Test
-		void shouldThrowWhenNotPMLRoutine() {
-			GetAdminRoutineQuery request = GetAdminRoutineQuery.newBuilder()
-					.setRoutineName("test")
-					.build();
-			Routine notPml = mock(Routine.class);
-
-			stubAdjudicatorTx(adjudicator -> {
-				when(adjudicator.routines().getAdminRoutine(request.getRoutineName()))
-						.thenReturn(notPml);
-			});
-
-			assertThrows(PMRuntimeException.class,
-			             () -> service.getAdminRoutine(request, observer));
 			verifyNoMoreInteractions(observer);
 		}
 	}
@@ -2021,7 +1829,7 @@ public class PolicyQueryServiceTest {
 	class ComputeCapabilityListTests {
 
 		@Mock
-		private StreamObserver<AccessQueryMappingResponse> observer;
+		private StreamObserver<AccessQueryMapping> observer;
 
 		@Test
 		void shouldReturnCapabilityList() throws PMException {
@@ -2041,7 +1849,7 @@ public class PolicyQueryServiceTest {
 			service.computeCapabilityList(request, observer);
 
 			verify(accessQueryAdjudicator).computeCapabilityList(userContext);
-			AccessQueryMappingResponse expected = AccessQueryMappingResponse.newBuilder()
+			AccessQueryMapping expected = AccessQueryMapping.newBuilder()
 					.putAllMap(Map.of(1L, AccessQueryMappingEntry.newBuilder().addArset("test").setNode(testNode(1)).build()))
 					.build();
 			verify(observer).onNext(expected);
@@ -2063,7 +1871,7 @@ public class PolicyQueryServiceTest {
 			service.computeCapabilityList(request, observer);
 
 			verify(accessQueryAdjudicator).computeCapabilityList(userContext);
-			verify(observer).onNext(AccessQueryMappingResponse.newBuilder().build());
+			verify(observer).onNext(AccessQueryMapping.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -2084,7 +1892,7 @@ public class PolicyQueryServiceTest {
 	class ComputeACLTests {
 
 		@Mock
-		private StreamObserver<AccessQueryMappingResponse> observer;
+		private StreamObserver<AccessQueryMapping> observer;
 
 		@Test
 		void shouldReturnAclMap() throws PMException {
@@ -2105,7 +1913,7 @@ public class PolicyQueryServiceTest {
 			service.computeACL(request, observer);
 
 			verify(accessQueryAdjudicator).computeACL(targetContext);
-			AccessQueryMappingResponse expected = AccessQueryMappingResponse.newBuilder()
+			AccessQueryMapping expected = AccessQueryMapping.newBuilder()
 					.putAllMap(Map.of(1L, AccessQueryMappingEntry.newBuilder().addArset("test").setNode(testNode(1)).build()))
 					.build();
 			verify(observer).onNext(expected);
@@ -2128,7 +1936,7 @@ public class PolicyQueryServiceTest {
 			service.computeACL(request, observer);
 
 			verify(accessQueryAdjudicator).computeACL(targetContext);
-			verify(observer).onNext(AccessQueryMappingResponse.newBuilder().build());
+			verify(observer).onNext(AccessQueryMapping.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -2149,7 +1957,7 @@ public class PolicyQueryServiceTest {
 	class ComputeDestinationAttributesTests {
 
 		@Mock
-		private StreamObserver<AccessQueryMappingResponse> observer;
+		private StreamObserver<AccessQueryMapping> observer;
 
 		@Test
 		void shouldReturnDestinationAttributes() throws PMException {
@@ -2170,7 +1978,7 @@ public class PolicyQueryServiceTest {
 			service.computeDestinationAttributes(request, observer);
 
 			verify(accessQueryAdjudicator).computeDestinationAttributes(userContext);
-			AccessQueryMappingResponse expected = AccessQueryMappingResponse.newBuilder()
+			AccessQueryMapping expected = AccessQueryMapping.newBuilder()
 					.putAllMap(Map.of(1L, AccessQueryMappingEntry.newBuilder().addArset("test").setNode(testNode(1)).build()))
 					.build();
 			verify(observer).onNext(expected);
@@ -2194,7 +2002,7 @@ public class PolicyQueryServiceTest {
 			service.computeDestinationAttributes(request, observer);
 
 			verify(accessQueryAdjudicator).computeDestinationAttributes(userContext);
-			verify(observer).onNext(AccessQueryMappingResponse.newBuilder().build());
+			verify(observer).onNext(AccessQueryMapping.newBuilder().build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -2515,7 +2323,7 @@ public class PolicyQueryServiceTest {
 	@Nested
 	class ExplainTests {
 		@Mock
-		private StreamObserver<ExplainResponse> observer;
+		private StreamObserver<ExplainProto> observer;
 
 		private final ExplainQuery request = ExplainQuery.newBuilder()
 				.setUserCtx(UserContextProto.getDefaultInstance())
@@ -2523,9 +2331,9 @@ public class PolicyQueryServiceTest {
 				.build();
 
 		@Test
-		void shouldReturnExplainResponse() throws PMException {
+		void shouldReturnExplainProto() throws PMException {
 			Explain explainModel = mock(Explain.class);
-			ExplainResponse expectedResponse = ExplainResponse.newBuilder()
+			ExplainProto expectedResponse = ExplainProto.newBuilder()
 					.addPrivileges("read")
 					.build();
 
@@ -2543,7 +2351,7 @@ public class PolicyQueryServiceTest {
 							.thenReturn(explainModel);
 				});
 
-				pu.when(() -> ProtoUtil.buildExplainResponse(explainModel, pap.query()))
+				pu.when(() -> ProtoUtil.buildExplainProto(explainModel, pap.query()))
 						.thenReturn(expectedResponse);
 
 				service.explain(request, observer);

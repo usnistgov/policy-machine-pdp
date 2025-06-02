@@ -7,7 +7,6 @@ import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
 import gov.nist.csd.pm.core.common.prohibition.ContainerCondition;
 import gov.nist.csd.pm.core.common.prohibition.Prohibition;
 import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
-import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
 import gov.nist.csd.pm.core.pap.query.GraphQuery;
 import gov.nist.csd.pm.core.pap.query.PolicyQuery;
 import gov.nist.csd.pm.core.pap.query.model.context.TargetContext;
@@ -15,13 +14,14 @@ import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pap.query.model.explain.Explain;
 import gov.nist.csd.pm.core.pap.query.model.explain.ExplainNode;
 import gov.nist.csd.pm.core.pap.query.model.explain.PolicyClassExplain;
-import gov.nist.csd.pm.pdp.proto.model.ExplainResponse;
+import gov.nist.csd.pm.pdp.proto.model.ExplainProto;
 import gov.nist.csd.pm.pdp.proto.model.NodeProto;
 import gov.nist.csd.pm.pdp.proto.model.PolicyClassExplainProto;
 import gov.nist.csd.pm.pdp.proto.model.ProhibitionProto;
 import gov.nist.csd.pm.pdp.proto.query.IdList;
 import gov.nist.csd.pm.pdp.proto.query.TargetContextProto;
 import gov.nist.csd.pm.pdp.proto.query.UserContextProto;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -29,27 +29,25 @@ import java.util.Map;
 
 import static gov.nist.csd.pm.core.common.graph.node.NodeType.OA;
 import static gov.nist.csd.pm.core.common.graph.node.NodeType.U;
-import static org.junit.Assert.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class ProtoUtilTest {
 
 	@Test
-	void testBuildExplainResponse_NullExplain() {
+	void testBuildExplainProto_NullExplain() {
 		// Test when the input `explain` object is null
-		ExplainResponse result = ProtoUtil.buildExplainResponse(null, mock(PolicyQuery.class));
-		assertNotNull(result);
-		assertTrue(result.getPrivilegesList().isEmpty());
-		assertTrue(result.getDeniedPrivilegesList().isEmpty());
-		assertTrue(result.getPolicyClassesList().isEmpty());
-		assertTrue(result.getProhibitionsList().isEmpty());
+		ExplainProto result = ProtoUtil.buildExplainProto(null, mock(PolicyQuery.class));
+		Assertions.assertNotNull(result);
+		Assertions.assertTrue(result.getPrivilegesList().isEmpty());
+		Assertions.assertTrue(result.getDeniedPrivilegesList().isEmpty());
+		Assertions.assertTrue(result.getPolicyClassesList().isEmpty());
+		Assertions.assertTrue(result.getProhibitionsList().isEmpty());
 	}
 
 	@Test
-	void testBuildExplainResponse_WithPrivilegesOnly() {
+	void testBuildExplainProto_WithPrivilegesOnly() {
 		// Mock privileges present in the Explain object
 		AccessRightSet mockPrivileges = new AccessRightSet(List.of("read", "write"));
 		Explain explain = mock(Explain.class);
@@ -59,7 +57,7 @@ class ProtoUtilTest {
 		when(explain.getDeniedPrivileges()).thenReturn(new AccessRightSet());
 
 		// Run the method and validate results
-		ExplainResponse result = ProtoUtil.buildExplainResponse(explain, mock(PolicyQuery.class));
+		ExplainProto result = ProtoUtil.buildExplainProto(explain, mock(PolicyQuery.class));
 		assertFalse(result.getPrivilegesList().isEmpty());
 		assertEquals(List.of("read", "write"), result.getPrivilegesList());
 		assertTrue(result.getPolicyClassesList().isEmpty());
@@ -67,7 +65,7 @@ class ProtoUtilTest {
 	}
 
 	@Test
-	void testBuildExplainResponse_WithPolicyClasses() {
+	void testBuildExplainProto_WithPolicyClasses() {
 		// Mock data for a single policy class explain
 		Node mockNode = new Node(1L, "PolicyClass1", NodeType.PC);
 		ExplainNode mockExplainNode = mock(ExplainNode.class);
@@ -85,7 +83,7 @@ class ProtoUtilTest {
 		when(explain.getDeniedPrivileges()).thenReturn(new AccessRightSet());
 
 		// Run the method and validate constructed paths
-		ExplainResponse result = ProtoUtil.buildExplainResponse(explain, mock(PolicyQuery.class));
+		ExplainProto result = ProtoUtil.buildExplainProto(explain, mock(PolicyQuery.class));
 		assertEquals(1, result.getPolicyClassesCount());
 		PolicyClassExplainProto pcProto = result.getPolicyClasses(0);
 		assertEquals(1L, pcProto.getPc().getId());
@@ -96,7 +94,7 @@ class ProtoUtilTest {
 	}
 
 	@Test
-	void testBuildExplainResponse_WithProhibitions() throws PMException {
+	void testBuildExplainProto_WithProhibitions() throws PMException {
 		// Mock a prohibition
 		Prohibition prohibition = new Prohibition(
 				"Prohibition1", new ProhibitionSubject(1L),
@@ -114,7 +112,7 @@ class ProtoUtilTest {
 		when(policyQuery.graph().getNodeById(1L)).thenReturn(new Node(1L, "test", U));
 
 		// Run the method and validate prohibition results
-		ExplainResponse result = ProtoUtil.buildExplainResponse(explain, policyQuery);
+		ExplainProto result = ProtoUtil.buildExplainProto(explain, policyQuery);
 		assertEquals(1, result.getProhibitionsCount());
 		ProhibitionProto prohibitionProto = result.getProhibitions(0);
 		assertEquals("Prohibition1", prohibitionProto.getName());
@@ -124,7 +122,7 @@ class ProtoUtilTest {
 	}
 
 	@Test
-	void testBuildExplainResponse_WithDeniedPrivileges() {
+	void testBuildExplainProto_WithDeniedPrivileges() {
 		// Mock denied privileges
 		AccessRightSet mockDeniedPrivileges = new AccessRightSet(List.of("delete", "update"));
 		Explain explain = mock(Explain.class);
@@ -134,7 +132,7 @@ class ProtoUtilTest {
 		when(explain.getDeniedPrivileges()).thenReturn(mockDeniedPrivileges);
 
 		// Run the method and validate denied privileges
-		ExplainResponse result = ProtoUtil.buildExplainResponse(explain, mock(PolicyQuery.class));
+		ExplainProto result = ProtoUtil.buildExplainProto(explain, mock(PolicyQuery.class));
 		assertFalse(result.getDeniedPrivilegesList().isEmpty());
 		assertEquals(List.of("delete", "update"), result.getDeniedPrivilegesList());
 	}

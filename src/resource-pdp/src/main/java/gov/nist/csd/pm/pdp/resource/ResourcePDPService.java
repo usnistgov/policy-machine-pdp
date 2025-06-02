@@ -1,27 +1,19 @@
 package gov.nist.csd.pm.pdp.resource;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.protobuf.InvalidProtocolBufferException;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.Node;
 import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.query.PolicyQuery;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
-import gov.nist.csd.pm.core.pdp.adjudication.AdjudicationResponse;
-import gov.nist.csd.pm.core.pdp.adjudication.Decision;
-import gov.nist.csd.pm.pdp.proto.adjudication.AdjudicateGenericResponse;
 import gov.nist.csd.pm.pdp.proto.adjudication.AdjudicateResourceOperationCmd;
-import gov.nist.csd.pm.pdp.proto.adjudication.AdjudicateResourceOperationResponse;
 import gov.nist.csd.pm.pdp.proto.adjudication.ResourcePDPServiceGrpc;
+import gov.nist.csd.pm.pdp.proto.model.NodeProto;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextFromHeader;
-import gov.nist.csd.pm.pdp.shared.protobuf.AdjudicationResponseUtil;
+import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil.toNodeProto;
 
 @GrpcService
 public class ResourcePDPService extends ResourcePDPServiceGrpc.ResourcePDPServiceImplBase {
@@ -38,45 +30,18 @@ public class ResourcePDPService extends ResourcePDPServiceGrpc.ResourcePDPServic
 
     @Override
     public void adjudicateResourceOperation(AdjudicateResourceOperationCmd request,
-                                            StreamObserver<AdjudicateResourceOperationResponse> responseObserver) {
+                                            StreamObserver<NodeProto> responseObserver) {
         try {
             UserContext userCtx = UserContextFromHeader.get(pap);
-
             String operation = request.getOperation();
             long targetId = request.getTargetId();
 
             logger.info("adjudicating resource operation {} on {} by {}", operation, targetId, userCtx);
-            AdjudicationResponse adjudicationResponse = pdp.adjudicateResourceOperation(userCtx, targetId, operation);
-            if (adjudicationResponse.getDecision() == Decision.GRANT) {
-                logger.debug("adjudication granted");
-                responseObserver.onNext(grant(targetId, adjudicationResponse));
-            } else {
-                logger.debug("adjudication denied {}", adjudicationResponse.getExplain());
-                responseObserver.onNext(deny(adjudicationResponse, pap.query()));
-            }
-
+            Node node = pdp.adjudicateResourceOperation(userCtx, targetId, operation);
+            responseObserver.onNext(ProtoUtil.toNodeProto(node));
             responseObserver.onCompleted();
-        } catch (PMException | InvalidProtocolBufferException | JsonProcessingException e) {
+        } catch (PMException e) {
             responseObserver.onError(e);
         }
-    }
-
-    private AdjudicateResourceOperationResponse grant(long targetId, AdjudicationResponse adjudicationResponse) throws PMException, InvalidProtocolBufferException, JsonProcessingException {
-        AdjudicateGenericResponse grant = AdjudicationResponseUtil.grant(adjudicationResponse);
-        Node node = pap.query().graph().getNodeById(targetId);
-
-        return AdjudicateResourceOperationResponse.newBuilder()
-                .setDecision(grant.getDecision())
-                .setNode(toNodeProto(node))
-                .build();
-
-    }
-
-    private AdjudicateResourceOperationResponse deny(AdjudicationResponse adjudicationResponse, PolicyQuery query) throws PMException {
-        AdjudicateGenericResponse deny = AdjudicationResponseUtil.deny(adjudicationResponse, query);
-        return AdjudicateResourceOperationResponse.newBuilder()
-                .setDecision(deny.getDecision())
-                .setExplain(deny.getExplain())
-                .build();
     }
 }

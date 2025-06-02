@@ -7,7 +7,6 @@ import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.PDPTx;
 import gov.nist.csd.pm.core.pdp.PDPTxRunner;
-import gov.nist.csd.pm.core.pdp.adjudication.AdjudicationResponse;
 import gov.nist.csd.pm.pdp.admin.pap.EventTrackingPAP;
 import gov.nist.csd.pm.pdp.proto.adjudication.AdminCommand;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
@@ -337,13 +336,13 @@ public class AdjudicatorTest {
 
 		@Test
 		void whenSuccess_returnsResponse() throws PMException {
-			AdjudicationResponse resp = mock(AdjudicationResponse.class);
+			Object resp = mock(Object.class);
 			when(contextMock.pdp().adjudicateAdminOperation(any(), eq(opName), eq(args)))
 					.thenReturn(resp);
 			when(papMock.publishToEventStore(any(), any(), anyLong()))
 					.thenReturn(Collections.emptyList());
 
-			AdjudicationResponse result = adjudicator.adjudicateAdminOperation(opName, args);
+			Object result = adjudicator.adjudicateAdminOperation(opName, args);
 
 			assertSame(resp, result);
 			verify(contextFactory, times(1)).createContext();
@@ -371,7 +370,7 @@ public class AdjudicatorTest {
 
 		@Test
 		void whenWrongExpectedVersionAndSuccessOnRetry_returnsResponse() throws PMException {
-			AdjudicationResponse resp = mock(AdjudicationResponse.class);
+			Object resp = mock(Object.class);
 			AtomicInteger attempts = new AtomicInteger();
 
 			when(contextMock.pdp().adjudicateAdminOperation(any(), eq(opName), eq(args)))
@@ -384,7 +383,7 @@ public class AdjudicatorTest {
 			when(papMock.publishToEventStore(any(), any(), anyLong()))
 					.thenReturn(Collections.emptyList());
 
-			AdjudicationResponse result = adjudicator.adjudicateAdminOperation(opName, args);
+			Object result = adjudicator.adjudicateAdminOperation(opName, args);
 
 			assertSame(resp, result);
 			assertEquals(2, attempts.get(), "Should have retried once");
@@ -423,13 +422,13 @@ public class AdjudicatorTest {
 
 		@Test
 		void whenSuccess_returnsResponse() throws PMException {
-			AdjudicationResponse resp = mock(AdjudicationResponse.class);
+			Object resp = mock(Object.class);
 			when(contextMock.pdp().adjudicateAdminRoutine(any(), eq(rtName), eq(args)))
 					.thenReturn(resp);
 			when(papMock.publishToEventStore(any(), any(), anyLong()))
 					.thenReturn(Collections.emptyList());
 
-			AdjudicationResponse result = adjudicator.adjudicateAdminRoutine(rtName, args);
+			Object result = adjudicator.adjudicateAdminRoutine(rtName, args);
 
 			assertSame(resp, result);
 			verify(contextFactory).createContext();
@@ -456,7 +455,7 @@ public class AdjudicatorTest {
 
 		@Test
 		void whenWrongExpectedVersionAndSuccessOnRetry_returnsResponse() throws PMException {
-			AdjudicationResponse resp = mock(AdjudicationResponse.class);
+			Object resp = mock(Object.class);
 			AtomicInteger attempts = new AtomicInteger();
 			when(contextMock.pdp().adjudicateAdminRoutine(any(), eq(rtName), eq(args)))
 					.thenAnswer(inv -> {
@@ -468,7 +467,7 @@ public class AdjudicatorTest {
 			when(papMock.publishToEventStore(any(), any(), anyLong()))
 					.thenReturn(Collections.emptyList());
 
-			AdjudicationResponse result = adjudicator.adjudicateAdminRoutine(rtName, args);
+			Object result = adjudicator.adjudicateAdminRoutine(rtName, args);
 
 			assertSame(resp, result);
 			assertEquals(2, attempts.get());

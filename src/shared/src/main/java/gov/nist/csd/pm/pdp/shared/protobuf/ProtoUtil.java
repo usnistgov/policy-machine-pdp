@@ -88,9 +88,9 @@ public class ProtoUtil {
 		return builder.build();
 	}
 
-	public static ExplainResponse buildExplainResponse(Explain explain, PolicyQuery query) {
+	public static ExplainProto buildExplainProto(Explain explain, PolicyQuery query) {
 		if (explain == null) {
-			return ExplainResponse.newBuilder().build();
+			return ExplainProto.newBuilder().build();
 		}
 
 		AccessRightSet privileges = explain.getPrivileges();
@@ -150,7 +150,7 @@ public class ProtoUtil {
 			prohibitionProtos.add(toProhibitionProto(p, query));
 		}
 
-		return ExplainResponse.newBuilder()
+		return ExplainProto.newBuilder()
 				.addAllPrivileges(privileges)
 				.addAllDeniedPrivileges(deniedPrivileges)
 				.addAllPolicyClasses(policyClassProtos)

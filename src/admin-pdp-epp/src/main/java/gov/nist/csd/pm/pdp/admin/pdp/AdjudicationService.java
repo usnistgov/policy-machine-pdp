@@ -1,10 +1,8 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
-import gov.nist.csd.pm.core.pdp.adjudication.AdjudicationResponse;
-import gov.nist.csd.pm.core.pdp.adjudication.Decision;
 import gov.nist.csd.pm.pdp.proto.adjudication.*;
-import gov.nist.csd.pm.pdp.shared.protobuf.AdjudicationResponseUtil;
+import gov.nist.csd.pm.pdp.shared.protobuf.ObjectToStruct;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 
@@ -45,14 +43,10 @@ public class AdjudicationService extends AdjudicationServiceGrpc.AdjudicationSer
 	                                       StreamObserver<AdjudicateGenericResponse> responseObserver) {
 		try {
 			Map<String, Object> args = fromProtoArgs(request.getArgsMap());
-			AdjudicationResponse response = adjudicator.adjudicateAdminOperation(request.getOpName(), args);
-
-			if (response.getDecision() == Decision.GRANT) {
-				responseObserver.onNext(AdjudicationResponseUtil.grant(response));
-			} else {
-				responseObserver.onNext(AdjudicationResponseUtil.deny(response, pap.query()));
-			}
-
+			Object response = adjudicator.adjudicateAdminOperation(request.getOpName(), args);
+			responseObserver.onNext(AdjudicateGenericResponse.newBuilder()
+					                        .setValue(ObjectToStruct.convert(response))
+					                        .build());
 			responseObserver.onCompleted();
 		} catch (Exception e) {
 			responseObserver.onError(e);
@@ -64,14 +58,10 @@ public class AdjudicationService extends AdjudicationServiceGrpc.AdjudicationSer
 	                                     StreamObserver<AdjudicateGenericResponse> responseObserver) {
 		try {
 			Map<String, Object> args = fromProtoArgs(request.getArgsMap());
-			AdjudicationResponse response = adjudicator.adjudicateAdminRoutine(request.getOpName(), args);
-
-			if (response.getDecision() == Decision.GRANT) {
-				responseObserver.onNext(AdjudicationResponseUtil.grant(response));
-			} else {
-				responseObserver.onNext(AdjudicationResponseUtil.deny(response, pap.query()));
-			}
-
+			Object response = adjudicator.adjudicateAdminRoutine(request.getOpName(), args);
+			responseObserver.onNext(AdjudicateGenericResponse.newBuilder()
+					                        .setValue(ObjectToStruct.convert(response))
+					                        .build());
 			responseObserver.onCompleted();
 		} catch (Exception e) {
 			responseObserver.onError(e);

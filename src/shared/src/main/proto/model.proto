@@ -62,7 +62,7 @@ message PolicyClassExplainProto {
   repeated ExplainNodePathProto paths = 3;
 }
 
-message ExplainResponse {
+message ExplainProto {
   repeated string privileges = 1;
   repeated PolicyClassExplainProto policy_classes = 2;
   repeated string denied_privileges = 3;

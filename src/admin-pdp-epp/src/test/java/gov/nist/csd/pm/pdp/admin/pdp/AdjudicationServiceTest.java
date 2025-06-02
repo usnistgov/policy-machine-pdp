@@ -1,11 +1,12 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Struct;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
-import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pdp.adjudication.AdjudicationResponse;
-import gov.nist.csd.pm.core.pdp.adjudication.Decision;
 import gov.nist.csd.pm.pdp.proto.adjudication.*;
+import gov.nist.csd.pm.pdp.shared.protobuf.ObjectToStruct;
 import io.grpc.stub.StreamObserver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -82,69 +83,6 @@ class AdjudicationServiceTest {
 	class AdjudicateGenericOperationTest {
 
 		@Test
-		void shouldGrantWhenDecisionIsGrant() {
-			GenericAdminCmd request = GenericAdminCmd.newBuilder()
-					.setOpName("myOp")
-					.putArgs("count", Arg.newBuilder().setInt64Value(42L).build())
-					.build();
-			@SuppressWarnings("unchecked")
-			StreamObserver<AdjudicateGenericResponse> observer = mock(StreamObserver.class);
-
-			AdjudicationResponse pdpResponse = mock(AdjudicationResponse.class);
-			when(pdpResponse.getDecision()).thenReturn(Decision.GRANT);
-
-			when(adjudicator.adjudicateAdminOperation(eq("myOp"), anyMap()))
-					.thenReturn(pdpResponse);
-
-			service.adjudicateGenericOperation(request, observer);
-
-			@SuppressWarnings("unchecked")
-			ArgumentCaptor<Map<String, Object>> argsCaptor =
-					ArgumentCaptor.forClass((Class) Map.class);
-			verify(adjudicator).adjudicateAdminOperation(eq("myOp"), argsCaptor.capture());
-			Map<String, Object> captured = argsCaptor.getValue();
-			assertThat(captured).containsEntry("count", 42L);
-
-			ArgumentCaptor<AdjudicateGenericResponse> respCaptor =
-					ArgumentCaptor.forClass(AdjudicateGenericResponse.class);
-			verify(observer).onNext(respCaptor.capture());
-			AdjudicateGenericResponse protoResp = respCaptor.getValue();
-			assertThat(protoResp.getDecision())
-					.isEqualTo(AdjudicateDecision.GRANT);
-
-			verify(observer).onCompleted();
-			verify(observer, never()).onError(any());
-		}
-
-		@Test
-		void shouldDenyWhenDecisionIsDeny() throws PMException {
-			GenericAdminCmd request = GenericAdminCmd.newBuilder()
-					.setOpName("otherOp")
-					.putArgs("flag", Arg.newBuilder().setInt64Value(0L).build())
-					.build();
-			@SuppressWarnings("unchecked")
-			StreamObserver<AdjudicateGenericResponse> observer = mock(StreamObserver.class);
-
-			AdjudicationResponse pdpResponse = mock(AdjudicationResponse.class);
-			when(pdpResponse.getDecision()).thenReturn(Decision.DENY);
-
-			when(adjudicator.adjudicateAdminOperation(eq("otherOp"), anyMap()))
-					.thenReturn(pdpResponse);
-
-			service.adjudicateGenericOperation(request, observer);
-
-			ArgumentCaptor<AdjudicateGenericResponse> respCaptor =
-					ArgumentCaptor.forClass(AdjudicateGenericResponse.class);
-			verify(observer).onNext(respCaptor.capture());
-			AdjudicateGenericResponse protoResp = respCaptor.getValue();
-			assertThat(protoResp.getDecision())
-					.isEqualTo(AdjudicateDecision.DENY);
-
-			verify(observer).onCompleted();
-			verify(observer, never()).onError(any());
-		}
-
-		@Test
 		void shouldOnErrorWhenAdjudicatorThrows() throws PMException {
 			GenericAdminCmd request = GenericAdminCmd.newBuilder()
 					.setOpName("failOp")
@@ -171,69 +109,6 @@ class AdjudicationServiceTest {
 
 	@Nested
 	class AdjudicateGenericRoutineTest {
-
-		@Test
-		void shouldGrantWhenDecisionIsGrant() throws PMException {
-			GenericAdminCmd request = GenericAdminCmd.newBuilder()
-					.setOpName("routineOp")
-					.putArgs("flag", Arg.newBuilder().setBoolValue(true).build())
-					.build();
-			@SuppressWarnings("unchecked")
-			StreamObserver<AdjudicateGenericResponse> observer = mock(StreamObserver.class);
-
-			AdjudicationResponse pdpResponse = mock(AdjudicationResponse.class);
-			when(pdpResponse.getDecision()).thenReturn(Decision.GRANT);
-
-			when(adjudicator.adjudicateAdminRoutine(eq("routineOp"), anyMap()))
-					.thenReturn(pdpResponse);
-
-			service.adjudicateGenericRoutine(request, observer);
-
-			@SuppressWarnings("unchecked")
-			ArgumentCaptor<Map<String, Object>> argsCaptor =
-					ArgumentCaptor.forClass((Class) Map.class);
-			verify(adjudicator).adjudicateAdminRoutine(eq("routineOp"), argsCaptor.capture());
-			Map<String, Object> captured = argsCaptor.getValue();
-			assertThat(captured).containsEntry("flag", true);
-
-			ArgumentCaptor<AdjudicateGenericResponse> respCaptor =
-					ArgumentCaptor.forClass(AdjudicateGenericResponse.class);
-			verify(observer).onNext(respCaptor.capture());
-			AdjudicateGenericResponse protoResp = respCaptor.getValue();
-			assertThat(protoResp.getDecision())
-					.isEqualTo(AdjudicateDecision.GRANT);
-
-			verify(observer).onCompleted();
-			verify(observer, never()).onError(any());
-		}
-
-		@Test
-		void shouldDenyWhenDecisionIsDeny() throws PMException {
-			GenericAdminCmd request = GenericAdminCmd.newBuilder()
-					.setOpName("routineOp2")
-					.putArgs("count", Arg.newBuilder().setInt64Value(0L).build())
-					.build();
-			@SuppressWarnings("unchecked")
-			StreamObserver<AdjudicateGenericResponse> observer = mock(StreamObserver.class);
-
-			AdjudicationResponse pdpResponse = mock(AdjudicationResponse.class);
-			when(pdpResponse.getDecision()).thenReturn(Decision.DENY);
-
-			when(adjudicator.adjudicateAdminRoutine(eq("routineOp2"), anyMap()))
-					.thenReturn(pdpResponse);
-
-			service.adjudicateGenericRoutine(request, observer);
-
-			ArgumentCaptor<AdjudicateGenericResponse> respCaptor =
-					ArgumentCaptor.forClass(AdjudicateGenericResponse.class);
-			verify(observer).onNext(respCaptor.capture());
-			AdjudicateGenericResponse protoResp = respCaptor.getValue();
-			assertThat(protoResp.getDecision())
-					.isEqualTo(AdjudicateDecision.DENY);
-
-			verify(observer).onCompleted();
-			verify(observer, never()).onError(any());
-		}
 
 		@Test
 		void shouldOnErrorWhenAdjudicatorThrows() throws PMException {
