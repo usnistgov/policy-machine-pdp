@@ -122,7 +122,7 @@ public class AdjudicatorTest {
 			when(pdpMock.runTx(any(), any()))
 					.thenAnswer(inv -> {
 						Object runner = inv.getArgument(1);
-						@SuppressWarnings("unchecked")
+						
 						PDPTxRunner<Object> r = (PDPTxRunner<Object>) runner;
 						return r.run(pdpTxMock);
 					});
@@ -131,7 +131,7 @@ public class AdjudicatorTest {
 					.thenReturn(Collections.emptyList());
 
 			doAnswer(invocation -> {
-				@SuppressWarnings("unchecked")
+				
 				Map<String, Long> map = invocation.getArgument(2);
 				map.put("one", 1L);
 				return null;
@@ -139,7 +139,7 @@ public class AdjudicatorTest {
 					.handleCommand(eq(pdpTxMock), eq(cmd1), anyMap());
 
 			doAnswer(invocation -> {
-				@SuppressWarnings("unchecked")
+				
 				Map<String, Long> map = invocation.getArgument(2);
 				map.put("two", 2L);
 				return null;
@@ -165,7 +165,7 @@ public class AdjudicatorTest {
 
 			when(pdpMock.runTx(any(), any(PDPTxRunner.class)))
 					.thenAnswer(inv -> {
-						@SuppressWarnings("unchecked")
+						
 						PDPTxRunner<?> runner = inv.getArgument(1);
 						return runner.run(pdpTxMock);
 					});
@@ -195,7 +195,7 @@ public class AdjudicatorTest {
 
 			when(pdpMock.runTx(any(), any(PDPTxRunner.class)))
 					.thenAnswer(inv -> {
-						@SuppressWarnings("unchecked")
+						
 						PDPTxRunner<?> runner = inv.getArgument(1);
 						return runner.run(pdpTxMock);
 					});
@@ -203,7 +203,7 @@ public class AdjudicatorTest {
 					.thenReturn(Collections.emptyList());
 
 			doAnswer(inv -> {
-				@SuppressWarnings("unchecked")
+				
 				Map<String, Long> map = inv.getArgument(2);
 				if (attempts.getAndIncrement() == 0) {
 					throw mock(WrongExpectedVersionException.class);
@@ -230,7 +230,7 @@ public class AdjudicatorTest {
 
 			when(pdpMock.runTx(any(), any(PDPTxRunner.class)))
 					.thenAnswer(inv -> {
-						@SuppressWarnings("unchecked")
+						
 						PDPTxRunner<?> runner = inv.getArgument(1);
 						return runner.run(pdpTxMock);
 					});

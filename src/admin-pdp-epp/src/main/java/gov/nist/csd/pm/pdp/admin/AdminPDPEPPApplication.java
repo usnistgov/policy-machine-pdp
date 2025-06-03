@@ -5,11 +5,11 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.store.Neo4jEmbeddedPolicyStore;
-import gov.nist.csd.pm.core.pap.function.AdminFunction;
+import gov.nist.csd.pm.core.pap.function.op.Operation;
+import gov.nist.csd.pm.core.pap.function.routine.Routine;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
@@ -40,11 +40,6 @@ public class AdminPDPEPPApplication {
     }
 
     @Bean
-    public List<AdminFunction<?, ?>> adminFunctionPlugins() {
-        return new ArrayList<>();
-    }
-
-    @Bean
     public GraphDatabaseService graphDb(AdminPDPConfig adminPDPConfig) {
         logger.info("Creating Neo4j embedded database instance");
 
@@ -64,7 +59,23 @@ public class AdminPDPEPPApplication {
     }
 
     @Bean
-    public Neo4jEmbeddedPAP pap(Neo4jEmbeddedPolicyStore eventListenerPolicyStore) throws PMException {
-        return new Neo4jEmbeddedPAP(eventListenerPolicyStore);
+    public Neo4jEmbeddedPAP pap(Neo4jEmbeddedPolicyStore eventListenerPolicyStore, 
+                                List<Operation<?, ?>> operationPlugins,
+                                List<Routine<?, ?>> routinePlugins) throws PMException {
+        Neo4jEmbeddedPAP pap = new Neo4jEmbeddedPAP(eventListenerPolicyStore);
+        
+        // Register operation plugins
+        for (Operation<?, ?> operation : operationPlugins) {
+            logger.info("Registering operation plugin: {}", operation.getName());
+            pap.modify().operations().createAdminOperation(operation);
+        }
+        
+        // Register routine plugins
+        for (Routine<?, ?> routine : routinePlugins) {
+            logger.info("Registering routine plugin: {}", routine.getName());
+            pap.modify().routines().createAdminRoutine(routine);
+        }
+        
+        return pap;
     }
 }

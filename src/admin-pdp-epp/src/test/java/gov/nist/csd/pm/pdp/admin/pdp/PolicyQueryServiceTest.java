@@ -106,7 +106,7 @@ public class PolicyQueryServiceTest {
 		void apply(PolicyQueryAdjudicator adjudicator) throws PMException;
 	}
 
-	private void stubAdjudicatorTx(TxFunction txFn) {
+	private void stubAdjudicatorTx(TxFunction txFn) throws PMException {
 		when(adjudicator.adjudicateQuery(any())).thenAnswer(invocation -> {
 			PDPTxFunction<?> fn = invocation.getArgument(0);
 			when(pdpTx.query()).thenReturn(policyQueryAdjudicator);
@@ -143,7 +143,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldReturnFalseWhenNodeDoesNotExist() {
+		void shouldReturnFalseWhenNodeDoesNotExist() throws PMException {
 			IdOrNameQuery request = IdOrNameQuery.newBuilder().setId(123).build();
 
 			stubAdjudicatorTx(adjudicator -> {
@@ -158,7 +158,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateRuntimeExceptionAndNotCallObserver() {
+		void shouldPropagateRuntimeExceptionAndNotCallObserver() throws PMException {
 			IdOrNameQuery request = IdOrNameQuery.newBuilder()
 					.setId(123)
 					.build();
@@ -176,7 +176,7 @@ public class PolicyQueryServiceTest {
 		private StreamObserver<NodeProto> observer;
 
 		@Test
-		void shouldReturnNodeProtoWhenIdProvided() {
+		void shouldReturnNodeProtoWhenIdProvided() throws PMException {
 			IdOrNameQuery req = IdOrNameQuery.newBuilder()
 					.setId(123)
 					.build();
@@ -199,7 +199,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldReturnNodeProtoWhenNameProvided() {
+		void shouldReturnNodeProtoWhenNameProvided() throws PMException {
 			IdOrNameQuery req = IdOrNameQuery.newBuilder()
 					.setName("test")
 					.build();
@@ -222,7 +222,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldThrowWhenIdOrNameNotSet() {
+		void shouldThrowWhenIdOrNameNotSet() throws PMException {
 			IdOrNameQuery request = IdOrNameQuery.getDefaultInstance();
 
 			stubAdjudicatorTx(adjudicator -> { });
@@ -233,7 +233,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateRuntimeExceptionAndNotCallObserver() {
+		void shouldPropagateRuntimeExceptionAndNotCallObserver() throws PMException {
 			IdOrNameQuery req = IdOrNameQuery.newBuilder()
 					.setId(999L)
 					.build();
@@ -275,7 +275,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateRuntimeExceptionAndNotCallObserver() {
+		void shouldPropagateRuntimeExceptionAndNotCallObserver() throws PMException {
 			IdOrNameQuery request = IdOrNameQuery.newBuilder()
 					.setName("test")
 					.build();
@@ -344,7 +344,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateRuntimeExceptionAndNotCallObserver() {
+		void shouldPropagateRuntimeExceptionAndNotCallObserver() throws PMException {
 			SearchQuery request = SearchQuery.getDefaultInstance();
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
@@ -401,7 +401,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateRuntimeExceptionAndNotCallObserver() {
+		void shouldPropagateRuntimeExceptionAndNotCallObserver() throws PMException {
 			Empty request = Empty.getDefaultInstance();
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
@@ -462,7 +462,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			GetAdjacentAssignmentsQuery request = GetAdjacentAssignmentsQuery.newBuilder()
 					.setNodeId(3)
 					.build();
@@ -525,7 +525,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			GetAdjacentAssignmentsQuery request = GetAdjacentAssignmentsQuery.newBuilder()
 					.setNodeId(7)
 					.build();
@@ -608,7 +608,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			GetAssociationsQuery request = GetAssociationsQuery.newBuilder()
 					.setNodeId(6L)
 					.build();
@@ -691,7 +691,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			GetAssociationsQuery request = GetAssociationsQuery.newBuilder()
 					.setNodeId(1L)
 					.build();
@@ -784,7 +784,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			GetSubgraphQuery request = GetSubgraphQuery.newBuilder()
 					.setNodeId(1)
 					.build();
@@ -879,7 +879,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			GetSubgraphQuery request = GetSubgraphQuery.newBuilder()
 					.setNodeId(3)
 					.build();
@@ -941,7 +941,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			GetDescendantsQuery request = GetDescendantsQuery.newBuilder()
 					.setNodeId(1)
 					.build();
@@ -1003,7 +1003,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			GetDescendantsQuery request = GetDescendantsQuery.newBuilder()
 					.setNodeId(1)
 					.build();
@@ -1066,7 +1066,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 
@@ -1126,7 +1126,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 
@@ -1186,7 +1186,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 
@@ -1263,7 +1263,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionWhenSubjectNotSet() {
+		void shouldPropagateExceptionWhenSubjectNotSet() throws PMException {
 			GetProhibitionBySubjectQuery request = GetProhibitionBySubjectQuery.getDefaultInstance();
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new PMRuntimeException("test exception"));
@@ -1307,7 +1307,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			GetByNameQuery request = GetByNameQuery.newBuilder()
 					.setName("test")
 					.build();
@@ -1375,7 +1375,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			GetInheritedProhibitionsQuery request = GetInheritedProhibitionsQuery.newBuilder()
 					.setSubjectId(1)
 					.build();
@@ -1445,7 +1445,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			GetProhibitionsWithContainerQuery request = GetProhibitionsWithContainerQuery.newBuilder()
 					.setContainerId(1)
 					.build();
@@ -1513,7 +1513,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 
@@ -1554,7 +1554,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			GetByNameQuery request = GetByNameQuery.newBuilder()
 					.setName("test")
 					.build();
@@ -1619,7 +1619,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 
@@ -1672,7 +1672,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 
@@ -1743,7 +1743,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			ComputePrivilegesQuery request = ComputePrivilegesQuery.newBuilder().build();
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
@@ -1814,7 +1814,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			ComputeDeniedPrivilegesQuery request = ComputeDeniedPrivilegesQuery.newBuilder().build();
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
@@ -1877,7 +1877,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			ComputeCapabilityListQuery request = ComputeCapabilityListQuery.newBuilder().build();
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
@@ -1942,7 +1942,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			ComputeACLQuery request = ComputeACLQuery.newBuilder().build();
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
@@ -2008,7 +2008,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			ComputeDestinationAttributesQuery request =
 					ComputeDestinationAttributesQuery.newBuilder().build();
 			when(adjudicator.adjudicateQuery(any()))
@@ -2125,7 +2125,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 
@@ -2217,7 +2217,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 
@@ -2310,7 +2310,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 
@@ -2365,7 +2365,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() {
+		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 
@@ -2452,7 +2452,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateException() {
+		void shouldPropagateException() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 
@@ -2521,7 +2521,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateException() {
+		void shouldPropagateException() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 
@@ -2613,7 +2613,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateException() {
+		void shouldPropagateException() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 
@@ -2692,7 +2692,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateException() {
+		void shouldPropagateException() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 
@@ -2771,7 +2771,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateException() {
+		void shouldPropagateException() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 
@@ -2847,7 +2847,7 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateException() {
+		void shouldPropagateException() throws PMException {
 			when(adjudicator.adjudicateQuery(any()))
 					.thenThrow(new RuntimeException("test exception"));
 

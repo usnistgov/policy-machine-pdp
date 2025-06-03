@@ -31,9 +31,9 @@ class AdjudicationServiceTest {
 	}
 
 	@Test
-	void shouldReturnCreatedNodeIdsAndComplete() {
+	void shouldReturnCreatedNodeIdsAndComplete() throws PMException {
 		AdjudicateAdminCmdRequest request = AdjudicateAdminCmdRequest.newBuilder().build();
-		@SuppressWarnings("unchecked")
+		
 		StreamObserver<CreatedNodeIdsResponse> observer = mock(StreamObserver.class);
 
 		Map<String, Long> resultMap = Map.of(
@@ -58,9 +58,8 @@ class AdjudicationServiceTest {
 	}
 
 	@Test
-	void shouldOnErrorWhenAdjudicatorThrows() {
+	void shouldOnErrorWhenAdjudicatorThrows() throws PMException {
 		AdjudicateAdminCmdRequest request = AdjudicateAdminCmdRequest.newBuilder().build();
-		@SuppressWarnings("unchecked")
 		StreamObserver<CreatedNodeIdsResponse> observer = mock(StreamObserver.class);
 
 		when(adjudicator.adjudicateAdminCommands(request.getCommandsList()))
@@ -68,7 +67,6 @@ class AdjudicationServiceTest {
 
 		service.adjudicateAdminCmd(request, observer);
 
-		@SuppressWarnings("unchecked")
 		ArgumentCaptor<Throwable> errorCaptor =
 				ArgumentCaptor.forClass(Throwable.class);
 		verify(observer).onError(errorCaptor.capture());
@@ -87,7 +85,7 @@ class AdjudicationServiceTest {
 			GenericAdminCmd request = GenericAdminCmd.newBuilder()
 					.setOpName("failOp")
 					.build();
-			@SuppressWarnings("unchecked")
+			
 			StreamObserver<AdjudicateGenericResponse> observer = mock(StreamObserver.class);
 
 			when(adjudicator.adjudicateAdminOperation(eq("failOp"), anyMap()))
@@ -95,7 +93,7 @@ class AdjudicationServiceTest {
 
 			service.adjudicateGenericOperation(request, observer);
 
-			@SuppressWarnings("unchecked")
+			
 			ArgumentCaptor<Throwable> errorCaptor =
 					ArgumentCaptor.forClass(Throwable.class);
 			verify(observer).onError(errorCaptor.capture());
@@ -115,7 +113,7 @@ class AdjudicationServiceTest {
 			GenericAdminCmd request = GenericAdminCmd.newBuilder()
 					.setOpName("failRoutine")
 					.build();
-			@SuppressWarnings("unchecked")
+			
 			StreamObserver<AdjudicateGenericResponse> observer = mock(StreamObserver.class);
 
 			when(adjudicator.adjudicateAdminRoutine(eq("failRoutine"), anyMap()))
@@ -123,7 +121,7 @@ class AdjudicationServiceTest {
 
 			service.adjudicateGenericRoutine(request, observer);
 
-			@SuppressWarnings("unchecked")
+			
 			ArgumentCaptor<Throwable> errorCaptor =
 					ArgumentCaptor.forClass(Throwable.class);
 			verify(observer).onError(errorCaptor.capture());
