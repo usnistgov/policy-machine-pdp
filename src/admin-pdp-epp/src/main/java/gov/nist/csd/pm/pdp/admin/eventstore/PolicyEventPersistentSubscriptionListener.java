@@ -9,7 +9,7 @@ import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import gov.nist.csd.pm.pdp.shared.eventstore.PolicyEventHandler;
 import gov.nist.csd.pm.pdp.shared.eventstore.SnapshotService;
-import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
+import gov.nist.csd.pm.pdp.shared.function.FunctionLoader;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,19 +26,16 @@ public class PolicyEventPersistentSubscriptionListener extends PersistentSubscri
     private final SnapshotService snapshotService;
     private final CurrentRevisionService currentRevision;
     private final AdminPDPConfig adminPDPConfig;
-    private final GraphDatabaseService graphDatabaseService;
 
     public PolicyEventPersistentSubscriptionListener(Neo4jEmbeddedPAP pap,
                                                      CurrentRevisionService currentRevision,
                                                      SnapshotService snapshotService,
                                                      AdminPDPConfig adminPDPConfig,
-                                                     PluginLoader pluginLoader,
-                                                     GraphDatabaseService graphDatabaseService) {
-        this.policyEventHandler = new PolicyEventHandler(pap, pluginLoader);
+                                                     FunctionLoader functionLoader) {
+        this.policyEventHandler = new PolicyEventHandler(pap, functionLoader);
         this.currentRevision = currentRevision;
         this.snapshotService = snapshotService;
         this.adminPDPConfig = adminPDPConfig;
-        this.graphDatabaseService = graphDatabaseService;
     }
 
     @Override

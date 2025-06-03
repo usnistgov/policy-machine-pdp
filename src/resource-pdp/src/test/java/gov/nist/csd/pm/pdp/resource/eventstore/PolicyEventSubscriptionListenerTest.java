@@ -6,7 +6,7 @@ import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.pdp.proto.event.ObjectCreated;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
-import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
+import gov.nist.csd.pm.pdp.shared.function.FunctionLoader;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -34,7 +34,7 @@ class PolicyEventSubscriptionListenerTest {
 		PolicyEventSubscriptionListener listener = new PolicyEventSubscriptionListener(
 				pap,
 				currentRevisionService,
-				new PluginLoader()
+				new FunctionLoader()
 		);
 
 		listener.processOrQueue(6, List.of(
@@ -80,7 +80,7 @@ class PolicyEventSubscriptionListenerTest {
 		PolicyEventSubscriptionListener listener = new PolicyEventSubscriptionListener(
 				pap,
 				currentRevisionService,
-				new PluginLoader()
+				new FunctionLoader()
 		);
 
 		new Thread(() -> {
@@ -145,7 +145,7 @@ class PolicyEventSubscriptionListenerTest {
 		PolicyEventSubscriptionListener listener = new PolicyEventSubscriptionListener(
 				pap,
 				currentRevisionService,
-				new PluginLoader()
+				new FunctionLoader()
 		);
 
 		listener.onEvent(null, ResolvedEventMock.of(6, PMEvent.newBuilder()

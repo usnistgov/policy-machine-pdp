@@ -5,7 +5,7 @@ import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
 import gov.nist.csd.pm.core.pap.query.GraphQuery;
 import gov.nist.csd.pm.pdp.proto.event.Bootstrapped;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
-import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
+import gov.nist.csd.pm.pdp.shared.function.FunctionLoader;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -17,9 +17,9 @@ class PolicyEventHandlerTest {
 	@Test
 	void testBootstrap() throws PMException {
 		MemoryPAP pap = new MemoryPAP();
-		PluginLoader pluginLoader = new PluginLoader();
+		FunctionLoader functionLoader = new FunctionLoader();
 
-		PolicyEventHandler policyEventHandler = new PolicyEventHandler(pap, pluginLoader);
+		PolicyEventHandler policyEventHandler = new PolicyEventHandler(pap, functionLoader);
 
 		PMEvent pmEvent = PMEvent.newBuilder()
 				.setBootstrapped(

@@ -66,13 +66,13 @@ public class AdminPDPEPPApplication {
         
         // Register operation plugins
         for (Operation<?, ?> operation : operationPlugins) {
-            logger.info("Registering operation plugin: {}", operation.getName());
+            logger.info("Registering operation function: {}", operation.getName());
             pap.modify().operations().createAdminOperation(operation);
         }
         
         // Register routine plugins
         for (Routine<?, ?> routine : routinePlugins) {
-            logger.info("Registering routine plugin: {}", routine.getName());
+            logger.info("Registering routine function: {}", routine.getName());
             pap.modify().routines().createAdminRoutine(routine);
         }
         
