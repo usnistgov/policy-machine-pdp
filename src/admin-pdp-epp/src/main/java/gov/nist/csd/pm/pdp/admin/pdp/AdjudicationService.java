@@ -4,7 +4,6 @@ import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.pdp.proto.adjudication.*;
 import gov.nist.csd.pm.pdp.shared.protobuf.ObjectToStruct;
-import gov.nist.csd.pm.core.common.exception.PMException;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;

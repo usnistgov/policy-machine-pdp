@@ -135,21 +135,32 @@ class SnapshotServiceTest {
 					eventStoreTestContainer.getPort()
 			);
 			EventStoreConnectionManager eventStoreConnectionManager = new EventStoreConnectionManager(config);
+			CurrentRevisionService currentRevisionService = new CurrentRevisionService();
 			SnapshotService snapshotService = new SnapshotService(
 					config,
 					eventStoreConnectionManager,
 					pap,
-					new CurrentRevisionService()
+					currentRevisionService
 			);
+			currentRevisionService.set(1);
 
 			snapshotService.snapshot();
 			pap.modify().graph().deleteNode(pap.query().graph().getNodeId("o1"));
 			snapshotService.snapshot();
 			pap.modify().graph().createObject("o1", List.of(pap.query().graph().getNodeId("oa1")));
 
+			MemoryPAP pap2 = new MemoryPAP();
+			CurrentRevisionService currentRevisionService2 = new CurrentRevisionService();
+			snapshotService = new SnapshotService(
+					config,
+					eventStoreConnectionManager,
+					pap2,
+					currentRevisionService2
+			);
 			snapshotService.restoreLatestSnapshot();
 
-			assertFalse(pap.query().graph().nodeExists("o1"));
+			assertTrue(pap2.query().graph().nodeExists("pc1"));
+			assertFalse(pap2.query().graph().nodeExists("o1"));
 		}
 	}
 

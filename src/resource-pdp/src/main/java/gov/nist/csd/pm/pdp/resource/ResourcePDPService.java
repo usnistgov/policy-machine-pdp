@@ -14,6 +14,7 @@ import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.grpc.Status;
 
 @GrpcService
 public class ResourcePDPService extends ResourcePDPServiceGrpc.ResourcePDPServiceImplBase {
@@ -34,14 +35,26 @@ public class ResourcePDPService extends ResourcePDPServiceGrpc.ResourcePDPServic
         try {
             UserContext userCtx = UserContextFromHeader.get(pap);
             String operation = request.getOperation();
-            long targetId = request.getTargetId();
+            long targetId = 0;
+            if (request.getTargetCase() == AdjudicateResourceOperationCmd.TargetCase.ID) {
+                targetId = request.getId();
+            } else if (request.getTargetCase() == AdjudicateResourceOperationCmd.TargetCase.NAME) {
+                targetId = pap.query().graph().getNodeId(request.getName());
+            } else {
+                responseObserver.onError(Status.INVALID_ARGUMENT
+                                                 .withDescription("ID or name not set")
+                                                 .asRuntimeException());
+            }
 
             logger.info("adjudicating resource operation {} on {} by {}", operation, targetId, userCtx);
             Node node = pdp.adjudicateResourceOperation(userCtx, targetId, operation);
             responseObserver.onNext(ProtoUtil.toNodeProto(node));
             responseObserver.onCompleted();
-        } catch (PMException e) {
-            responseObserver.onError(e);
+        } catch (Exception e) {
+            responseObserver.onError(Status.INTERNAL
+                                             .withDescription(e.getMessage())
+                                             .withCause(e)
+                                             .asRuntimeException());
         }
     }
 }
