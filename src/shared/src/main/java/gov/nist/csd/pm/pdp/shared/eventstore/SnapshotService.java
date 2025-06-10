@@ -7,6 +7,8 @@ import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.serialization.json.JSONDeserializer;
 import gov.nist.csd.pm.core.pap.serialization.json.JSONSerializer;
 import gov.nist.csd.pm.pdp.proto.event.PMSnapshot;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,6 +16,8 @@ import java.util.concurrent.ExecutionException;
 
 @Service
 public class SnapshotService {
+
+    private static final Logger logger = LoggerFactory.getLogger(SnapshotService.class);
 
     private final EventStoreDBConfig eventStoreDBConfig;
     private final PAP pap;
@@ -50,6 +54,10 @@ public class SnapshotService {
                 .get();
     }
 
+    /**
+     * Restore policy from snapshot stream and return the latest revision. If no events in stream exist, return -1.
+     * @return The latest event revision or -1 if no snapshots.
+     */
     public long restoreLatestSnapshot() throws PMException, ExecutionException, InterruptedException,
             InvalidProtocolBufferException {
         ReadStreamOptions options = ReadStreamOptions.get()
@@ -63,13 +71,20 @@ public class SnapshotService {
 
         List<ResolvedEvent> events = readResult.getEvents();
         if (events.isEmpty()) {
-            return 0;
+            return -1;
         }
 
         ResolvedEvent first = events.getFirst();
         RecordedEvent originalEvent = first.getOriginalEvent();
         byte[] eventData = originalEvent.getEventData();
         PMSnapshot pmSnapshot = PMSnapshot.parseFrom(eventData);
+
+        // if the snapshot revision is <= current revision, no need to snapshot
+        long cr = currentRevision.get();
+        if (pmSnapshot.getRevision() <= cr) {
+            logger.info("Snapshot revision <= current revision, skipping snapshot");
+            return cr;
+        }
 
         synchronized (pap) {
             pap.reset();

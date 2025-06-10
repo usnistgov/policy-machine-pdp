@@ -10,8 +10,12 @@ pm:
       hostname: localhost
       port: 2113
       event-stream: pm-events-v1
-      snapshot-stream: pm-snapshot-v1
+      snapshot-stream: pm-snapshot-v2
 
 logging:
   level:
     root: INFO
+management:
+  health:
+    neo4j:
+      enabled: false

@@ -3,6 +3,7 @@ package gov.nist.csd.pm.pdp.admin.eventstore;
 import com.eventstore.dbclient.CreatePersistentSubscriptionToStreamOptions;
 import com.eventstore.dbclient.PersistentSubscriptionToStreamInfo;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
+import gov.nist.csd.pm.pdp.admin.pap.Neo4jBootstrapper;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
@@ -40,7 +41,8 @@ public class SubscriptionService {
                                PolicyEventPersistentSubscriptionListener policyEventPersistentSubscriptionListener,
                                EventStoreDBConfig eventStoreDBConfig,
                                AdminPDPConfig adminPDPConfig,
-                               CurrentRevisionService currentRevisionService) {
+                               CurrentRevisionService currentRevisionService,
+                               Neo4jBootstrapper neo4jBootstrapper) {
         this.eventStoreConnectionManager = eventStoreConnectionManager;
         this.policyEventPersistentSubscriptionListener = policyEventPersistentSubscriptionListener;
         this.eventStoreDBConfig = eventStoreDBConfig;
@@ -55,7 +57,9 @@ public class SubscriptionService {
 
     @PostConstruct
     public void initSubscription() {
-        startSubscription();
+        // start subscription attempt in new thread to avoid blocking the spring thread
+        Thread t = new Thread(this::startSubscriptionWithRetry);
+        t.start();
     }
 
     @Pointcut("execution(* gov.nist.csd.pm.pdp.admin.eventstore.PolicyEventPersistentSubscriptionListener.onCancelled(..))")
@@ -65,25 +69,25 @@ public class SubscriptionService {
     @AfterReturning("onOnCancelled()")
     public void afterOnCancelled() {
         logger.info("afterOnCancelled()");
-        startSubscription();
+        startSubscriptionWithRetry();
     }
 
-    public void startSubscription() {
+    public void startSubscriptionWithRetry() {
         retry.executeRunnable(() -> {
             logger.info("Starting persistent subscription...");
             try {
-                subscribeToStream();
+                startSubscription();
                 logger.info("Persistent subscription up");
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException("Retry thread interrupted", e);
-            } catch (ExecutionException e) {
+            } catch (ExecutionException | TimeoutException e) {
                 throw new RuntimeException("Subscription retry failed", e);
             }
         });
     }
 
-    private void subscribeToStream() throws InterruptedException, ExecutionException {
+    private void startSubscription() throws InterruptedException, ExecutionException, TimeoutException {
         // ensure the consumer group exists
         createConsumerGroup();
 
@@ -93,7 +97,7 @@ public class SubscriptionService {
         // create the persistent subscription
         eventStoreConnectionManager.getOrInitPersistentSubClient()
                 .subscribeToStream(eventStream, group, policyEventPersistentSubscriptionListener)
-                .get();
+                .get(5, TimeUnit.SECONDS);
 
         setCurrentRevision(eventStream, group);
     }

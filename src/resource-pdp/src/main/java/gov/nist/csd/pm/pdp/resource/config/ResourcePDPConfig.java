@@ -28,17 +28,21 @@ public class ResourcePDPConfig {
      */
     private int eppSideEffectTimeout;
 
+    /**
+     * If true, the server will not send event contexts to the EPP.
+     */
+    private boolean disableEpp;
+
     public ResourcePDPConfig() {
     }
 
-    public ResourcePDPConfig(String adminHostname,
-                             int adminPort,
-                             boolean eppAsync,
-                             int eppSideEffectTimeout) {
+    public ResourcePDPConfig(String adminHostname, int adminPort, boolean eppAsync, int eppSideEffectTimeout,
+                             boolean disableEpp) {
         this.adminHostname = adminHostname;
         this.adminPort = adminPort;
         this.eppAsync = eppAsync;
         this.eppSideEffectTimeout = eppSideEffectTimeout;
+        this.disableEpp = disableEpp;
     }
 
     @PostConstruct
@@ -82,5 +86,13 @@ public class ResourcePDPConfig {
 
     public void setEppSideEffectTimeout(int eppSideEffectTimeout) {
         this.eppSideEffectTimeout = eppSideEffectTimeout;
+    }
+
+    public boolean isDisableEpp() {
+        return disableEpp;
+    }
+
+    public void setDisableEpp(boolean disableEpp) {
+        this.disableEpp = disableEpp;
     }
 }

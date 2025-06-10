@@ -99,12 +99,12 @@ public class AdjudicatorTest {
 			PMException pmException = new PMException("Test exception");
 			when(pdpMock.runTx(any(), any())).thenThrow(pmException);
 
-			PMRuntimeException exception = assertThrows(
-					PMRuntimeException.class,
+			PMException exception = assertThrows(
+					PMException.class,
 					() -> adjudicator.adjudicateQuery(tx -> "Result")
 			);
 
-			assertEquals(pmException, exception.getCause());
+			assertEquals(pmException, exception);
 			verify(contextFactory, times(1)).createContext();
 			verify(pdpMock, times(1)).runTx(any(), any());
 			verify(papMock, never()).publishToEventStore(any(), any(), anyLong());
@@ -176,12 +176,11 @@ public class AdjudicatorTest {
 					.when(commandHandler)
 					.handleCommand(eq(pdpTxMock), eq(cmd), anyMap());
 
-			RuntimeException ex = assertThrows(
-					RuntimeException.class,
+			PMException ex = assertThrows(
+					PMException.class,
 					() -> adjudicator.adjudicateAdminCommands(List.of(cmd))
 			);
-			assertTrue(ex.getCause() instanceof PMException);
-			assertEquals("fail", ex.getCause().getMessage());
+			assertEquals("fail", ex.getMessage());
 
 			verify(contextFactory, times(1)).createContext();
 			verify(commandHandler, times(1))
@@ -275,12 +274,11 @@ public class AdjudicatorTest {
 		@Test
 		void whenPMException_NoRetiresAttempted() throws PMException {
 			PMConsumer<NGACContext> badConsumer = ctx -> {throw new PMException("test exception");};
-			PMRuntimeException ex = assertThrows(
-					PMRuntimeException.class,
+			PMException ex = assertThrows(
+					PMException.class,
 					() -> adjudicator.adjudicateTransaction(badConsumer)
 			);
-			assertTrue(ex.getCause() instanceof PMException);
-			assertEquals("test exception", ex.getCause().getMessage());
+			assertEquals("test exception", ex.getMessage());
 
 			verify(contextFactory, times(1)).createContext();
 			verify(papMock, never()).publishToEventStore(any(), any(), anyLong());
@@ -354,15 +352,15 @@ public class AdjudicatorTest {
 
 		@Test
 		void whenPMException_wrappedAndNoRetry() throws PMException {
-			PMException failure = new PMException("boom");
+			PMException failure = new PMException("error");
 			when(contextMock.pdp().adjudicateAdminOperation(any(), eq(opName), eq(args)))
 					.thenThrow(failure);
 
-			PMRuntimeException ex = assertThrows(
-					PMRuntimeException.class,
+			PMException ex = assertThrows(
+					PMException.class,
 					() -> adjudicator.adjudicateAdminOperation(opName, args)
 			);
-			assertSame(failure, ex.getCause());
+			assertSame(failure, ex);
 
 			verify(contextFactory, times(1)).createContext();
 			verify(papMock, never()).publishToEventStore(any(), any(), anyLong());
@@ -439,15 +437,15 @@ public class AdjudicatorTest {
 
 		@Test
 		void whenPMException_wrappedAndNoRetry() throws PMException {
-			PMException failure = new PMException("oops");
+			PMException failure = new PMException("error");
 			when(contextMock.pdp().adjudicateAdminRoutine(any(), eq(rtName), eq(args)))
 					.thenThrow(failure);
 
-			PMRuntimeException ex = assertThrows(
-					PMRuntimeException.class,
+			PMException ex = assertThrows(
+					PMException.class,
 					() -> adjudicator.adjudicateAdminRoutine(rtName, args)
 			);
-			assertSame(failure, ex.getCause());
+			assertSame(failure, ex);
 
 			verify(contextFactory).createContext();
 			verify(papMock, never()).publishToEventStore(any(), any(), anyLong());

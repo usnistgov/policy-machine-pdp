@@ -69,6 +69,10 @@ public class EPPClient extends EPP {
 
     @Override
     public void processEvent(EventContext eventCtx) throws PMException {
+        if (resourcePDPConfig.isDisableEpp()) {
+            return;
+        }
+
         logger.info("sending event {}", eventCtx);
 
         EventContextProto eventCtxProto = EventContextUtil.toProto(eventCtx);

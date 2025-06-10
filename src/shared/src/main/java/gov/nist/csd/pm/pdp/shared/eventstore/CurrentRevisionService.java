@@ -11,7 +11,7 @@ public class CurrentRevisionService {
 	private final AtomicLong currentRevision;
 
 	public CurrentRevisionService() {
-		currentRevision = new AtomicLong(0);
+		currentRevision = new AtomicLong(-1);
 	}
 
 	public void set(long revision) {

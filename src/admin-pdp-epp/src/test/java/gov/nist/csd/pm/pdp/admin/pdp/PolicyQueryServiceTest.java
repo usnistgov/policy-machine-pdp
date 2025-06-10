@@ -2,7 +2,6 @@ package gov.nist.csd.pm.pdp.admin.pdp;
 
 import com.google.protobuf.Empty;
 import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.common.exception.PMRuntimeException;
 import gov.nist.csd.pm.core.common.graph.node.Node;
 import gov.nist.csd.pm.core.common.graph.node.NodeType;
 import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
@@ -10,11 +9,7 @@ import gov.nist.csd.pm.core.common.graph.relationship.Association;
 import gov.nist.csd.pm.core.common.prohibition.Prohibition;
 import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
-import gov.nist.csd.pm.core.pap.function.op.Operation;
-import gov.nist.csd.pm.core.pap.function.routine.Routine;
 import gov.nist.csd.pm.core.pap.obligation.Obligation;
-import gov.nist.csd.pm.core.pap.pml.function.operation.PMLStmtsOperation;
-import gov.nist.csd.pm.core.pap.pml.function.routine.PMLStmtsRoutine;
 import gov.nist.csd.pm.core.pap.query.GraphQuery;
 import gov.nist.csd.pm.core.pap.query.PolicyQuery;
 import gov.nist.csd.pm.core.pap.query.model.context.TargetContext;
@@ -23,10 +18,13 @@ import gov.nist.csd.pm.core.pap.query.model.explain.Explain;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.Subgraph;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.SubgraphPrivileges;
 import gov.nist.csd.pm.core.pdp.PDPTx;
+import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.pdp.proto.model.*;
 import gov.nist.csd.pm.pdp.proto.query.*;
 import gov.nist.csd.pm.core.pdp.query.*;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -158,15 +156,36 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateRuntimeExceptionAndNotCallObserver() throws PMException {
-			IdOrNameQuery request = IdOrNameQuery.newBuilder()
-					.setId(123)
-					.build();
-			RuntimeException ex = new RuntimeException("test exception");
-			when(adjudicator.adjudicateQuery(any())).thenThrow(ex);
+		void shouldHandleUnauthorizedException() throws PMException {
+			IdOrNameQuery request = IdOrNameQuery.newBuilder().setId(123).build();
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class, () -> service.nodeExists(request, observer));
-			verifyNoInteractions(observer);
+			service.nodeExists(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			IdOrNameQuery request = IdOrNameQuery.newBuilder().setId(123).build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.nodeExists(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -222,28 +241,36 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldThrowWhenIdOrNameNotSet() throws PMException {
-			IdOrNameQuery request = IdOrNameQuery.getDefaultInstance();
+		void shouldHandleUnauthorizedException() throws PMException {
+			IdOrNameQuery request = IdOrNameQuery.newBuilder().setId(123).build();
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			stubAdjudicatorTx(adjudicator -> { });
+			service.getNode(request, observer);
 
-			assertThrows(PMException.class,
-			             () -> service.getNode(request, observer));
-			verifyNoInteractions(observer);
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 
 		@Test
-		void shouldPropagateRuntimeExceptionAndNotCallObserver() throws PMException {
-			IdOrNameQuery req = IdOrNameQuery.newBuilder()
-					.setId(999L)
-					.build();
-			RuntimeException e = new RuntimeException("test exception");
+		void shouldHandleGeneralException() throws PMException {
+			IdOrNameQuery request = IdOrNameQuery.newBuilder().setId(123).build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
 
-			when(adjudicator.adjudicateQuery(any())).thenThrow(e);
+			service.getNode(request, observer);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getNode(req, observer));
-			verifyNoInteractions(observer);
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -275,17 +302,36 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateRuntimeExceptionAndNotCallObserver() throws PMException {
-			IdOrNameQuery request = IdOrNameQuery.newBuilder()
-					.setName("test")
-					.build();
+		void shouldHandleUnauthorizedException() throws PMException {
+			IdOrNameQuery request = IdOrNameQuery.newBuilder().setName("test").build();
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+			service.getNodeId(request, observer);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getNodeId(request, observer));
-			verifyNoInteractions(observer);
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			IdOrNameQuery request = IdOrNameQuery.newBuilder().setName("test").build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getNodeId(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -344,14 +390,36 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateRuntimeExceptionAndNotCallObserver() throws PMException {
+		void shouldHandleUnauthorizedException() throws PMException {
 			SearchQuery request = SearchQuery.getDefaultInstance();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.searchNodes(request, observer));
-			verifyNoInteractions(observer);
+			service.searchNodes(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			SearchQuery request = SearchQuery.getDefaultInstance();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.searchNodes(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -401,14 +469,36 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateRuntimeExceptionAndNotCallObserver() throws PMException {
+		void shouldHandleUnauthorizedException() throws PMException {
 			Empty request = Empty.getDefaultInstance();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getPolicyClasses(request, observer));
-			verifyNoInteractions(observer);
+			service.getPolicyClasses(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			Empty request = Empty.getDefaultInstance();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getPolicyClasses(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -462,16 +552,40 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
+		void shouldHandleUnauthorizedException() throws PMException {
 			GetAdjacentAssignmentsQuery request = GetAdjacentAssignmentsQuery.newBuilder()
 					.setNodeId(3)
 					.build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getAdjacentDescendants(request, observer));
-			verifyNoInteractions(observer);
+			service.getAdjacentDescendants(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			GetAdjacentAssignmentsQuery request = GetAdjacentAssignmentsQuery.newBuilder()
+					.setNodeId(3)
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getAdjacentDescendants(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -525,16 +639,40 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
+		void shouldHandleUnauthorizedException() throws PMException {
 			GetAdjacentAssignmentsQuery request = GetAdjacentAssignmentsQuery.newBuilder()
 					.setNodeId(7)
 					.build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getAdjacentAscendants(request, observer));
-			verifyNoInteractions(observer);
+			service.getAdjacentAscendants(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			GetAdjacentAssignmentsQuery request = GetAdjacentAssignmentsQuery.newBuilder()
+					.setNodeId(7)
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getAdjacentAscendants(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -608,16 +746,40 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
+		void shouldHandleUnauthorizedException() throws PMException {
 			GetAssociationsQuery request = GetAssociationsQuery.newBuilder()
 					.setNodeId(6L)
 					.build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getAssociationsWithSource(request, observer));
-			verifyNoInteractions(observer);
+			service.getAssociationsWithSource(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			GetAssociationsQuery request = GetAssociationsQuery.newBuilder()
+					.setNodeId(6L)
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getAssociationsWithSource(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -691,16 +853,40 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
+		void shouldHandleUnauthorizedException() throws PMException {
 			GetAssociationsQuery request = GetAssociationsQuery.newBuilder()
 					.setNodeId(1L)
 					.build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getAssociationsWithTarget(request, observer));
-			verifyNoInteractions(observer);
+			service.getAssociationsWithTarget(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			GetAssociationsQuery request = GetAssociationsQuery.newBuilder()
+					.setNodeId(1L)
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getAssociationsWithTarget(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -784,16 +970,40 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
+		void shouldHandleUnauthorizedException() throws PMException {
 			GetSubgraphQuery request = GetSubgraphQuery.newBuilder()
 					.setNodeId(1)
 					.build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getAscendantSubgraph(request, observer));
-			verifyNoInteractions(observer);
+			service.getAscendantSubgraph(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			GetSubgraphQuery request = GetSubgraphQuery.newBuilder()
+					.setNodeId(1)
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getAscendantSubgraph(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -879,16 +1089,40 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
+		void shouldHandleUnauthorizedException() throws PMException {
 			GetSubgraphQuery request = GetSubgraphQuery.newBuilder()
 					.setNodeId(3)
 					.build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getDescendantSubgraph(request, observer));
-			verifyNoInteractions(observer);
+			service.getDescendantSubgraph(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			GetSubgraphQuery request = GetSubgraphQuery.newBuilder()
+					.setNodeId(3)
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getDescendantSubgraph(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -941,16 +1175,40 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
+		void shouldHandleUnauthorizedException() throws PMException {
 			GetDescendantsQuery request = GetDescendantsQuery.newBuilder()
 					.setNodeId(1)
 					.build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getAttributeDescendants(request, observer));
-			verifyNoInteractions(observer);
+			service.getAttributeDescendants(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			GetDescendantsQuery request = GetDescendantsQuery.newBuilder()
+					.setNodeId(1)
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getAttributeDescendants(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -1003,16 +1261,40 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
+		void shouldHandleUnauthorizedException() throws PMException {
 			GetDescendantsQuery request = GetDescendantsQuery.newBuilder()
 					.setNodeId(1)
 					.build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getPolicyClassDescendants(request, observer));
-			verifyNoInteractions(observer);
+			service.getPolicyClassDescendants(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			GetDescendantsQuery request = GetDescendantsQuery.newBuilder()
+					.setNodeId(1)
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getPolicyClassDescendants(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -1066,13 +1348,34 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.isAscendant(request, observer));
-			verifyNoInteractions(observer);
+			service.isAscendant(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.isAscendant(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -1126,13 +1429,34 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.isDescendant(request, observer));
-			verifyNoInteractions(observer);
+			service.isDescendant(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.isDescendant(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -1186,13 +1510,34 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getProhibitions(Empty.getDefaultInstance(), observer));
-			verifyNoInteractions(observer);
+			service.getProhibitions(Empty.getDefaultInstance(), observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getProhibitions(Empty.getDefaultInstance(), observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -1263,14 +1608,40 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionWhenSubjectNotSet() throws PMException {
-			GetProhibitionBySubjectQuery request = GetProhibitionBySubjectQuery.getDefaultInstance();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new PMRuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			GetProhibitionBySubjectQuery request = GetProhibitionBySubjectQuery.newBuilder()
+					.setNodeId(1)
+					.build();
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(PMRuntimeException.class,
-			             () -> service.getProhibitionsBySubject(request, observer));
-			verifyNoInteractions(observer);
+			service.getProhibitionsBySubject(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			GetProhibitionBySubjectQuery request = GetProhibitionBySubjectQuery.newBuilder()
+					.setNodeId(1)
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getProhibitionsBySubject(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -1307,16 +1678,40 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
+		void shouldHandleUnauthorizedException() throws PMException {
 			GetByNameQuery request = GetByNameQuery.newBuilder()
 					.setName("test")
 					.build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getProhibition(request, observer));
-			verifyNoInteractions(observer);
+			service.getProhibition(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			GetByNameQuery request = GetByNameQuery.newBuilder()
+					.setName("test")
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getProhibition(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -1375,16 +1770,40 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
+		void shouldHandleUnauthorizedException() throws PMException {
 			GetInheritedProhibitionsQuery request = GetInheritedProhibitionsQuery.newBuilder()
 					.setSubjectId(1)
 					.build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new PMRuntimeException("test exception"));
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(PMRuntimeException.class,
-			             () -> service.getInheritedProhibitions(request, observer));
-			verifyNoInteractions(observer);
+			service.getInheritedProhibitions(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			GetInheritedProhibitionsQuery request = GetInheritedProhibitionsQuery.newBuilder()
+					.setSubjectId(1)
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getInheritedProhibitions(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -1445,16 +1864,40 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
+		void shouldHandleUnauthorizedException() throws PMException {
 			GetProhibitionsWithContainerQuery request = GetProhibitionsWithContainerQuery.newBuilder()
 					.setContainerId(1)
 					.build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getProhibitionsWithContainer(request, observer));
-			verifyNoInteractions(observer);
+			service.getProhibitionsWithContainer(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			GetProhibitionsWithContainerQuery request = GetProhibitionsWithContainerQuery.newBuilder()
+					.setContainerId(1)
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getProhibitionsWithContainer(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -1513,13 +1956,34 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getObligations(Empty.getDefaultInstance(), observer));
-			verifyNoInteractions(observer);
+			service.getObligations(Empty.getDefaultInstance(), observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getObligations(Empty.getDefaultInstance(), observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -1554,16 +2018,40 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
+		void shouldHandleUnauthorizedException() throws PMException {
 			GetByNameQuery request = GetByNameQuery.newBuilder()
 					.setName("test")
 					.build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getObligation(request, observer));
-			verifyNoInteractions(observer);
+			service.getObligation(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			GetByNameQuery request = GetByNameQuery.newBuilder()
+					.setName("test")
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getObligation(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -1619,15 +2107,35 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			GetObligationByAuthorQuery request = GetObligationByAuthorQuery.newBuilder().setAuthorId(1L).build();
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getObligationsByAuthor(
-					             GetObligationByAuthorQuery.newBuilder().setAuthorId(1L).build(),
-					             observer
-			             ));
+			service.getObligationsByAuthor(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			GetObligationByAuthorQuery request = GetObligationByAuthorQuery.newBuilder().setAuthorId(1L).build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getObligationsByAuthor(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
 			verifyNoMoreInteractions(observer);
 		}
 	}
@@ -1672,12 +2180,33 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.getResourceOperations(Empty.getDefaultInstance(), observer));
+			service.getResourceOperations(Empty.getDefaultInstance(), observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.getResourceOperations(Empty.getDefaultInstance(), observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
 			verifyNoMoreInteractions(observer);
 		}
 	}
@@ -1743,13 +2272,41 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
-			ComputePrivilegesQuery request = ComputePrivilegesQuery.newBuilder().build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			ComputePrivilegesQuery request = ComputePrivilegesQuery.newBuilder()
+					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
+					.setTargetCtx(TargetContextProto.newBuilder().setId(2).build())
+					.build();
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.computePrivileges(request, observer));
+			service.computePrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			ComputePrivilegesQuery request = ComputePrivilegesQuery.newBuilder()
+					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
+					.setTargetCtx(TargetContextProto.newBuilder().setId(2).build())
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.computePrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
 			verifyNoMoreInteractions(observer);
 		}
 	}
@@ -1814,13 +2371,41 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
-			ComputeDeniedPrivilegesQuery request = ComputeDeniedPrivilegesQuery.newBuilder().build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			ComputeDeniedPrivilegesQuery request = ComputeDeniedPrivilegesQuery.newBuilder()
+					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
+					.setTargetCtx(TargetContextProto.newBuilder().setId(2).build())
+					.build();
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.computeDeniedPrivileges(request, observer));
+			service.computeDeniedPrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			ComputeDeniedPrivilegesQuery request = ComputeDeniedPrivilegesQuery.newBuilder()
+					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
+					.setTargetCtx(TargetContextProto.newBuilder().setId(2).build())
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.computeDeniedPrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
 			verifyNoMoreInteractions(observer);
 		}
 	}
@@ -1877,13 +2462,39 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
-			ComputeCapabilityListQuery request = ComputeCapabilityListQuery.newBuilder().build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			ComputeCapabilityListQuery request = ComputeCapabilityListQuery.newBuilder()
+					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
+					.build();
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.computeCapabilityList(request, observer));
+			service.computeCapabilityList(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			ComputeCapabilityListQuery request = ComputeCapabilityListQuery.newBuilder()
+					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.computeCapabilityList(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
 			verifyNoMoreInteractions(observer);
 		}
 	}
@@ -1942,13 +2553,39 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
-			ComputeACLQuery request = ComputeACLQuery.newBuilder().build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			ComputeACLQuery request = ComputeACLQuery.newBuilder()
+					.setTargetCtx(TargetContextProto.newBuilder().setId(1).build())
+					.build();
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.computeACL(request, observer));
+			service.computeACL(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			ComputeACLQuery request = ComputeACLQuery.newBuilder()
+					.setTargetCtx(TargetContextProto.newBuilder().setId(1).build())
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.computeACL(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
 			verifyNoMoreInteractions(observer);
 		}
 	}
@@ -2008,15 +2645,40 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
-			ComputeDestinationAttributesQuery request =
-					ComputeDestinationAttributesQuery.newBuilder().build();
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			ComputeDestinationAttributesQuery request = ComputeDestinationAttributesQuery.newBuilder()
+					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
+					.build();
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.computeDestinationAttributes(request, observer));
-			verifyNoInteractions(observer);
+			service.computeDestinationAttributes(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			ComputeDestinationAttributesQuery request = ComputeDestinationAttributesQuery.newBuilder()
+					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
+					.build();
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.computeDestinationAttributes(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -2125,13 +2787,34 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.computeSubgraphPrivileges(request, observer));
-			verifyNoInteractions(observer);
+			service.computeSubgraphPrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.computeSubgraphPrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -2217,13 +2900,34 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.computeAdjacentAscendantPrivileges(request, observer));
-			verifyNoInteractions(observer);
+			service.computeAdjacentAscendantPrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.computeAdjacentAscendantPrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -2310,13 +3014,34 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.computeAdjacentDescendantPrivileges(request, observer));
-			verifyNoInteractions(observer);
+			service.computeAdjacentDescendantPrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.computeAdjacentDescendantPrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -2365,13 +3090,34 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateExceptionAndNotCallObserver() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.explain(request, observer));
-			verifyNoInteractions(observer);
+			service.explain(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.explain(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -2452,13 +3198,34 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateException() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.computePersonalObjectSystem(request, observer));
-			verifyNoInteractions(observer);
+			service.computePersonalObjectSystem(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.computePersonalObjectSystem(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
 		}
 	}
 
@@ -2521,12 +3288,33 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateException() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.selfComputePrivileges(request, observer));
+			service.selfComputePrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.selfComputePrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
 			verifyNoMoreInteractions(observer);
 		}
 	}
@@ -2613,12 +3401,33 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateException() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.selfComputeSubgraphPrivileges(request, observer));
+			service.selfComputeSubgraphPrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.selfComputeSubgraphPrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
 			verifyNoMoreInteractions(observer);
 		}
 	}
@@ -2692,12 +3501,33 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateException() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.selfComputeAdjacentAscendantPrivileges(request, observer));
+			service.selfComputeAdjacentAscendantPrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.selfComputeAdjacentAscendantPrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
 			verifyNoMoreInteractions(observer);
 		}
 	}
@@ -2771,12 +3601,33 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateException() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.selfComputeAdjacentDescendantPrivileges(request, observer));
+			service.selfComputeAdjacentDescendantPrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.selfComputeAdjacentDescendantPrivileges(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
 			verifyNoMoreInteractions(observer);
 		}
 	}
@@ -2847,12 +3698,33 @@ public class PolicyQueryServiceTest {
 		}
 
 		@Test
-		void shouldPropagateException() throws PMException {
-			when(adjudicator.adjudicateQuery(any()))
-					.thenThrow(new RuntimeException("test exception"));
+		void shouldHandleUnauthorizedException() throws PMException {
+			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
+			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(unauthorizedException);
 
-			assertThrows(RuntimeException.class,
-			             () -> service.selfComputePersonalObjectSystem(request, observer));
+			service.selfComputePersonalObjectSystem(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+			assertEquals("Unauthorized access", exception.getStatus().getDescription());
+			verifyNoMoreInteractions(observer);
+		}
+
+		@Test
+		void shouldHandleGeneralException() throws PMException {
+			RuntimeException generalException = new RuntimeException("General error");
+			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
+
+			service.selfComputePersonalObjectSystem(request, observer);
+
+			ArgumentCaptor<StatusRuntimeException> captor = ArgumentCaptor.forClass(StatusRuntimeException.class);
+			verify(observer).onError(captor.capture());
+			StatusRuntimeException exception = captor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+			assertEquals("General error", exception.getStatus().getDescription());
 			verifyNoMoreInteractions(observer);
 		}
 	}

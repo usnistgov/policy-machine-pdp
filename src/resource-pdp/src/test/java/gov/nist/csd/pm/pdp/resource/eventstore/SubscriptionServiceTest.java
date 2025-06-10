@@ -3,6 +3,7 @@ package gov.nist.csd.pm.pdp.resource.eventstore;
 import static org.mockito.Mockito.*;
 
 import com.eventstore.dbclient.*;
+import com.google.protobuf.InvalidProtocolBufferException;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
 import gov.nist.csd.pm.core.pap.PAP;
@@ -23,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 @ExtendWith(MockitoExtension.class)
 class SubscriptionServiceTest {
@@ -73,7 +75,7 @@ class SubscriptionServiceTest {
 		}
 
 		@Test
-		void whenNoSnapshot_catchesUpFrom0() throws ExecutionException, InterruptedException {
+		void whenNoSnapshot_catchesUpFrom0() throws ExecutionException, InterruptedException, PMException, InvalidProtocolBufferException, TimeoutException {
 			eventStoreConnectionManager.getOrInitClient()
 					.appendToStream(
 							config.getEventStream(),
@@ -95,7 +97,7 @@ class SubscriptionServiceTest {
 		}
 
 		@Test
-		void whenSnapshotExists_catchesUpFromSnapshotNumber() throws PMException, ExecutionException, InterruptedException {
+		void whenSnapshotExists_catchesUpFromSnapshotNumber() throws PMException, ExecutionException, InterruptedException, InvalidProtocolBufferException, TimeoutException {
 			currentRevisionService.set(1);
 			pap.modify().graph().createPolicyClass("pc1");
 			eventStoreConnectionManager.getOrInitClient()
@@ -136,7 +138,7 @@ class SubscriptionServiceTest {
 		}
 
 		@Test
-		void whenCaughtUp_subscriptionReceivesNewEventsAfterLastRevision() throws ExecutionException, InterruptedException {
+		void whenCaughtUp_subscriptionReceivesNewEventsAfterLastRevision() throws ExecutionException, InterruptedException, PMException, InvalidProtocolBufferException, TimeoutException {
 			PolicyClassCreated pc2 = PolicyClassCreated.newBuilder()
 					.setId("pc2".hashCode())
 					.setName("pc2")
