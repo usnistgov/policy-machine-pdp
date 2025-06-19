@@ -13,7 +13,7 @@ This will create the following services:
 - `resource-pdp`, port 50051
 - `eventstore`, port 2113 
 
-See the 
+See client examples for the `resource-pdp` and `admin-pdp-epp` in the [client examples project](./examples/client)
 
 ## gRPC Headers
 
