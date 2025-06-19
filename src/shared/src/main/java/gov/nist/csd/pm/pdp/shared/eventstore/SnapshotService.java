@@ -71,6 +71,8 @@ public class SnapshotService {
 
         List<ResolvedEvent> events = readResult.getEvents();
         if (events.isEmpty()) {
+            // return -1 to signify there are no events -- 0 represents the first event
+            currentRevision.set(-1);
             return -1;
         }
 
@@ -79,18 +81,14 @@ public class SnapshotService {
         byte[] eventData = originalEvent.getEventData();
         PMSnapshot pmSnapshot = PMSnapshot.parseFrom(eventData);
 
-        // if the snapshot revision is <= current revision, no need to snapshot
-        long cr = currentRevision.get();
-        if (pmSnapshot.getRevision() <= cr) {
-            logger.info("Snapshot revision <= current revision, skipping snapshot");
-            return cr;
-        }
-
+        // restore policy
         synchronized (pap) {
             pap.reset();
-
             pap.deserialize(pmSnapshot.getJson(), new JSONDeserializer());
         }
+
+        // set current revision to snapshot revision
+        currentRevision.set(pmSnapshot.getRevision());
 
         return pmSnapshot.getRevision();
     }

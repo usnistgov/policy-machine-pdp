@@ -3,12 +3,14 @@ package gov.nist.csd.pm.pdp.admin.pdp;
 import com.eventstore.dbclient.WrongExpectedVersionException;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.exception.PMRuntimeException;
+import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.pdp.admin.pap.EventTrackingPAP;
-import gov.nist.csd.pm.pdp.proto.adjudication.AdminCommand;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
+import gov.nist.csd.pm.proto.v1.cmd.AdminCommand;
+import gov.nist.csd.pm.proto.v1.model.Value;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import org.slf4j.Logger;
@@ -16,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +62,7 @@ public class Adjudicator {
      */
     public <R> R adjudicateQuery(PDPTxFunction<R> consumer) throws PMException {
         NGACContext ctx = contextFactory.createContext();
-        return ctx.pdp().runTx(ctx.userCtx(), consumer::apply);
+        return ctx.pdp().runTx(contextFactory.createUserContext(ctx.pap()), consumer::apply);
     }
 
     /**
@@ -68,20 +71,21 @@ public class Adjudicator {
      * @param adminCommands The commands to adjudicate
      * @return A map of created node IDs
      */
-    public Map<String, Long> adjudicateAdminCommands(List<AdminCommand> adminCommands) throws PMException {
-        Map<String, Long> createdNodeIds = new HashMap<>();
+    public List<Value> adjudicateAdminCommands(List<AdminCommand> adminCommands) throws PMException {
+        List<Value> values = new ArrayList<>();
 
         adjudicateTransaction(ctx -> {
-            ctx.pdp().runTx(ctx.userCtx(), pdpTx -> {
+            ctx.pdp().runTx(contextFactory.createUserContext(ctx.pap()), pdpTx -> {
                 for (AdminCommand adminCommand : adminCommands) {
-                    commandHandler.handleCommand(pdpTx, adminCommand, createdNodeIds);
+                    Value value = commandHandler.handleCommand(ctx.pap(), pdpTx, adminCommand);
+                    values.add(value);
                 }
 
                 return null;
             });
         });
 
-        return createdNodeIds;
+        return values;
     }
 
     /**
@@ -96,59 +100,6 @@ public class Adjudicator {
                 NGACContext ctx = contextFactory.createContext();
                 txConsumer.accept(ctx);
                 return publishEvents(ctx.pap());
-            } catch (PMException e) {
-                throw new PMRuntimeException(e);
-            }
-        };
-
-        return executeWithRetry(supplier);
-    }
-
-
-    /**
-     * Adjudicates an administrative operation.
-     *
-     * @param opName The operation name
-     * @param args The operation arguments
-     * @return The adjudication response
-     */
-    public Object adjudicateAdminOperation(String opName, Map<String, Object> args) throws PMException {
-        Supplier<Object> supplier = () -> {
-            try {
-                NGACContext ctx = contextFactory.createContext();
-                Object adjudicationResponse = ctx.pdp().adjudicateAdminOperation(
-                        ctx.userCtx(),
-                        opName,
-                        args
-                );
-                publishEvents(ctx.pap());
-                return adjudicationResponse;
-            } catch (PMException e) {
-                throw new PMRuntimeException(e);
-            }
-        };
-
-        return executeWithRetry(supplier);
-    }
-
-    /**
-     * Adjudicates an administrative routine.
-     *
-     * @param opName The routine name
-     * @param args The routine arguments
-     * @return The adjudication response
-     */
-    public Object adjudicateAdminRoutine(String opName, Map<String, Object> args) throws PMException {
-        Supplier<Object> supplier = () -> {
-            try {
-                NGACContext ctx = contextFactory.createContext();
-                Object adjudicationResponse = ctx.pdp().adjudicateAdminRoutine(
-                        ctx.userCtx(),
-                        opName,
-                        args
-                );
-                publishEvents(ctx.pap());
-                return adjudicationResponse;
             } catch (PMException e) {
                 throw new PMRuntimeException(e);
             }

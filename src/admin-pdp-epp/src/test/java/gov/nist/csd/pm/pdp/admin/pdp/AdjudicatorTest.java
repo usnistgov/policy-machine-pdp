@@ -2,17 +2,17 @@ package gov.nist.csd.pm.pdp.admin.pdp;
 
 import com.eventstore.dbclient.WrongExpectedVersionException;
 import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.common.exception.PMRuntimeException;
+import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.PDPTx;
 import gov.nist.csd.pm.core.pdp.PDPTxRunner;
 import gov.nist.csd.pm.pdp.admin.pap.EventTrackingPAP;
-import gov.nist.csd.pm.pdp.proto.adjudication.AdminCommand;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
+import gov.nist.csd.pm.proto.v1.cmd.AdminCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -67,7 +67,7 @@ public class AdjudicatorTest {
 		when(contextFactory.createContext()).thenReturn(contextMock);
 		when(contextMock.pdp()).thenReturn(pdpMock);
 		when(contextMock.pap()).thenReturn(papMock);
-		when(contextMock.userCtx()).thenReturn(userContextMock);
+		when(contextFactory.createUserContext(any())).thenReturn(userContextMock);
 		when(currentRevision.get()).thenReturn(1L);
 
 		adjudicator = new Adjudicator(
@@ -131,32 +131,24 @@ public class AdjudicatorTest {
 					.thenReturn(Collections.emptyList());
 
 			doAnswer(invocation -> {
-				
-				Map<String, Long> map = invocation.getArgument(2);
-				map.put("one", 1L);
+				invocation.getArgument(2);
 				return null;
 			}).when(commandHandler)
-					.handleCommand(eq(pdpTxMock), eq(cmd1), anyMap());
+					.handleCommand(any(), eq(pdpTxMock), eq(cmd1));
 
 			doAnswer(invocation -> {
-				
-				Map<String, Long> map = invocation.getArgument(2);
-				map.put("two", 2L);
+				invocation.getArgument(2);
 				return null;
 			}).when(commandHandler)
-					.handleCommand(eq(pdpTxMock), eq(cmd2), anyMap());
+					.handleCommand(any(), eq(pdpTxMock), eq(cmd2));
 
-			Map<String, Long> result = adjudicator.adjudicateAdminCommands(List.of(cmd1, cmd2));
-
-			assertEquals(2, result.size());
-			assertEquals(1L, result.get("one"));
-			assertEquals(2L, result.get("two"));
+			adjudicator.adjudicateAdminCommands(List.of(cmd1, cmd2));
 
 			verify(contextFactory, times(1)).createContext();
 			verify(commandHandler, times(1))
-					.handleCommand(eq(pdpTxMock), eq(cmd1), anyMap());
+					.handleCommand(any(), eq(pdpTxMock), eq(cmd1));
 			verify(commandHandler, times(1))
-					.handleCommand(eq(pdpTxMock), eq(cmd2), anyMap());
+					.handleCommand(any(), eq(pdpTxMock), eq(cmd2));
 		}
 
 		@Test
@@ -174,7 +166,7 @@ public class AdjudicatorTest {
 
 			doThrow(new PMException("fail"))
 					.when(commandHandler)
-					.handleCommand(eq(pdpTxMock), eq(cmd), anyMap());
+					.handleCommand(any(), eq(pdpTxMock), eq(cmd));
 
 			PMException ex = assertThrows(
 					PMException.class,
@@ -184,7 +176,7 @@ public class AdjudicatorTest {
 
 			verify(contextFactory, times(1)).createContext();
 			verify(commandHandler, times(1))
-					.handleCommand(eq(pdpTxMock), eq(cmd), anyMap());
+					.handleCommand(any(), eq(pdpTxMock), eq(cmd));
 		}
 
 		@Test
@@ -203,23 +195,20 @@ public class AdjudicatorTest {
 
 			doAnswer(inv -> {
 				
-				Map<String, Long> map = inv.getArgument(2);
+				inv.getArgument(2);
 				if (attempts.getAndIncrement() == 0) {
 					throw mock(WrongExpectedVersionException.class);
 				}
-				map.put("retry", 42L);
 				return null;
 			}).when(commandHandler)
-					.handleCommand(eq(pdpTxMock), eq(cmd), anyMap());
+					.handleCommand(any(), eq(pdpTxMock), eq(cmd));
 
-			Map<String, Long> result = adjudicator.adjudicateAdminCommands(List.of(cmd));
+			adjudicator.adjudicateAdminCommands(List.of(cmd));
 
-			assertEquals(1, result.size());
-			assertEquals(42L, result.get("retry"));
 			assertEquals(2, attempts.get());
 			verify(contextFactory, times(2)).createContext();
 			verify(commandHandler, times(2))
-					.handleCommand(eq(pdpTxMock), eq(cmd), anyMap());
+					.handleCommand(any(), eq(pdpTxMock), eq(cmd));
 		}
 
 		@Test
@@ -240,7 +229,7 @@ public class AdjudicatorTest {
 				attempts.incrementAndGet();
 				throw mock(WrongExpectedVersionException.class);
 			}).when(commandHandler)
-					.handleCommand(eq(pdpTxMock), eq(cmd), anyMap());
+					.handleCommand(any(), eq(pdpTxMock), eq(cmd));
 
 			assertThrows(
 					WrongExpectedVersionException.class,
@@ -249,7 +238,7 @@ public class AdjudicatorTest {
 			assertEquals(3, attempts.get());
 			verify(contextFactory, times(3)).createContext();
 			verify(commandHandler, times(3))
-					.handleCommand(eq(pdpTxMock), eq(cmd), anyMap());
+					.handleCommand(any(), eq(pdpTxMock), eq(cmd));
 		}
 
 	}
@@ -324,172 +313,6 @@ public class AdjudicatorTest {
 			assertEquals(3, attempts.get());
 			verify(contextFactory, times(3)).createContext();
 			verify(papMock, times(3)).publishToEventStore(any(), any(), anyLong());
-		}
-	}
-
-	@Nested
-	class AdjudicateAdminOperationTest {
-		private final String opName = "op";
-		private final Map<String,Object> args = Collections.singletonMap("k","v");
-
-		@Test
-		void whenSuccess_returnsResponse() throws PMException {
-			Object resp = mock(Object.class);
-			when(contextMock.pdp().adjudicateAdminOperation(any(), eq(opName), eq(args)))
-					.thenReturn(resp);
-			when(papMock.publishToEventStore(any(), any(), anyLong()))
-					.thenReturn(Collections.emptyList());
-
-			Object result = adjudicator.adjudicateAdminOperation(opName, args);
-
-			assertSame(resp, result);
-			verify(contextFactory, times(1)).createContext();
-			verify(contextMock.pdp(), times(1))
-					.adjudicateAdminOperation(eq(userContextMock), eq(opName), eq(args));
-			verify(papMock, times(1))
-					.publishToEventStore(any(), any(), anyLong());
-		}
-
-		@Test
-		void whenPMException_wrappedAndNoRetry() throws PMException {
-			PMException failure = new PMException("error");
-			when(contextMock.pdp().adjudicateAdminOperation(any(), eq(opName), eq(args)))
-					.thenThrow(failure);
-
-			PMException ex = assertThrows(
-					PMException.class,
-					() -> adjudicator.adjudicateAdminOperation(opName, args)
-			);
-			assertSame(failure, ex);
-
-			verify(contextFactory, times(1)).createContext();
-			verify(papMock, never()).publishToEventStore(any(), any(), anyLong());
-		}
-
-		@Test
-		void whenWrongExpectedVersionAndSuccessOnRetry_returnsResponse() throws PMException {
-			Object resp = mock(Object.class);
-			AtomicInteger attempts = new AtomicInteger();
-
-			when(contextMock.pdp().adjudicateAdminOperation(any(), eq(opName), eq(args)))
-					.thenAnswer(inv -> {
-						if (attempts.getAndIncrement() == 0) {
-							throw mock(WrongExpectedVersionException.class);
-						}
-						return resp;
-					});
-			when(papMock.publishToEventStore(any(), any(), anyLong()))
-					.thenReturn(Collections.emptyList());
-
-			Object result = adjudicator.adjudicateAdminOperation(opName, args);
-
-			assertSame(resp, result);
-			assertEquals(2, attempts.get(), "Should have retried once");
-			verify(contextFactory, times(2)).createContext();
-			verify(contextMock.pdp(), times(2))
-					.adjudicateAdminOperation(eq(userContextMock), eq(opName), eq(args));
-			// publish only on successful attempt
-			verify(papMock, times(1))
-					.publishToEventStore(any(), any(), anyLong());
-		}
-
-		@Test
-		void whenWrongExpectedVersionAndMaxRetriesExceeded_throws() throws PMException {
-			AtomicInteger attempts = new AtomicInteger();
-			when(contextMock.pdp().adjudicateAdminOperation(any(), eq(opName), eq(args)))
-					.thenAnswer(inv -> {
-						attempts.incrementAndGet();
-						throw mock(WrongExpectedVersionException.class);
-					});
-
-			assertThrows(
-					WrongExpectedVersionException.class,
-					() -> adjudicator.adjudicateAdminOperation(opName, args)
-			);
-
-			assertEquals(3, attempts.get());
-			verify(contextFactory, times(3)).createContext();
-			verify(papMock, never()).publishToEventStore(any(), any(), anyLong());
-		}
-	}
-
-	@Nested
-	class AdjudicateAdminRoutineTest {
-		private final String rtName = "routine";
-		private final Map<String,Object> args = Collections.singletonMap("x",123);
-
-		@Test
-		void whenSuccess_returnsResponse() throws PMException {
-			Object resp = mock(Object.class);
-			when(contextMock.pdp().adjudicateAdminRoutine(any(), eq(rtName), eq(args)))
-					.thenReturn(resp);
-			when(papMock.publishToEventStore(any(), any(), anyLong()))
-					.thenReturn(Collections.emptyList());
-
-			Object result = adjudicator.adjudicateAdminRoutine(rtName, args);
-
-			assertSame(resp, result);
-			verify(contextFactory).createContext();
-			verify(contextMock.pdp())
-					.adjudicateAdminRoutine(eq(userContextMock), eq(rtName), eq(args));
-			verify(papMock).publishToEventStore(any(), any(), anyLong());
-		}
-
-		@Test
-		void whenPMException_wrappedAndNoRetry() throws PMException {
-			PMException failure = new PMException("error");
-			when(contextMock.pdp().adjudicateAdminRoutine(any(), eq(rtName), eq(args)))
-					.thenThrow(failure);
-
-			PMException ex = assertThrows(
-					PMException.class,
-					() -> adjudicator.adjudicateAdminRoutine(rtName, args)
-			);
-			assertSame(failure, ex);
-
-			verify(contextFactory).createContext();
-			verify(papMock, never()).publishToEventStore(any(), any(), anyLong());
-		}
-
-		@Test
-		void whenWrongExpectedVersionAndSuccessOnRetry_returnsResponse() throws PMException {
-			Object resp = mock(Object.class);
-			AtomicInteger attempts = new AtomicInteger();
-			when(contextMock.pdp().adjudicateAdminRoutine(any(), eq(rtName), eq(args)))
-					.thenAnswer(inv -> {
-						if (attempts.getAndIncrement() == 0) {
-							throw mock(WrongExpectedVersionException.class);
-						}
-						return resp;
-					});
-			when(papMock.publishToEventStore(any(), any(), anyLong()))
-					.thenReturn(Collections.emptyList());
-
-			Object result = adjudicator.adjudicateAdminRoutine(rtName, args);
-
-			assertSame(resp, result);
-			assertEquals(2, attempts.get());
-			verify(contextFactory, times(2)).createContext();
-			verify(papMock, times(1)).publishToEventStore(any(), any(), anyLong());
-		}
-
-		@Test
-		void whenWrongExpectedVersionAndMaxRetriesExceeded_throws() throws PMException {
-			AtomicInteger attempts = new AtomicInteger();
-			when(contextMock.pdp().adjudicateAdminRoutine(any(), eq(rtName), eq(args)))
-					.thenAnswer(inv -> {
-						attempts.incrementAndGet();
-						throw mock(WrongExpectedVersionException.class);
-					});
-
-			WrongExpectedVersionException ex = assertThrows(
-					WrongExpectedVersionException.class,
-					() -> adjudicator.adjudicateAdminRoutine(rtName, args)
-			);
-			assertEquals(3, attempts.get());
-
-			verify(contextFactory, times(3)).createContext();
-			verify(papMock, never()).publishToEventStore(any(), any(), anyLong());
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
+import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.function.AdminFunction;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
@@ -36,9 +37,12 @@ public class ContextFactory {
     public NGACContext createContext() throws PMException {
         NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb);
         EventTrackingPAP pap = new EventTrackingPAP(noCommitNeo4jPolicyStore, loadedAdminFunctionPlugins);
-        UserContext userCtx = UserContextFromHeader.get(pap);
         PDP pdp = new PDP(pap);
 
-        return new NGACContext(userCtx, pdp, pap);
+        return new NGACContext(pdp, pap);
+    }
+
+    public UserContext createUserContext(PAP pap) throws PMException {
+        return UserContextFromHeader.get(pap);
     }
 }

@@ -109,13 +109,7 @@ public class SubscriptionService {
 
 	private long restoreLatestSnapshot() throws PMException, InvalidProtocolBufferException, ExecutionException, InterruptedException {
 		try {
-			long snapshotRevision = snapshotService.restoreLatestSnapshot();
-			logger.info("Loaded snapshot at revision {}. Next, catch up to latest revision.", snapshotRevision);
-			if (snapshotRevision != -1) {
-				currentRevisionService.set(snapshotRevision);
-			}
-
-			return snapshotRevision;
+			return snapshotService.restoreLatestSnapshot();
 		} catch (ExecutionException e) {
 			Throwable cause = e.getCause();
 			if (!(cause instanceof StreamNotFoundException)) {

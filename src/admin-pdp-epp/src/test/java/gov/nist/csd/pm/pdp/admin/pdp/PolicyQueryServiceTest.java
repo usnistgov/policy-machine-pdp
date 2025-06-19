@@ -1,6 +1,8 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
+import com.google.protobuf.BoolValue;
 import com.google.protobuf.Empty;
+import com.google.protobuf.Int64Value;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.Node;
 import gov.nist.csd.pm.core.common.graph.node.NodeType;
@@ -19,10 +21,10 @@ import gov.nist.csd.pm.core.pap.query.model.subgraph.Subgraph;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.SubgraphPrivileges;
 import gov.nist.csd.pm.core.pdp.PDPTx;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
-import gov.nist.csd.pm.pdp.proto.model.*;
-import gov.nist.csd.pm.pdp.proto.query.*;
 import gov.nist.csd.pm.core.pdp.query.*;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
+import gov.nist.csd.pm.proto.v1.model.*;
+import gov.nist.csd.pm.proto.v1.query.*;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
@@ -122,7 +124,7 @@ public class PolicyQueryServiceTest {
 	class NodeExistsTests {
 
 		@Mock
-		private StreamObserver<BooleanResponse> observer;
+		private StreamObserver<BoolValue> observer;
 
 		@Test
 		void shouldReturnTrueWhenNodeExists() throws PMException {
@@ -135,7 +137,7 @@ public class PolicyQueryServiceTest {
 			service.nodeExists(request, observer);
 
 			verify(graphQueryAdjudicator).nodeExists(123);
-			verify(observer).onNext(BooleanResponse.newBuilder().setResult(true).build());
+			verify(observer).onNext(BoolValue.newBuilder().setValue(true).build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -150,7 +152,7 @@ public class PolicyQueryServiceTest {
 
 			service.nodeExists(request, observer);
 
-			verify(observer).onNext(BooleanResponse.newBuilder().setResult(false).build());
+			verify(observer).onNext(BoolValue.newBuilder().setValue(false).build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -192,7 +194,7 @@ public class PolicyQueryServiceTest {
 	@Nested
 	class GetNodeTests {
 		@Mock
-		private StreamObserver<NodeProto> observer;
+		private StreamObserver<gov.nist.csd.pm.proto.v1.model.Node> observer;
 
 		@Test
 		void shouldReturnNodeProtoWhenIdProvided() throws PMException {
@@ -200,7 +202,7 @@ public class PolicyQueryServiceTest {
 					.setId(123)
 					.build();
 			Node node = mock(Node.class);
-			NodeProto nodeProto = NodeProto.newBuilder().setName("test").build();
+			gov.nist.csd.pm.proto.v1.model.Node nodeProto = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("test").build();
 
 			stubAdjudicatorTx(adjudicator -> {
 				when(adjudicator.graph().getNodeById(123)).thenReturn(node);
@@ -223,7 +225,7 @@ public class PolicyQueryServiceTest {
 					.setName("test")
 					.build();
 			Node node = mock(Node.class);
-			NodeProto nodeProto = NodeProto.newBuilder().setName("test").build();
+			gov.nist.csd.pm.proto.v1.model.Node nodeProto = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("test").build();
 
 			stubAdjudicatorTx(adjudicator -> {
 				when(adjudicator.graph().getNodeByName("test")).thenReturn(node);
@@ -277,7 +279,7 @@ public class PolicyQueryServiceTest {
 	@Nested
 	class GetNodeIdTests {
 		@Mock
-		private StreamObserver<NodeIdResponse> observer;
+		private StreamObserver<Int64Value> observer;
 
 		@Test
 		void shouldReturnIdGivenName() throws PMException {
@@ -294,8 +296,8 @@ public class PolicyQueryServiceTest {
 			service.getNodeId(request, observer);
 
 			verify(graphQueryAdjudicator).getNodeId("test");
-			verify(observer).onNext(NodeIdResponse.newBuilder()
-					                        .setId(expectedId)
+			verify(observer).onNext(Int64Value.newBuilder()
+					                        .setValue(expectedId)
 					                        .build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
@@ -346,8 +348,8 @@ public class PolicyQueryServiceTest {
 			SearchQuery request = SearchQuery.getDefaultInstance();
 			Node node1 = mock(Node.class);
 			Node node2 = mock(Node.class);
-			NodeProto proto1 = NodeProto.newBuilder().setName("test").setType(NodeProto.NodeTypeProto.PC).build();
-			NodeProto proto2 = NodeProto.newBuilder().setName("test").setType(NodeProto.NodeTypeProto.PC).build();
+			gov.nist.csd.pm.proto.v1.model.Node proto1 = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("test").setType(gov.nist.csd.pm.proto.v1.model.NodeType.PC).build();
+			gov.nist.csd.pm.proto.v1.model.Node proto2 = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("test").setType(gov.nist.csd.pm.proto.v1.model.NodeType.PC).build();
 
 			stubAdjudicatorTx(adjudicator -> {
 				when(adjudicator.graph().search(NodeType.PC, new HashMap<>()))
@@ -703,12 +705,12 @@ public class PolicyQueryServiceTest {
 						.thenReturn(List.of(assoc1, assoc2));
 			});
 
-			AssociationProto proto1 = AssociationProto.newBuilder()
+			gov.nist.csd.pm.proto.v1.model.Association proto1 = gov.nist.csd.pm.proto.v1.model.Association.newBuilder()
 					.setUa(testNode(1L))
 					.setTarget(testNode(2L))
 					.addAllArset(List.of("read"))
 					.build();
-			AssociationProto proto2 = AssociationProto.newBuilder()
+			gov.nist.csd.pm.proto.v1.model.Association proto2 = gov.nist.csd.pm.proto.v1.model.Association.newBuilder()
 					.setUa(testNode(1L))
 					.setTarget(testNode(3L))
 					.addAllArset(List.of("write"))
@@ -810,12 +812,12 @@ public class PolicyQueryServiceTest {
 						.thenReturn(List.of(assoc1, assoc2));
 			});
 
-			AssociationProto proto1 = AssociationProto.newBuilder()
+			gov.nist.csd.pm.proto.v1.model.Association proto1 = gov.nist.csd.pm.proto.v1.model.Association.newBuilder()
 					.setUa(testNode(1))
 					.setTarget(testNode(3))
 					.addAllArset(List.of("read"))
 					.build();
-			AssociationProto proto2 = AssociationProto.newBuilder()
+			gov.nist.csd.pm.proto.v1.model.Association proto2 = gov.nist.csd.pm.proto.v1.model.Association.newBuilder()
 					.setUa(testNode(2))
 					.setTarget(testNode(3))
 					.addAllArset(List.of("write"))
@@ -893,7 +895,7 @@ public class PolicyQueryServiceTest {
 	@Nested
 	class GetAscendantSubgraphTests {
 		@Mock
-		StreamObserver<SubgraphProto> observer;
+		StreamObserver<gov.nist.csd.pm.proto.v1.query.Subgraph> observer;
 
 		@Test
 		void shouldReturnSingleNodeSubgraph() throws PMException {
@@ -909,7 +911,7 @@ public class PolicyQueryServiceTest {
 			});
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
-				var nodeProto = gov.nist.csd.pm.pdp.proto.model.NodeProto.newBuilder()
+				var nodeProto = gov.nist.csd.pm.proto.v1.model.Node.newBuilder()
 						.setName("test")
 						.build();
 				pu.when(() -> ProtoUtil.toNodeProto(node)).thenReturn(nodeProto);
@@ -917,7 +919,7 @@ public class PolicyQueryServiceTest {
 				service.getAscendantSubgraph(request, observer);
 
 				verify(graphQueryAdjudicator).getAscendantSubgraph(request.getNodeId());
-				SubgraphProto expected = SubgraphProto.newBuilder()
+				gov.nist.csd.pm.proto.v1.query.Subgraph expected = gov.nist.csd.pm.proto.v1.query.Subgraph.newBuilder()
 						.setNode(nodeProto)
 						.build();
 				verify(observer).onNext(expected);
@@ -942,11 +944,11 @@ public class PolicyQueryServiceTest {
 			});
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
-				var parentProto = gov.nist.csd.pm.pdp.proto.model.NodeProto.newBuilder()
+				var parentProto = gov.nist.csd.pm.proto.v1.model.Node.newBuilder()
 						.setId(1)
 						.setName("test1")
 						.build();
-				var childProto = gov.nist.csd.pm.pdp.proto.model.NodeProto.newBuilder()
+				var childProto = gov.nist.csd.pm.proto.v1.model.Node.newBuilder()
 						.setId(2)
 						.setName("test2")
 						.build();
@@ -956,10 +958,10 @@ public class PolicyQueryServiceTest {
 				service.getAscendantSubgraph(request, observer);
 
 				verify(graphQueryAdjudicator).getAscendantSubgraph(request.getNodeId());
-				SubgraphProto expectedChild = SubgraphProto.newBuilder()
+				gov.nist.csd.pm.proto.v1.query.Subgraph expectedChild = gov.nist.csd.pm.proto.v1.query.Subgraph.newBuilder()
 						.setNode(childProto)
 						.build();
-				SubgraphProto expected = SubgraphProto.newBuilder()
+				gov.nist.csd.pm.proto.v1.query.Subgraph expected = gov.nist.csd.pm.proto.v1.query.Subgraph.newBuilder()
 						.setNode(parentProto)
 						.addSubgraph(expectedChild)
 						.build();
@@ -1010,7 +1012,7 @@ public class PolicyQueryServiceTest {
 	@Nested
 	class GetDescendantSubgraphTests {
 		@Mock
-		StreamObserver<SubgraphProto> observer;
+		StreamObserver<gov.nist.csd.pm.proto.v1.query.Subgraph> observer;
 
 		@Test
 		void shouldReturnSingleNodeSubgraph() throws PMException {
@@ -1026,7 +1028,7 @@ public class PolicyQueryServiceTest {
 			});
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
-				var nodeProto = gov.nist.csd.pm.pdp.proto.model.NodeProto.newBuilder()
+				var nodeProto = gov.nist.csd.pm.proto.v1.model.Node.newBuilder()
 						.setId(1)
 						.setName("test")
 						.build();
@@ -1035,7 +1037,7 @@ public class PolicyQueryServiceTest {
 				service.getDescendantSubgraph(request, observer);
 
 				verify(graphQueryAdjudicator).getDescendantSubgraph(request.getNodeId());
-				SubgraphProto expected = SubgraphProto.newBuilder()
+				gov.nist.csd.pm.proto.v1.query.Subgraph expected = gov.nist.csd.pm.proto.v1.query.Subgraph.newBuilder()
 						.setNode(nodeProto)
 						.build();
 				verify(observer).onNext(expected);
@@ -1059,11 +1061,11 @@ public class PolicyQueryServiceTest {
 						.thenReturn(parent);
 			});
 
-			var parentProto = gov.nist.csd.pm.pdp.proto.model.NodeProto.newBuilder()
+			var parentProto = gov.nist.csd.pm.proto.v1.model.Node.newBuilder()
 					.setId(1)
 					.setName("test1")
 					.build();
-			var childProto = gov.nist.csd.pm.pdp.proto.model.NodeProto.newBuilder()
+			var childProto = gov.nist.csd.pm.proto.v1.model.Node.newBuilder()
 					.setId(2)
 					.setName("test2")
 					.build();
@@ -1075,10 +1077,10 @@ public class PolicyQueryServiceTest {
 				service.getDescendantSubgraph(request, observer);
 
 				verify(graphQueryAdjudicator).getDescendantSubgraph(request.getNodeId());
-				SubgraphProto expectedChild = SubgraphProto.newBuilder()
+				gov.nist.csd.pm.proto.v1.query.Subgraph expectedChild = gov.nist.csd.pm.proto.v1.query.Subgraph.newBuilder()
 						.setNode(childProto)
 						.build();
-				SubgraphProto expected = SubgraphProto.newBuilder()
+				gov.nist.csd.pm.proto.v1.query.Subgraph expected = gov.nist.csd.pm.proto.v1.query.Subgraph.newBuilder()
 						.setNode(parentProto)
 						.addSubgraph(expectedChild)
 						.build();
@@ -1302,9 +1304,9 @@ public class PolicyQueryServiceTest {
 	class IsAscendantTests {
 
 		@Mock
-		private StreamObserver<BooleanResponse> observer;
+		private StreamObserver<BoolValue> observer;
 
-		private final IsAncestorQuery request = IsAncestorQuery.newBuilder()
+		private final ContainmentQuery request = ContainmentQuery.newBuilder()
 				.setAscendantId(1)
 				.setDescendantId(2)
 				.build();
@@ -1323,7 +1325,7 @@ public class PolicyQueryServiceTest {
 			verify(graphQueryAdjudicator).isAscendant(
 					request.getAscendantId(),
 					request.getDescendantId());
-			verify(observer).onNext(BooleanResponse.newBuilder().setResult(true).build());
+			verify(observer).onNext(BoolValue.newBuilder().setValue(true).build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -1342,7 +1344,7 @@ public class PolicyQueryServiceTest {
 			verify(graphQueryAdjudicator).isAscendant(
 					request.getAscendantId(),
 					request.getDescendantId());
-			verify(observer).onNext(BooleanResponse.newBuilder().setResult(false).build());
+			verify(observer).onNext(BoolValue.newBuilder().setValue(false).build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -1383,9 +1385,9 @@ public class PolicyQueryServiceTest {
 	class IsDescendantTests {
 
 		@Mock
-		private StreamObserver<BooleanResponse> observer;
+		private StreamObserver<BoolValue> observer;
 
-		private final IsAncestorQuery request = IsAncestorQuery.newBuilder()
+		private final ContainmentQuery request = ContainmentQuery.newBuilder()
 				.setAscendantId(1)
 				.setDescendantId(2)
 				.build();
@@ -1404,7 +1406,7 @@ public class PolicyQueryServiceTest {
 			verify(graphQueryAdjudicator).isDescendant(
 					request.getAscendantId(),
 					request.getDescendantId());
-			verify(observer).onNext(BooleanResponse.newBuilder().setResult(true).build());
+			verify(observer).onNext(BoolValue.newBuilder().setValue(true).build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -1423,7 +1425,7 @@ public class PolicyQueryServiceTest {
 			verify(graphQueryAdjudicator).isDescendant(
 					request.getAscendantId(),
 					request.getDescendantId());
-			verify(observer).onNext(BooleanResponse.newBuilder().setResult(false).build());
+			verify(observer).onNext(BoolValue.newBuilder().setValue(false).build());
 			verify(observer).onCompleted();
 			verifyNoMoreInteractions(observer);
 		}
@@ -1470,8 +1472,8 @@ public class PolicyQueryServiceTest {
 		void shouldReturnProhibitionProtos() throws PMException {
 			Prohibition p1 = mock(Prohibition.class);
 			Prohibition p2 = mock(Prohibition.class);
-			ProhibitionProto proto1 = ProhibitionProto.newBuilder().setName("test").build();
-			ProhibitionProto proto2 = ProhibitionProto.newBuilder().setName("test").build();
+			gov.nist.csd.pm.proto.v1.model.Prohibition proto1 = gov.nist.csd.pm.proto.v1.model.Prohibition.newBuilder().setName("test").build();
+			gov.nist.csd.pm.proto.v1.model.Prohibition proto2 = gov.nist.csd.pm.proto.v1.model.Prohibition.newBuilder().setName("test").build();
 
 			stubAdjudicatorTx(adjudicator -> {
 				when(adjudicator.prohibitions().getProhibitions()).thenReturn(List.of(p1, p2));
@@ -1553,7 +1555,7 @@ public class PolicyQueryServiceTest {
 					.setNodeId(1)
 					.build();
 			Prohibition p = mock(Prohibition.class);
-			ProhibitionProto proto = ProhibitionProto.newBuilder().setName("test").build();
+			gov.nist.csd.pm.proto.v1.model.Prohibition proto = gov.nist.csd.pm.proto.v1.model.Prohibition.newBuilder().setName("test").build();
 
 			ProhibitionSubject prohibitionSubject = new ProhibitionSubject(request.getNodeId());
 			stubAdjudicatorTx(adjudicator -> {
@@ -1583,7 +1585,7 @@ public class PolicyQueryServiceTest {
 					.setProcess("test")
 					.build();
 			Prohibition p = mock(Prohibition.class);
-			ProhibitionProto proto = ProhibitionProto.newBuilder().setName("test").build();
+			gov.nist.csd.pm.proto.v1.model.Prohibition proto = gov.nist.csd.pm.proto.v1.model.Prohibition.newBuilder().setName("test").build();
 
 			ProhibitionSubject prohibitionSubject = new ProhibitionSubject(request.getProcess());
 			stubAdjudicatorTx(adjudicator -> {
@@ -1649,7 +1651,7 @@ public class PolicyQueryServiceTest {
 	class GetProhibitionTests {
 
 		@Mock
-		private StreamObserver<ProhibitionProto> observer;
+		private StreamObserver<gov.nist.csd.pm.proto.v1.model.Prohibition> observer;
 
 		@Test
 		void shouldReturnProhibitionProto() throws PMException {
@@ -1657,7 +1659,7 @@ public class PolicyQueryServiceTest {
 					.setName("test")
 					.build();
 			Prohibition p = mock(Prohibition.class);
-			ProhibitionProto proto = ProhibitionProto.newBuilder().setName("test").build();
+			gov.nist.csd.pm.proto.v1.model.Prohibition proto = gov.nist.csd.pm.proto.v1.model.Prohibition.newBuilder().setName("test").build();
 
 			stubAdjudicatorTx(adjudicator -> {
 				when(adjudicator.prohibitions().getProhibition(request.getName()))
@@ -1727,7 +1729,7 @@ public class PolicyQueryServiceTest {
 					.setSubjectId(1)
 					.build();
 			Prohibition p = mock(Prohibition.class);
-			ProhibitionProto proto = ProhibitionProto.newBuilder().setName("test").build();
+			gov.nist.csd.pm.proto.v1.model.Prohibition proto = gov.nist.csd.pm.proto.v1.model.Prohibition.newBuilder().setName("test").build();
 
 			stubAdjudicatorTx(adjudicator -> {
 				when(adjudicator.prohibitions().getInheritedProhibitionsFor(request.getSubjectId()))
@@ -1819,7 +1821,7 @@ public class PolicyQueryServiceTest {
 					.setContainerId(1)
 					.build();
 			Prohibition p = mock(Prohibition.class);
-			ProhibitionProto proto = ProhibitionProto.newBuilder()
+			gov.nist.csd.pm.proto.v1.model.Prohibition proto = gov.nist.csd.pm.proto.v1.model.Prohibition.newBuilder()
 					.setName("test")
 					.build();
 
@@ -1926,9 +1928,9 @@ public class PolicyQueryServiceTest {
 
 			verify(obligationsQueryAdjudicator).getObligations();
 
-			ObligationProto proto1 = ObligationProto.newBuilder()
+			gov.nist.csd.pm.proto.v1.model.Obligation proto1 = gov.nist.csd.pm.proto.v1.model.Obligation.newBuilder()
 					.setName("test").setAuthor(testNode(1L)).setPml("pml1").build();
-			ObligationProto proto2 = ObligationProto.newBuilder()
+			gov.nist.csd.pm.proto.v1.model.Obligation proto2 = gov.nist.csd.pm.proto.v1.model.Obligation.newBuilder()
 					.setName("test").setAuthor(testNode(2L)).setPml("pml2").build();
 			ObligationList expected = ObligationList.newBuilder()
 					.addObligations(proto1)
@@ -1989,7 +1991,7 @@ public class PolicyQueryServiceTest {
 
 	@Nested
 	class GetObligationTests {
-		@Mock StreamObserver<ObligationProto> observer;
+		@Mock StreamObserver<gov.nist.csd.pm.proto.v1.model.Obligation> observer;
 
 		@Test
 		void shouldReturnObligationProto() throws PMException {
@@ -2010,7 +2012,7 @@ public class PolicyQueryServiceTest {
 
 			verify(obligationsQueryAdjudicator).getObligation(request.getName());
 
-			ObligationProto expected = ObligationProto.newBuilder()
+			gov.nist.csd.pm.proto.v1.model.Obligation expected = gov.nist.csd.pm.proto.v1.model.Obligation.newBuilder()
 					.setName("test").setAuthor(testNode(1L)).setPml("pml").build();
 			verify(observer).onNext(expected);
 			verify(observer).onCompleted();
@@ -2078,7 +2080,7 @@ public class PolicyQueryServiceTest {
 
 			verify(obligationsQueryAdjudicator).getObligationsWithAuthor(request.getAuthorId());
 
-			ObligationProto proto = ObligationProto.newBuilder()
+			gov.nist.csd.pm.proto.v1.model.Obligation proto = gov.nist.csd.pm.proto.v1.model.Obligation.newBuilder()
 					.setName("test").setAuthor(testNode(1L)).setPml("pml").build();
 			ObligationList expected = ObligationList.newBuilder()
 					.addObligations(proto)
@@ -2220,8 +2222,8 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldReturnPrivilegesSet() throws PMException {
 			ComputePrivilegesQuery request = ComputePrivilegesQuery.newBuilder()
-					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
-					.setTargetCtx(TargetContextProto.newBuilder().setId(2).build())
+					.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1).build())
+					.setTargetCtx(gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder().setId(2).build())
 					.build();
 			AccessRightSet privs = new AccessRightSet("read", "write");
 
@@ -2250,8 +2252,8 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldReturnEmptyWhenNoPrivileges() throws PMException {
 			ComputePrivilegesQuery request = ComputePrivilegesQuery.newBuilder()
-					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
-					.setTargetCtx(TargetContextProto.newBuilder().setId(2).build())
+					.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1).build())
+					.setTargetCtx(gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder().setId(2).build())
 					.build();
 			AccessRightSet empty = mock(AccessRightSet.class);
 			when(empty.iterator()).thenReturn(new AccessRightSet().iterator());
@@ -2274,8 +2276,8 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldHandleUnauthorizedException() throws PMException {
 			ComputePrivilegesQuery request = ComputePrivilegesQuery.newBuilder()
-					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
-					.setTargetCtx(TargetContextProto.newBuilder().setId(2).build())
+					.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1).build())
+					.setTargetCtx(gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder().setId(2).build())
 					.build();
 			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
 			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
@@ -2294,8 +2296,8 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldHandleGeneralException() throws PMException {
 			ComputePrivilegesQuery request = ComputePrivilegesQuery.newBuilder()
-					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
-					.setTargetCtx(TargetContextProto.newBuilder().setId(2).build())
+					.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1).build())
+					.setTargetCtx(gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder().setId(2).build())
 					.build();
 			RuntimeException generalException = new RuntimeException("General error");
 			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
@@ -2320,8 +2322,8 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldReturnDeniedPrivileges() throws PMException {
 			ComputeDeniedPrivilegesQuery request = ComputeDeniedPrivilegesQuery.newBuilder()
-					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
-					.setTargetCtx(TargetContextProto.newBuilder().setId(2).build())
+					.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1).build())
+					.setTargetCtx(gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder().setId(2).build())
 					.build();
 			AccessRightSet denied = mock(AccessRightSet.class);
 			when(denied.iterator()).thenReturn(new AccessRightSet("test").iterator());
@@ -2349,8 +2351,8 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldReturnEmptyWhenNoDeniedPrivileges() throws PMException {
 			ComputeDeniedPrivilegesQuery request = ComputeDeniedPrivilegesQuery.newBuilder()
-					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
-					.setTargetCtx(TargetContextProto.newBuilder().setId(2).build())
+					.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1).build())
+					.setTargetCtx(gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder().setId(2).build())
 					.build();
 			AccessRightSet empty = mock(AccessRightSet.class);
 			when(empty.iterator()).thenReturn(new AccessRightSet().iterator());
@@ -2373,8 +2375,8 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldHandleUnauthorizedException() throws PMException {
 			ComputeDeniedPrivilegesQuery request = ComputeDeniedPrivilegesQuery.newBuilder()
-					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
-					.setTargetCtx(TargetContextProto.newBuilder().setId(2).build())
+					.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1).build())
+					.setTargetCtx(gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder().setId(2).build())
 					.build();
 			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
 			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
@@ -2393,8 +2395,8 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldHandleGeneralException() throws PMException {
 			ComputeDeniedPrivilegesQuery request = ComputeDeniedPrivilegesQuery.newBuilder()
-					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
-					.setTargetCtx(TargetContextProto.newBuilder().setId(2).build())
+					.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1).build())
+					.setTargetCtx(gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder().setId(2).build())
 					.build();
 			RuntimeException generalException = new RuntimeException("General error");
 			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
@@ -2419,7 +2421,7 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldReturnCapabilityList() throws PMException {
 			ComputeCapabilityListQuery request = ComputeCapabilityListQuery.newBuilder()
-					.setUserCtx(UserContextProto.newBuilder().setId(1)).build();
+					.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1)).build();
 			AccessRightSet set = mock(AccessRightSet.class);
 			when(set.iterator()).thenReturn(new AccessRightSet("test").iterator());
 			Map<Long, AccessRightSet> map = Map.of(1L, set);
@@ -2445,7 +2447,7 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldReturnEmptyWhenNoCapabilities() throws PMException {
 			ComputeCapabilityListQuery request = ComputeCapabilityListQuery.newBuilder()
-					.setUserCtx(UserContextProto.newBuilder().setId(1).build()).build();
+					.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1).build()).build();
 			UserContext userContext = ProtoUtil.fromUserContextProto(request.getUserCtx());
 
 			stubAdjudicatorTx(adjudicator -> {
@@ -2464,7 +2466,7 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldHandleUnauthorizedException() throws PMException {
 			ComputeCapabilityListQuery request = ComputeCapabilityListQuery.newBuilder()
-					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
+					.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1).build())
 					.build();
 			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
 			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
@@ -2483,7 +2485,7 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldHandleGeneralException() throws PMException {
 			ComputeCapabilityListQuery request = ComputeCapabilityListQuery.newBuilder()
-					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
+					.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1).build())
 					.build();
 			RuntimeException generalException = new RuntimeException("General error");
 			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
@@ -2508,7 +2510,7 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldReturnAclMap() throws PMException {
 			ComputeACLQuery request = ComputeACLQuery.newBuilder()
-					.setTargetCtx(TargetContextProto.newBuilder().setId(1))
+					.setTargetCtx(gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder().setId(1))
 					.build();
 			AccessRightSet set = mock(AccessRightSet.class);
 			when(set.iterator()).thenReturn(new AccessRightSet("test").iterator());
@@ -2535,7 +2537,7 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldReturnEmptyWhenNoAclEntries() throws PMException {
 			ComputeACLQuery request = ComputeACLQuery.newBuilder()
-					.setTargetCtx(TargetContextProto.newBuilder().setId(1))
+					.setTargetCtx(gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder().setId(1))
 					.build();
 			TargetContext targetContext = ProtoUtil.fromTargetContextProto(request.getTargetCtx());
 
@@ -2555,7 +2557,7 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldHandleUnauthorizedException() throws PMException {
 			ComputeACLQuery request = ComputeACLQuery.newBuilder()
-					.setTargetCtx(TargetContextProto.newBuilder().setId(1).build())
+					.setTargetCtx(gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder().setId(1).build())
 					.build();
 			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
 			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
@@ -2574,7 +2576,7 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldHandleGeneralException() throws PMException {
 			ComputeACLQuery request = ComputeACLQuery.newBuilder()
-					.setTargetCtx(TargetContextProto.newBuilder().setId(1).build())
+					.setTargetCtx(gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder().setId(1).build())
 					.build();
 			RuntimeException generalException = new RuntimeException("General error");
 			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
@@ -2600,7 +2602,7 @@ public class PolicyQueryServiceTest {
 		void shouldReturnDestinationAttributes() throws PMException {
 			ComputeDestinationAttributesQuery request =
 					ComputeDestinationAttributesQuery.newBuilder()
-							.setUserCtx(UserContextProto.newBuilder().setId(1))
+							.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1))
 							.build();
 			AccessRightSet set = mock(AccessRightSet.class);
 			when(set.iterator()).thenReturn(new AccessRightSet("test").iterator());
@@ -2627,7 +2629,7 @@ public class PolicyQueryServiceTest {
 		void shouldReturnEmptyWhenNoDestinationAttributes() throws PMException {
 			ComputeDestinationAttributesQuery request =
 					ComputeDestinationAttributesQuery.newBuilder()
-							.setUserCtx(UserContextProto.newBuilder().setId(1))
+							.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1))
 							.build();
 
 			UserContext userContext = ProtoUtil.fromUserContextProto(request.getUserCtx());
@@ -2647,7 +2649,7 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldHandleUnauthorizedException() throws PMException {
 			ComputeDestinationAttributesQuery request = ComputeDestinationAttributesQuery.newBuilder()
-					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
+					.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1).build())
 					.build();
 			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
 			when(unauthorizedException.getMessage()).thenReturn("Unauthorized access");
@@ -2666,7 +2668,7 @@ public class PolicyQueryServiceTest {
 		@Test
 		void shouldHandleGeneralException() throws PMException {
 			ComputeDestinationAttributesQuery request = ComputeDestinationAttributesQuery.newBuilder()
-					.setUserCtx(UserContextProto.newBuilder().setId(1).build())
+					.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder().setId(1).build())
 					.build();
 			RuntimeException generalException = new RuntimeException("General error");
 			when(adjudicator.adjudicateQuery(any())).thenThrow(generalException);
@@ -2686,10 +2688,10 @@ public class PolicyQueryServiceTest {
 	class ComputeSubgraphPrivilegesTests {
 
 		@Mock
-		private StreamObserver<SubgraphPrivilegesProto> observer;
+		private StreamObserver<gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges> observer;
 
 		private final AccessWithRootQuery request = AccessWithRootQuery.newBuilder()
-				.setUserCtx(UserContextProto.getDefaultInstance())
+				.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.getDefaultInstance())
 				.setRoot(1)
 				.build();
 
@@ -2713,7 +2715,7 @@ public class PolicyQueryServiceTest {
 							.thenReturn(model);
 				});
 
-				var nodeProto = gov.nist.csd.pm.pdp.proto.model.NodeProto.newBuilder()
+				var nodeProto = gov.nist.csd.pm.proto.v1.model.Node.newBuilder()
 						.setName("test")
 						.build();
 				pu.when(() -> ProtoUtil.toNodeProto(node)).thenReturn(nodeProto);
@@ -2723,7 +2725,7 @@ public class PolicyQueryServiceTest {
 				verify(accessQueryAdjudicator)
 						.computeSubgraphPrivileges(userCtx, request.getRoot());
 
-				SubgraphPrivilegesProto expected = SubgraphPrivilegesProto.newBuilder()
+				gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges expected = gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges.newBuilder()
 						.setNode(nodeProto)
 						.addAllArset(List.of("read"))
 						.build();
@@ -2757,10 +2759,10 @@ public class PolicyQueryServiceTest {
 							.thenReturn(parentModel);
 				});
 
-				var parentProto = gov.nist.csd.pm.pdp.proto.model.NodeProto.newBuilder()
+				var parentProto = gov.nist.csd.pm.proto.v1.model.Node.newBuilder()
 						.setName("parent")
 						.build();
-				var childProto = gov.nist.csd.pm.pdp.proto.model.NodeProto.newBuilder()
+				var childProto = gov.nist.csd.pm.proto.v1.model.Node.newBuilder()
 						.setName("child")
 						.build();
 				pu.when(() -> ProtoUtil.toNodeProto(parentNode)).thenReturn(parentProto);
@@ -2771,11 +2773,11 @@ public class PolicyQueryServiceTest {
 				verify(accessQueryAdjudicator)
 						.computeSubgraphPrivileges(userCtx, request.getRoot());
 
-				SubgraphPrivilegesProto expectedChild = SubgraphPrivilegesProto.newBuilder()
+				gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges expectedChild = gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges.newBuilder()
 						.setNode(childProto)
 						.addAllArset(List.of("read"))
 						.build();
-				SubgraphPrivilegesProto expected = SubgraphPrivilegesProto.newBuilder()
+				gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges expected = gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges.newBuilder()
 						.setNode(parentProto)
 						.addAllArset(List.of("read"))
 						.addAscendants(expectedChild)
@@ -2825,7 +2827,7 @@ public class PolicyQueryServiceTest {
 		private StreamObserver<NodePrivilegeList> observer;
 
 		private final AccessWithRootQuery request = AccessWithRootQuery.newBuilder()
-				.setUserCtx(UserContextProto.getDefaultInstance())
+				.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.getDefaultInstance())
 				.setRoot(1)
 				.build();
 
@@ -2835,8 +2837,8 @@ public class PolicyQueryServiceTest {
 			AccessRightSet s1 = new AccessRightSet("read"), s2 = new AccessRightSet("write");
 			Map<Node, AccessRightSet> map = Map.of(n1, s1, n2, s2);
 
-			NodeProto p1 = NodeProto.newBuilder().setName("n1").build();
-			NodeProto p2 = NodeProto.newBuilder().setName("n2").build();
+			gov.nist.csd.pm.proto.v1.model.Node p1 = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("n1").build();
+			gov.nist.csd.pm.proto.v1.model.Node p2 = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("n2").build();
 			NodePrivilege np1 = NodePrivilege.newBuilder()
 					.setNode(p1)
 					.addAllArset(List.of("read"))
@@ -2938,7 +2940,7 @@ public class PolicyQueryServiceTest {
 		private StreamObserver<NodePrivilegeList> observer;
 
 		private final AccessWithRootQuery request = AccessWithRootQuery.newBuilder()
-				.setUserCtx(UserContextProto.getDefaultInstance())
+				.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.getDefaultInstance())
 				.setRoot(1)
 				.build();
 
@@ -2950,8 +2952,8 @@ public class PolicyQueryServiceTest {
 
 			UserContext userCtx = mock(UserContext.class);
 
-			NodeProto p1 = NodeProto.newBuilder().setName("n1").build();
-			NodeProto p2 = NodeProto.newBuilder().setName("n2").build();
+			gov.nist.csd.pm.proto.v1.model.Node p1 = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("n1").build();
+			gov.nist.csd.pm.proto.v1.model.Node p2 = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("n2").build();
 			NodePrivilege np1 = NodePrivilege.newBuilder()
 					.setNode(p1)
 					.addAllArset(List.of("create"))
@@ -3048,17 +3050,17 @@ public class PolicyQueryServiceTest {
 	@Nested
 	class ExplainTests {
 		@Mock
-		private StreamObserver<ExplainProto> observer;
+		private StreamObserver<ExplainResponse> observer;
 
 		private final ExplainQuery request = ExplainQuery.newBuilder()
-				.setUserCtx(UserContextProto.getDefaultInstance())
-				.setTargetCtx(TargetContextProto.getDefaultInstance())
+				.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.getDefaultInstance())
+				.setTargetCtx(gov.nist.csd.pm.proto.v1.query.TargetContext.getDefaultInstance())
 				.build();
 
 		@Test
 		void shouldReturnExplainProto() throws PMException {
 			Explain explainModel = mock(Explain.class);
-			ExplainProto expectedResponse = ExplainProto.newBuilder()
+			ExplainResponse expectedResponse = ExplainResponse.newBuilder()
 					.addPrivileges("read")
 					.build();
 
@@ -3128,7 +3130,7 @@ public class PolicyQueryServiceTest {
 		private StreamObserver<NodePrivilegeList> observer;
 
 		private final ComputePOSQuery request = ComputePOSQuery.newBuilder()
-				.setUserCtx(UserContextProto.getDefaultInstance())
+				.setUserCtx(gov.nist.csd.pm.proto.v1.query.UserContext.getDefaultInstance())
 				.build();
 
 		@Test
@@ -3138,8 +3140,8 @@ public class PolicyQueryServiceTest {
 			Map<Node, AccessRightSet> map = Map.of(n1, s1, n2, s2);
 
 			UserContext userCtx = mock(UserContext.class);
-			NodeProto p1 = NodeProto.newBuilder().setName("n1").build();
-			NodeProto p2 = NodeProto.newBuilder().setName("n2").build();
+			gov.nist.csd.pm.proto.v1.model.Node p1 = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("n1").build();
+			gov.nist.csd.pm.proto.v1.model.Node p2 = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("n2").build();
 			NodePrivilege np1 = NodePrivilege.newBuilder()
 					.setNode(p1)
 					.addAllArset(List.of("read"))
@@ -3234,8 +3236,8 @@ public class PolicyQueryServiceTest {
 		@Mock
 		private StreamObserver<StringList> observer;
 
-		private final TargetContextProto request =
-				TargetContextProto.newBuilder().setId(1).build();
+		private final gov.nist.csd.pm.proto.v1.query.TargetContext request =
+				gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder().setId(1).build();
 
 		@Test
 		void shouldReturnPrivileges() throws PMException {
@@ -3322,7 +3324,7 @@ public class PolicyQueryServiceTest {
 	@Nested
 	class SelfComputeSubgraphPrivilegesTests {
 		@Mock
-		private StreamObserver<SubgraphPrivilegesProto> observer;
+		private StreamObserver<gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges> observer;
 
 		private final SelfAccessWithRootQuery request =
 				SelfAccessWithRootQuery.newBuilder().setRoot(1).build();
@@ -3340,7 +3342,7 @@ public class PolicyQueryServiceTest {
 			});
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
-				var nodeProto = gov.nist.csd.pm.pdp.proto.model.NodeProto.newBuilder()
+				var nodeProto = gov.nist.csd.pm.proto.v1.model.Node.newBuilder()
 						.setName("test").build();
 				pu.when(() -> ProtoUtil.toNodeProto(node)).thenReturn(nodeProto);
 
@@ -3348,7 +3350,7 @@ public class PolicyQueryServiceTest {
 
 					verify(selfAccessQueryAdjudicator)
 						.computeSubgraphPrivileges(request.getRoot());
-				SubgraphPrivilegesProto expected = SubgraphPrivilegesProto.newBuilder()
+				gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges expected = gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges.newBuilder()
 						.setNode(nodeProto)
 						.addAllArset(List.of("read"))
 						.build();
@@ -3374,9 +3376,9 @@ public class PolicyQueryServiceTest {
 			});
 
 			try (MockedStatic<ProtoUtil> pu = mockStatic(ProtoUtil.class)) {
-				var parentProto = gov.nist.csd.pm.pdp.proto.model.NodeProto.newBuilder()
+				var parentProto = gov.nist.csd.pm.proto.v1.model.Node.newBuilder()
 						.setName("p").build();
-				var childProto  = gov.nist.csd.pm.pdp.proto.model.NodeProto.newBuilder()
+				var childProto  = gov.nist.csd.pm.proto.v1.model.Node.newBuilder()
 						.setName("c").build();
 				pu.when(() -> ProtoUtil.toNodeProto(parent)).thenReturn(parentProto);
 				pu.when(() -> ProtoUtil.toNodeProto(child)).thenReturn(childProto);
@@ -3385,11 +3387,11 @@ public class PolicyQueryServiceTest {
 
 				verify(selfAccessQueryAdjudicator)
 						.computeSubgraphPrivileges(request.getRoot());
-				SubgraphPrivilegesProto expectedChild = SubgraphPrivilegesProto.newBuilder()
+				gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges expectedChild = gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges.newBuilder()
 						.setNode(childProto)
 						.addAllArset(List.of("read"))
 						.build();
-				SubgraphPrivilegesProto expected = SubgraphPrivilegesProto.newBuilder()
+				gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges expected = gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges.newBuilder()
 						.setNode(parentProto)
 						.addAllArset(List.of("read"))
 						.addAscendants(expectedChild)
@@ -3452,8 +3454,8 @@ public class PolicyQueryServiceTest {
 						.thenReturn(map);
 			});
 
-			NodeProto p1 = NodeProto.newBuilder().setName("t1").build();
-			NodeProto p2 = NodeProto.newBuilder().setName("t2").build();
+			gov.nist.csd.pm.proto.v1.model.Node p1 = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("t1").build();
+			gov.nist.csd.pm.proto.v1.model.Node p2 = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("t2").build();
 			NodePrivilege np1 = NodePrivilege.newBuilder()
 					.setNode(p1)
 					.addAllArset(List.of("create"))
@@ -3552,8 +3554,8 @@ public class PolicyQueryServiceTest {
 						.thenReturn(map);
 			});
 
-			NodeProto p1 = NodeProto.newBuilder().setName("t1").build();
-			NodeProto p2 = NodeProto.newBuilder().setName("t2").build();
+			gov.nist.csd.pm.proto.v1.model.Node p1 = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("t1").build();
+			gov.nist.csd.pm.proto.v1.model.Node p2 = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("t2").build();
 			NodePrivilege np1 = NodePrivilege.newBuilder()
 					.setNode(p1)
 					.addAllArset(List.of("create"))
@@ -3650,8 +3652,8 @@ public class PolicyQueryServiceTest {
 						.thenReturn(map);
 			});
 
-			NodeProto p1 = NodeProto.newBuilder().setName("A").build();
-			NodeProto p2 = NodeProto.newBuilder().setName("B").build();
+			gov.nist.csd.pm.proto.v1.model.Node p1 = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("A").build();
+			gov.nist.csd.pm.proto.v1.model.Node p2 = gov.nist.csd.pm.proto.v1.model.Node.newBuilder().setName("B").build();
 			NodePrivilege np1 = NodePrivilege.newBuilder()
 					.setNode(p1)
 					.addAllArset(List.of("read"))

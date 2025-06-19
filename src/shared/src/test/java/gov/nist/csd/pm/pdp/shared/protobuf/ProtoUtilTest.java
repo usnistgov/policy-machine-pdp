@@ -14,13 +14,9 @@ import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pap.query.model.explain.Explain;
 import gov.nist.csd.pm.core.pap.query.model.explain.ExplainNode;
 import gov.nist.csd.pm.core.pap.query.model.explain.PolicyClassExplain;
-import gov.nist.csd.pm.pdp.proto.model.ExplainProto;
-import gov.nist.csd.pm.pdp.proto.model.NodeProto;
-import gov.nist.csd.pm.pdp.proto.model.PolicyClassExplainProto;
-import gov.nist.csd.pm.pdp.proto.model.ProhibitionProto;
-import gov.nist.csd.pm.pdp.proto.query.IdList;
-import gov.nist.csd.pm.pdp.proto.query.TargetContextProto;
-import gov.nist.csd.pm.pdp.proto.query.UserContextProto;
+import gov.nist.csd.pm.proto.v1.model.Value;
+import gov.nist.csd.pm.proto.v1.query.ExplainResponse;
+import gov.nist.csd.pm.proto.v1.query.IdList;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -38,7 +34,7 @@ class ProtoUtilTest {
 	@Test
 	void testBuildExplainProto_NullExplain() {
 		// Test when the input `explain` object is null
-		ExplainProto result = ProtoUtil.buildExplainProto(null, mock(PolicyQuery.class));
+		ExplainResponse result = ProtoUtil.buildExplainProto(null, mock(PolicyQuery.class));
 		Assertions.assertNotNull(result);
 		Assertions.assertTrue(result.getPrivilegesList().isEmpty());
 		Assertions.assertTrue(result.getDeniedPrivilegesList().isEmpty());
@@ -57,7 +53,7 @@ class ProtoUtilTest {
 		when(explain.getDeniedPrivileges()).thenReturn(new AccessRightSet());
 
 		// Run the method and validate results
-		ExplainProto result = ProtoUtil.buildExplainProto(explain, mock(PolicyQuery.class));
+		ExplainResponse result = ProtoUtil.buildExplainProto(explain, mock(PolicyQuery.class));
 		assertFalse(result.getPrivilegesList().isEmpty());
 		assertEquals(List.of("read", "write"), result.getPrivilegesList());
 		assertTrue(result.getPolicyClassesList().isEmpty());
@@ -83,9 +79,9 @@ class ProtoUtilTest {
 		when(explain.getDeniedPrivileges()).thenReturn(new AccessRightSet());
 
 		// Run the method and validate constructed paths
-		ExplainProto result = ProtoUtil.buildExplainProto(explain, mock(PolicyQuery.class));
+		ExplainResponse result = ProtoUtil.buildExplainProto(explain, mock(PolicyQuery.class));
 		assertEquals(1, result.getPolicyClassesCount());
-		PolicyClassExplainProto pcProto = result.getPolicyClasses(0);
+		gov.nist.csd.pm.proto.v1.query.PolicyClassExplain pcProto = result.getPolicyClasses(0);
 		assertEquals(1L, pcProto.getPc().getId());
 		assertEquals("PolicyClass1", pcProto.getPc().getName());
 		assertEquals(List.of("read"), pcProto.getArsetList());
@@ -112,9 +108,9 @@ class ProtoUtilTest {
 		when(policyQuery.graph().getNodeById(1L)).thenReturn(new Node(1L, "test", U));
 
 		// Run the method and validate prohibition results
-		ExplainProto result = ProtoUtil.buildExplainProto(explain, policyQuery);
+		ExplainResponse result = ProtoUtil.buildExplainProto(explain, policyQuery);
 		assertEquals(1, result.getProhibitionsCount());
-		ProhibitionProto prohibitionProto = result.getProhibitions(0);
+		gov.nist.csd.pm.proto.v1.model.Prohibition prohibitionProto = result.getProhibitions(0);
 		assertEquals("Prohibition1", prohibitionProto.getName());
 		assertEquals(1L, prohibitionProto.getNode().getId());
 		assertEquals(List.of("execute"), prohibitionProto.getArsetList());
@@ -132,7 +128,7 @@ class ProtoUtilTest {
 		when(explain.getDeniedPrivileges()).thenReturn(mockDeniedPrivileges);
 
 		// Run the method and validate denied privileges
-		ExplainProto result = ProtoUtil.buildExplainProto(explain, mock(PolicyQuery.class));
+		ExplainResponse result = ProtoUtil.buildExplainProto(explain, mock(PolicyQuery.class));
 		assertFalse(result.getDeniedPrivilegesList().isEmpty());
 		assertEquals(List.of("delete", "update"), result.getDeniedPrivilegesList());
 	}
@@ -140,8 +136,8 @@ class ProtoUtilTest {
 	@Test
 	void testFromTargetContextProto_WithId() throws PMException {
 		// Mocking the proto object for the ID case
-		TargetContextProto protoMock = mock(TargetContextProto.class);
-		when(protoMock.getTargetCase()).thenReturn(TargetContextProto.TargetCase.ID);
+		gov.nist.csd.pm.proto.v1.query.TargetContext protoMock = mock(gov.nist.csd.pm.proto.v1.query.TargetContext.class);
+		when(protoMock.getTargetCase()).thenReturn(gov.nist.csd.pm.proto.v1.query.TargetContext.TargetCase.ID);
 		when(protoMock.getId()).thenReturn(456L);
 
 		// Invoking the method and verifying the result
@@ -152,9 +148,9 @@ class ProtoUtilTest {
 	@Test
 	void testFromTargetContextProto_WithAttributes() throws PMException {
 		// Mocking the proto object for the ATTRIBUTES case
-		TargetContextProto protoMock = mock(TargetContextProto.class);
+		gov.nist.csd.pm.proto.v1.query.TargetContext protoMock = mock(gov.nist.csd.pm.proto.v1.query.TargetContext.class);
 		IdList idListMock = mock(IdList.class);
-		when(protoMock.getTargetCase()).thenReturn(TargetContextProto.TargetCase.ATTRIBUTES);
+		when(protoMock.getTargetCase()).thenReturn(gov.nist.csd.pm.proto.v1.query.TargetContext.TargetCase.ATTRIBUTES);
 		when(protoMock.getAttributes()).thenReturn(idListMock);
 		when(idListMock.getIdsList()).thenReturn(List.of(7L, 8L, 9L));
 
@@ -166,8 +162,8 @@ class ProtoUtilTest {
 	@Test
 	void testFromTargetContextProto_TargetNotSet() {
 		// Mocking the proto object for the TARGET_NOT_SET case
-		TargetContextProto protoMock = mock(TargetContextProto.class);
-		when(protoMock.getTargetCase()).thenReturn(TargetContextProto.TargetCase.TARGET_NOT_SET);
+		gov.nist.csd.pm.proto.v1.query.TargetContext protoMock = mock(gov.nist.csd.pm.proto.v1.query.TargetContext.class);
+		when(protoMock.getTargetCase()).thenReturn(gov.nist.csd.pm.proto.v1.query.TargetContext.TargetCase.TARGET_NOT_SET);
 
 		// Expecting an exception to be thrown
 		assertThrows(PMException.class, () -> ProtoUtil.fromTargetContextProto(protoMock));
@@ -176,8 +172,8 @@ class ProtoUtilTest {
 	@Test
 	void testFromUserContextProto_WithId() throws PMException {
 		// Mocking the proto object for the ID case
-		UserContextProto protoMock = mock(UserContextProto.class);
-		when(protoMock.getUserCase()).thenReturn(UserContextProto.UserCase.ID);
+		gov.nist.csd.pm.proto.v1.query.UserContext protoMock = mock(gov.nist.csd.pm.proto.v1.query.UserContext.class);
+		when(protoMock.getUserCase()).thenReturn(gov.nist.csd.pm.proto.v1.query.UserContext.UserCase.ID);
 		when(protoMock.getId()).thenReturn(123L);
 
 		// Invoking the method and verifying the result
@@ -188,9 +184,9 @@ class ProtoUtilTest {
 	@Test
 	void testFromUserContextProto_WithAttributes() throws PMException {
 		// Mocking the proto object for the ATTRIBUTES case
-		UserContextProto protoMock = mock(UserContextProto.class);
+		gov.nist.csd.pm.proto.v1.query.UserContext protoMock = mock(gov.nist.csd.pm.proto.v1.query.UserContext.class);
 		IdList idListMock = mock(IdList.class);
-		when(protoMock.getUserCase()).thenReturn(UserContextProto.UserCase.ATTRIBUTES);
+		when(protoMock.getUserCase()).thenReturn(gov.nist.csd.pm.proto.v1.query.UserContext.UserCase.ATTRIBUTES);
 		when(protoMock.getAttributes()).thenReturn(idListMock);
 		when(idListMock.getIdsList()).thenReturn(List.of(1L, 2L, 3L));
 
@@ -202,8 +198,8 @@ class ProtoUtilTest {
 	@Test
 	void testFromUserContextProto_UserNotSet() {
 		// Mocking the proto object for the USER_NOT_SET case
-		UserContextProto protoMock = mock(UserContextProto.class);
-		when(protoMock.getUserCase()).thenReturn(UserContextProto.UserCase.USER_NOT_SET);
+		gov.nist.csd.pm.proto.v1.query.UserContext protoMock = mock(gov.nist.csd.pm.proto.v1.query.UserContext.class);
+		when(protoMock.getUserCase()).thenReturn(gov.nist.csd.pm.proto.v1.query.UserContext.UserCase.USER_NOT_SET);
 
 		// Expecting an exception to be thrown
 		assertThrows(PMException.class, () -> ProtoUtil.fromUserContextProto(protoMock));
@@ -215,13 +211,13 @@ class ProtoUtilTest {
 		Node node = new Node(123L, "TestNode", NodeType.UA);
 
 		// Calling the method to be tested
-		NodeProto result = ProtoUtil.toNodeProto(node);
+		gov.nist.csd.pm.proto.v1.model.Node result = ProtoUtil.toNodeProto(node);
 
 		// Verifying the result
 		assertEquals(123L, result.getId());
 		assertEquals("TestNode", result.getName());
-		assertEquals(NodeProto.NodeTypeProto.UA, result.getType());
-		assertEquals(0, result.getPropertiesCount());
+		assertEquals(gov.nist.csd.pm.proto.v1.model.NodeType.UA, result.getType());
+		assertEquals(0, result.getProperties().size());
 	}
 
 	@Test
@@ -232,15 +228,15 @@ class ProtoUtilTest {
 		node.getProperties().put("key2", "value2");
 
 		// Calling the method to be tested
-		NodeProto result = ProtoUtil.toNodeProto(node);
+		gov.nist.csd.pm.proto.v1.model.Node result = ProtoUtil.toNodeProto(node);
 
 		// Verifying the result
 		assertEquals(456L, result.getId());
 		assertEquals("NodeWithProperties", result.getName());
-		assertEquals(NodeProto.NodeTypeProto.OA, result.getType());
-		assertEquals(2, result.getPropertiesCount());
-		assertEquals("value1", result.getPropertiesOrDefault("key1", null));
-		assertEquals("value2", result.getPropertiesOrDefault("key2", null));
+		assertEquals(gov.nist.csd.pm.proto.v1.model.NodeType.OA, result.getType());
+		assertEquals(2, result.getPropertiesMap().size());
+		assertEquals("value1", result.getPropertiesMap().getOrDefault("key1", null));
+		assertEquals("value2", result.getPropertiesMap().getOrDefault("key2", null));
 	}
 
 	@Test
@@ -249,10 +245,10 @@ class ProtoUtilTest {
 		for (NodeType nodeType : NodeType.values()) {
 			Node node = new Node(1L, "NodeTypeTest", nodeType);
 
-			NodeProto result = ProtoUtil.toNodeProto(node);
+			gov.nist.csd.pm.proto.v1.model.Node result = ProtoUtil.toNodeProto(node);
 
 			// Verify correct mapping
-			assertEquals(NodeProto.NodeTypeProto.valueOf(nodeType.name()), result.getType());
+			assertEquals(gov.nist.csd.pm.proto.v1.model.NodeType.valueOf(nodeType.name()), result.getType());
 		}
 	}
 
@@ -266,14 +262,14 @@ class ProtoUtilTest {
 		when(node.getProperties()).thenReturn(Map.of("key", "value"));
 
 		// Calling the method to be tested
-		NodeProto result = ProtoUtil.toNodeProto(node);
+		gov.nist.csd.pm.proto.v1.model.Node result = ProtoUtil.toNodeProto(node);
 
 		// Verify the protobuf object matches the mock expectations
 		assertEquals(789L, result.getId());
 		assertEquals("MockedNode", result.getName());
-		assertEquals(NodeProto.NodeTypeProto.U, result.getType());
-		assertEquals(1, result.getPropertiesCount());
-		assertEquals("value", result.getPropertiesOrDefault("key", null));
+		assertEquals(gov.nist.csd.pm.proto.v1.model.NodeType.U, result.getType());
+		assertEquals(1, result.getPropertiesMap().size());
+		assertEquals("value", result.getPropertiesMap().getOrDefault("key", null));
 	}
 
 	@Test
@@ -289,7 +285,7 @@ class ProtoUtilTest {
 		when(policyQuery.graph().getNodeById(1L)).thenReturn(new Node(1L, "test", U));
 
 		// Calling the method to be tested
-		ProhibitionProto result = ProtoUtil.toProhibitionProto(prohibition, policyQuery);
+		gov.nist.csd.pm.proto.v1.model.Prohibition result = ProtoUtil.toProhibitionProto(prohibition, policyQuery);
 
 		// Asserting values from the result
 		assertEquals("testProhibition", result.getName());
@@ -309,7 +305,7 @@ class ProtoUtilTest {
 		);
 
 		// Calling the method to be tested
-		ProhibitionProto result = ProtoUtil.toProhibitionProto(prohibition, mock(PolicyQuery.class));
+		gov.nist.csd.pm.proto.v1.model.Prohibition result = ProtoUtil.toProhibitionProto(prohibition, mock(PolicyQuery.class));
 
 		// Asserting values from the result
 		assertEquals("testProhibition", result.getName());
@@ -333,7 +329,7 @@ class ProtoUtilTest {
 		when(policyQuery.graph().getNodeById(1L)).thenReturn(new Node(1L, "test", U));
 
 		// Calling the method to be tested
-		ProhibitionProto result = ProtoUtil.toProhibitionProto(prohibition, policyQuery);
+		gov.nist.csd.pm.proto.v1.model.Prohibition result = ProtoUtil.toProhibitionProto(prohibition, policyQuery);
 
 		// Asserting values from the result
 		assertEquals("testProhibition", result.getName());
@@ -363,7 +359,7 @@ class ProtoUtilTest {
 		when(policyQuery.graph().getNodeById(3L)).thenReturn(new Node(3L, "test", U));
 
 		// Calling the method to be tested
-		ProhibitionProto result = ProtoUtil.toProhibitionProto(prohibition, policyQuery);
+		gov.nist.csd.pm.proto.v1.model.Prohibition result = ProtoUtil.toProhibitionProto(prohibition, policyQuery);
 
 		// Asserting values from the result
 		assertEquals("testProhibition", result.getName());

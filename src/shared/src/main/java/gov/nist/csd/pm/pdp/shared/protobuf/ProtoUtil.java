@@ -12,10 +12,9 @@ import gov.nist.csd.pm.core.pap.query.PolicyQuery;
 import gov.nist.csd.pm.core.pap.query.model.context.TargetContext;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pap.query.model.explain.*;
-import gov.nist.csd.pm.pdp.proto.model.*;
-import gov.nist.csd.pm.pdp.proto.query.ObligationProto;
-import gov.nist.csd.pm.pdp.proto.query.TargetContextProto;
-import gov.nist.csd.pm.pdp.proto.query.UserContextProto;
+import gov.nist.csd.pm.proto.v1.model.NodeType;
+import gov.nist.csd.pm.proto.v1.model.Value;
+import gov.nist.csd.pm.proto.v1.model.ValueMap;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,7 +22,7 @@ import java.util.List;
 
 public class ProtoUtil {
 
-	public static UserContext fromUserContextProto(UserContextProto userCtxProto) throws PMException {
+	public static UserContext fromUserContextProto(gov.nist.csd.pm.proto.v1.query.UserContext userCtxProto) throws PMException {
 		return switch (userCtxProto.getUserCase()) {
 			case ID -> new UserContext(userCtxProto.getId());
 			case ATTRIBUTES -> new UserContext(userCtxProto.getAttributes().getIdsList());
@@ -31,7 +30,7 @@ public class ProtoUtil {
 		};
 	}
 
-	public static TargetContext fromTargetContextProto(TargetContextProto targetCtxProto) throws PMException {
+	public static TargetContext fromTargetContextProto(gov.nist.csd.pm.proto.v1.query.TargetContext targetCtxProto) throws PMException {
 		return switch (targetCtxProto.getTargetCase()) {
 			case ID -> new TargetContext(targetCtxProto.getId());
 			case ATTRIBUTES -> new TargetContext(targetCtxProto.getAttributes().getIdsList());
@@ -39,17 +38,23 @@ public class ProtoUtil {
 		};
 	}
 
-	public static NodeProto toNodeProto(Node node) {
-		return NodeProto.newBuilder()
+	public static gov.nist.csd.pm.proto.v1.model.Node toNodeProto(Node node) {
+		ValueMap.Builder valueMap = ValueMap.newBuilder();
+		
+		for (var entry : node.getProperties().entrySet()) {
+			valueMap.putValues(entry.getKey(), Value.newBuilder().setStringValue(entry.getValue()).build());
+		}
+		
+		return gov.nist.csd.pm.proto.v1.model.Node.newBuilder()
 				.setId(node.getId())
 				.setName(node.getName())
-				.setType(NodeProto.NodeTypeProto.valueOf(node.getType().name()))
+				.setType(NodeType.valueOf(node.getType().name()))
 				.putAllProperties(node.getProperties())
 				.build();
 	}
 
-	public static ProhibitionProto toProhibitionProto(Prohibition prohibition, PolicyQuery query) {
-		ProhibitionProto.Builder builder = ProhibitionProto.newBuilder()
+	public static gov.nist.csd.pm.proto.v1.model.Prohibition toProhibitionProto(Prohibition prohibition, PolicyQuery query) {
+		gov.nist.csd.pm.proto.v1.model.Prohibition.Builder builder = gov.nist.csd.pm.proto.v1.model.Prohibition.newBuilder()
 				.setName(prohibition.getName())
 				.addAllArset(prohibition.getAccessRightSet())
 				.setIntersection(prohibition.isIntersection());
@@ -63,10 +68,10 @@ public class ProtoUtil {
 				builder.setProcess(subject.getProcess());
 			}
 
-			List<ProhibitionProto.ContainerCondition> containerConditions = new ArrayList<>();
+			List<gov.nist.csd.pm.proto.v1.model.Prohibition.ContainerCondition> containerConditions = new ArrayList<>();
 			for (ContainerCondition cc : prohibition.getContainers()) {
 				containerConditions.add(
-						ProhibitionProto.ContainerCondition.newBuilder()
+						gov.nist.csd.pm.proto.v1.model.Prohibition.ContainerCondition.newBuilder()
 								.setContainer(toNodeProto(query.graph().getNodeById(cc.getId())))
 								.setComplement(cc.isComplement())
 								.build()
@@ -80,17 +85,17 @@ public class ProtoUtil {
 		}
 	}
 
-	public static ObligationProto toObligationProto(Obligation obligation, PAP pap) throws PMException {
-		ObligationProto.Builder builder = ObligationProto.newBuilder()
+	public static gov.nist.csd.pm.proto.v1.model.Obligation toObligationProto(Obligation obligation, PAP pap) throws PMException {
+		gov.nist.csd.pm.proto.v1.model.Obligation.Builder builder = gov.nist.csd.pm.proto.v1.model.Obligation.newBuilder()
 				.setName(obligation.getName())
 				.setAuthor(ProtoUtil.toNodeProto(pap.query().graph().getNodeById(obligation.getAuthorId())))
 				.setPml(obligation.toString());
 		return builder.build();
 	}
 
-	public static ExplainProto buildExplainProto(Explain explain, PolicyQuery query) {
+	public static gov.nist.csd.pm.proto.v1.query.ExplainResponse buildExplainProto(Explain explain, PolicyQuery query) {
 		if (explain == null) {
-			return ExplainProto.newBuilder().build();
+			return gov.nist.csd.pm.proto.v1.query.ExplainResponse.newBuilder().build();
 		}
 
 		AccessRightSet privileges = explain.getPrivileges();
@@ -98,59 +103,59 @@ public class ProtoUtil {
 		Collection<Prohibition> prohibitions = explain.getProhibitions();
 		AccessRightSet deniedPrivileges = explain.getDeniedPrivileges();
 
-		List<PolicyClassExplainProto> policyClassProtos = new ArrayList<>();
+		List<gov.nist.csd.pm.proto.v1.query.PolicyClassExplain> policyClassProtos = new ArrayList<>();
 		for (PolicyClassExplain pc : policyClasses) {
 			Node pcNode = pc.pc();
 			Collection<List<ExplainNode>> paths = pc.paths();
-			List<ExplainNodePathProto> pathProtos = new ArrayList<>();
+			List<gov.nist.csd.pm.proto.v1.query.ExplainNodePath> pathProtos = new ArrayList<>();
 			for (List<ExplainNode> path : paths) {
-				List<ExplainNodeProto> explainNodeProtos = new ArrayList<>();
+				List<gov.nist.csd.pm.proto.v1.query.ExplainNode> explainNodeProtos = new ArrayList<>();
 				for (ExplainNode explainNode : path) {
-					List<ExplainAssociationProto> explainAssociationProtos = new ArrayList<>();
+					List<gov.nist.csd.pm.proto.v1.query.ExplainAssociation> explainAssociationProtos = new ArrayList<>();
 					for (ExplainAssociation explainAssociation : explainNode.associations()) {
-						List<PathProto> userPathProtos = new ArrayList<>();
+						List<gov.nist.csd.pm.proto.v1.query.Path> userPathProtos = new ArrayList<>();
 						for (Path userPath : explainAssociation.userPaths()) {
-							List<NodeProto> nodeProtos = new ArrayList<>();
+							List<gov.nist.csd.pm.proto.v1.model.Node> nodeProtos = new ArrayList<>();
 							for (Node node : userPath) {
 								nodeProtos.add(toNodeProto(node));
 							}
 
-							userPathProtos.add(PathProto.newBuilder()
+							userPathProtos.add(gov.nist.csd.pm.proto.v1.query.Path.newBuilder()
 									                   .addAllNodes(nodeProtos)
 									                   .build());
 						}
 
-						explainAssociationProtos.add(ExplainAssociationProto.newBuilder()
+						explainAssociationProtos.add(gov.nist.csd.pm.proto.v1.query.ExplainAssociation.newBuilder()
 								                             .setUa(toNodeProto(explainAssociation.ua()))
 								                             .addAllArset(explainAssociation.arset())
 								                             .addAllUserPaths(userPathProtos)
 								                             .build());
 					}
 
-					explainNodeProtos.add(ExplainNodeProto.newBuilder()
+					explainNodeProtos.add(gov.nist.csd.pm.proto.v1.query.ExplainNode.newBuilder()
 							                      .setNode(toNodeProto(explainNode.node()))
 							                      .addAllAssociations(explainAssociationProtos)
 							                      .build());
 				}
 
-				pathProtos.add(ExplainNodePathProto.newBuilder()
+				pathProtos.add(gov.nist.csd.pm.proto.v1.query.ExplainNodePath.newBuilder()
 						               .addAllNodes(explainNodeProtos)
 						               .build());
 			}
 
-			policyClassProtos.add(PolicyClassExplainProto.newBuilder()
+			policyClassProtos.add(gov.nist.csd.pm.proto.v1.query.PolicyClassExplain.newBuilder()
 					                      .setPc(toNodeProto(pcNode))
 					                      .addAllArset(pc.arset())
 					                      .addAllPaths(pathProtos)
 					                      .build());
 		}
 
-		List<ProhibitionProto> prohibitionProtos = new ArrayList<>();
+		List<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = new ArrayList<>();
 		for (Prohibition p : prohibitions) {
 			prohibitionProtos.add(toProhibitionProto(p, query));
 		}
 
-		return ExplainProto.newBuilder()
+		return gov.nist.csd.pm.proto.v1.query.ExplainResponse.newBuilder()
 				.addAllPrivileges(privileges)
 				.addAllDeniedPrivileges(deniedPrivileges)
 				.addAllPolicyClasses(policyClassProtos)

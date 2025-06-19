@@ -6,11 +6,12 @@ pm:
     resource:
       admin-hostname: localhost
       admin-port: 50052
+      epp-mode: sync
     esdb:
       hostname: localhost
       port: 2113
       event-stream: pm-events-v1
-      snapshot-stream: pm-snapshot-v2
+      snapshot-stream: pm-snapshot-v1
 
 logging:
   level:

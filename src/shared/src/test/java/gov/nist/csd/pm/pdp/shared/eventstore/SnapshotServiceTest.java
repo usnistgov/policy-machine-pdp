@@ -146,21 +146,15 @@ class SnapshotServiceTest {
 
 			snapshotService.snapshot();
 			pap.modify().graph().deleteNode(pap.query().graph().getNodeId("o1"));
+			currentRevisionService.set(2);
 			snapshotService.snapshot();
 			pap.modify().graph().createObject("o1", List.of(pap.query().graph().getNodeId("oa1")));
 
-			MemoryPAP pap2 = new MemoryPAP();
-			CurrentRevisionService currentRevisionService2 = new CurrentRevisionService();
-			snapshotService = new SnapshotService(
-					config,
-					eventStoreConnectionManager,
-					pap2,
-					currentRevisionService2
-			);
 			snapshotService.restoreLatestSnapshot();
 
-			assertTrue(pap2.query().graph().nodeExists("pc1"));
-			assertFalse(pap2.query().graph().nodeExists("o1"));
+			assertTrue(pap.query().graph().nodeExists("pc1"));
+			assertFalse(pap.query().graph().nodeExists("o1"));
+			assertEquals(2, currentRevisionService.get());
 		}
 	}
 

@@ -17,10 +17,9 @@ public class ResourcePDPConfig {
     private int adminPort;
 
     /**
-     * If true, configure the EPP to process events asynchronously. If true, EPP side effect events will be processed
-     * once received from the event store.
+     * The mode of the EPP client: ASYNC, SYNC, or DISABLED. Default is ASYNC.
      */
-    private boolean eppAsync;
+    private EPPMode eppMode;
 
     /**
      * The timeout that the EPPClient will use when waiting for the current revision to catch up
@@ -28,21 +27,14 @@ public class ResourcePDPConfig {
      */
     private int eppSideEffectTimeout;
 
-    /**
-     * If true, the server will not send event contexts to the EPP.
-     */
-    private boolean disableEpp;
-
     public ResourcePDPConfig() {
     }
 
-    public ResourcePDPConfig(String adminHostname, int adminPort, boolean eppAsync, int eppSideEffectTimeout,
-                             boolean disableEpp) {
+    public ResourcePDPConfig(String adminHostname, int adminPort, EPPMode eppMode, int eppSideEffectTimeout) {
         this.adminHostname = adminHostname;
         this.adminPort = adminPort;
-        this.eppAsync = eppAsync;
+        this.eppMode = eppMode;
         this.eppSideEffectTimeout = eppSideEffectTimeout;
-        this.disableEpp = disableEpp;
     }
 
     @PostConstruct
@@ -53,6 +45,10 @@ public class ResourcePDPConfig {
 
         if (adminPort == 0) {
             throw new IllegalArgumentException("adminPort is 0");
+        }
+
+        if (eppMode == null) {
+            this.eppMode = EPPMode.ASYNC;
         }
     }
 
@@ -72,12 +68,12 @@ public class ResourcePDPConfig {
         this.adminPort = adminPort;
     }
 
-    public boolean isEppAsync() {
-        return eppAsync;
+    public EPPMode getEppMode() {
+        return eppMode;
     }
 
-    public void setEppAsync(boolean eppAsync) {
-        this.eppAsync = eppAsync;
+    public void setEppMode(EPPMode eppMode) {
+        this.eppMode = eppMode;
     }
 
     public int getEppSideEffectTimeout() {
@@ -88,11 +84,4 @@ public class ResourcePDPConfig {
         this.eppSideEffectTimeout = eppSideEffectTimeout;
     }
 
-    public boolean isDisableEpp() {
-        return disableEpp;
-    }
-
-    public void setDisableEpp(boolean disableEpp) {
-        this.disableEpp = disableEpp;
-    }
 }

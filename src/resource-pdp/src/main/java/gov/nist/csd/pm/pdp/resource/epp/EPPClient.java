@@ -1,14 +1,14 @@
 package gov.nist.csd.pm.pdp.resource.epp;
 
 import gov.nist.csd.pm.core.common.event.EventContext;
-import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.epp.EPP;
-import gov.nist.csd.pm.epp.proto.EPPGrpc;
-import gov.nist.csd.pm.epp.proto.EPPResponse;
-import gov.nist.csd.pm.epp.proto.EventContextProto;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pdp.PDP;
+import gov.nist.csd.pm.epp.proto.ResourceEPPServiceGrpc;
+import gov.nist.csd.pm.epp.proto.ResourceEventContext;
+import gov.nist.csd.pm.epp.proto.SideEffectEvents;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
+import gov.nist.csd.pm.pdp.resource.config.EPPMode;
 import gov.nist.csd.pm.pdp.resource.config.ResourcePDPConfig;
 import gov.nist.csd.pm.pdp.resource.eventstore.PolicyEventSubscriptionListener;
 import gov.nist.csd.pm.pdp.shared.protobuf.EventContextUtil;
@@ -23,6 +23,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javax.annotation.PostConstruct;
+
+import org.bitbucket.inkytonik.kiama.output.Side;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -35,47 +37,51 @@ public class EPPClient extends EPP {
     private final PDP pdp;
     private final PolicyEventSubscriptionListener listener;
     private final ResourcePDPConfig resourcePDPConfig;
-    private EPPGrpc.EPPBlockingStub blockingStub;
-    private EPPGrpc.EPPStub stub;
+    private ResourceEPPServiceGrpc.ResourceEPPServiceBlockingStub blockingStub;
+    private ResourceEPPServiceGrpc.ResourceEPPServiceStub stub;
 
     public EPPClient(PDP pdp,
                      PAP pap,
-                     ResourcePDPConfig config,
                      PolicyEventSubscriptionListener listener,
                      ResourcePDPConfig resourcePDPConfig) {
         super(pdp, pap);
         this.pdp = pdp;
         this.listener = listener;
         this.resourcePDPConfig = resourcePDPConfig;
-
-        ManagedChannel channel = ManagedChannelBuilder
-            .forAddress(config.getAdminHostname(), config.getAdminPort())
-            .defaultServiceConfig(buildGrpcConfigMap())
-            .enableRetry()
-            .usePlaintext()
-            .build();
-
-        if (config.isEppAsync()) {
-            this.stub = EPPGrpc.newStub(channel);
-        } else {
-            this.blockingStub = EPPGrpc.newBlockingStub(channel);
-        }
     }
 
     @PostConstruct
     public void subscribeToPDP() {
+        if (resourcePDPConfig.getEppMode() == EPPMode.DISABLED) {
+            return;
+        }
+
         this.pdp.addEventSubscriber(this);
+
+        // init epp client to admin pdp epp
+        ManagedChannel channel = ManagedChannelBuilder
+                .forAddress(resourcePDPConfig.getAdminHostname(), resourcePDPConfig.getAdminPort())
+                .defaultServiceConfig(buildGrpcConfigMap())
+                .enableRetry()
+                .usePlaintext()
+                .build();
+
+        if (resourcePDPConfig.getEppMode() == EPPMode.ASYNC) {
+            this.stub = ResourceEPPServiceGrpc.newStub(channel);
+        } else {
+            this.blockingStub = ResourceEPPServiceGrpc.newBlockingStub(channel);
+        }
     }
 
     @Override
-    public void processEvent(EventContext eventCtx) throws PMException {
-        if (resourcePDPConfig.isDisableEpp()) {
+    public void processEvent(EventContext eventCtx) {
+        if (resourcePDPConfig.getEppMode() == EPPMode.DISABLED) {
             return;
         }
 
         logger.info("sending event {}", eventCtx);
 
-        EventContextProto eventCtxProto = EventContextUtil.toProto(eventCtx);
+        ResourceEventContext eventCtxProto = EventContextUtil.toProto(eventCtx);
 
         if (stub != null) {
             processEventAsync(eventCtxProto);
@@ -84,10 +90,10 @@ public class EPPClient extends EPP {
         }
     }
 
-    private void processEventAsync(EventContextProto eventCtx) {
+    private void processEventAsync(ResourceEventContext eventCtx) {
         stub.processEvent(eventCtx, new StreamObserver<>() {
             @Override
-            public void onNext(EPPResponse eppResponse) {
+            public void onNext(SideEffectEvents eppResponse) {
                 logger.info("EPP returned {} side effect events for event {}", eppResponse.getEventsCount(), eventCtx);
             }
 
@@ -107,8 +113,9 @@ public class EPPClient extends EPP {
      * Process the given even context synchronously in the EPP server. If no errors occur and the event context matched
      * an obligation event pattern, the EPP will respond with a list of events and the revision number of the first event.
      */
-    private void processEventSync(EventContextProto eventCtx) {
-        EPPResponse eppResponse = blockingStub.processEvent(eventCtx);
+    private void processEventSync(ResourceEventContext eventCtx) {
+        SideEffectEvents eppResponse = blockingStub.processEvent(eventCtx);
+
         List<PMEvent> eventsList = eppResponse.getEventsList();
         long startRevision = eppResponse.getStartRevision();
         logger.debug("epp returned start revision {} and {} events", startRevision, eventsList.size());

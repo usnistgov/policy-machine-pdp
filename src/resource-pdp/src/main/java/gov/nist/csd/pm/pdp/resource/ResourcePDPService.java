@@ -1,15 +1,14 @@
 package gov.nist.csd.pm.pdp.resource;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.Node;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
-import gov.nist.csd.pm.pdp.proto.adjudication.AdjudicateResourceOperationCmd;
-import gov.nist.csd.pm.pdp.proto.adjudication.ResourcePDPServiceGrpc;
-import gov.nist.csd.pm.pdp.proto.model.NodeProto;
+import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextFromHeader;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
+import gov.nist.csd.pm.proto.v1.adjudication.ResourceAdjudicationServiceGrpc;
+import gov.nist.csd.pm.proto.v1.adjudication.ResourceOperationCmd;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
@@ -17,7 +16,7 @@ import org.slf4j.LoggerFactory;
 import io.grpc.Status;
 
 @GrpcService
-public class ResourcePDPService extends ResourcePDPServiceGrpc.ResourcePDPServiceImplBase {
+public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.ResourceAdjudicationServiceImplBase {
 
     private static final Logger logger = LoggerFactory.getLogger(ResourcePDPService.class);
 
@@ -30,15 +29,15 @@ public class ResourcePDPService extends ResourcePDPServiceGrpc.ResourcePDPServic
     }
 
     @Override
-    public void adjudicateResourceOperation(AdjudicateResourceOperationCmd request,
-                                            StreamObserver<NodeProto> responseObserver) {
+    public void adjudicateResourceOperation(ResourceOperationCmd request,
+                                            StreamObserver<gov.nist.csd.pm.proto.v1.model.Node> responseObserver) {
         try {
             UserContext userCtx = UserContextFromHeader.get(pap);
             String operation = request.getOperation();
             long targetId = 0;
-            if (request.getTargetCase() == AdjudicateResourceOperationCmd.TargetCase.ID) {
+            if (request.getTargetCase() == ResourceOperationCmd.TargetCase.ID) {
                 targetId = request.getId();
-            } else if (request.getTargetCase() == AdjudicateResourceOperationCmd.TargetCase.NAME) {
+            } else if (request.getTargetCase() == ResourceOperationCmd.TargetCase.NAME) {
                 targetId = pap.query().graph().getNodeId(request.getName());
             } else {
                 responseObserver.onError(Status.INVALID_ARGUMENT
@@ -50,6 +49,11 @@ public class ResourcePDPService extends ResourcePDPServiceGrpc.ResourcePDPServic
             Node node = pdp.adjudicateResourceOperation(userCtx, targetId, operation);
             responseObserver.onNext(ProtoUtil.toNodeProto(node));
             responseObserver.onCompleted();
+        } catch (UnauthorizedException e) {
+            responseObserver.onError(Status.PERMISSION_DENIED
+                                             .withDescription(e.getMessage())
+                                             .withCause(e)
+                                             .asRuntimeException());
         } catch (Exception e) {
             responseObserver.onError(Status.INTERNAL
                                              .withDescription(e.getMessage())

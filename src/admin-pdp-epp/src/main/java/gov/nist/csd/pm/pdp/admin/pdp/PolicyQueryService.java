@@ -1,6 +1,9 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
+import com.google.protobuf.BoolValue;
 import com.google.protobuf.Empty;
+import com.google.protobuf.Int64Value;
+import com.google.protobuf.StringValue;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.Node;
 import gov.nist.csd.pm.core.common.graph.node.NodeType;
@@ -17,13 +20,12 @@ import gov.nist.csd.pm.core.pap.obligation.Obligation;
 import gov.nist.csd.pm.core.pap.query.model.explain.Explain;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.Subgraph;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.SubgraphPrivileges;
+import gov.nist.csd.pm.core.pap.serialization.PolicySerializer;
+import gov.nist.csd.pm.core.pap.serialization.json.JSONSerializer;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
-import gov.nist.csd.pm.pdp.proto.model.ExplainProto;
-import gov.nist.csd.pm.pdp.proto.model.NodeProto;
-import gov.nist.csd.pm.pdp.proto.model.ProhibitionProto;
-import gov.nist.csd.pm.pdp.proto.model.StringList;
-import gov.nist.csd.pm.pdp.proto.query.*;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
+import gov.nist.csd.pm.proto.v1.model.*;
+import gov.nist.csd.pm.proto.v1.query.*;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
@@ -42,11 +44,11 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
-	public void nodeExists(IdOrNameQuery request, StreamObserver<BooleanResponse> responseObserver) {
+	public void nodeExists(IdOrNameQuery request, StreamObserver<BoolValue> responseObserver) {
 		try {
 			boolean exists = adjudicator.adjudicateQuery(pdpTx -> pdpTx.query().graph().nodeExists(request.getId()));
 
-			responseObserver.onNext(BooleanResponse.newBuilder().setResult(exists).build());
+			responseObserver.onNext(BoolValue.newBuilder().setValue(exists).build());
 			responseObserver.onCompleted();
 		} catch (UnauthorizedException e) {
 			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
@@ -56,7 +58,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
-	public void getNode(IdOrNameQuery request, StreamObserver<NodeProto> responseObserver) {
+	public void getNode(IdOrNameQuery request, StreamObserver<gov.nist.csd.pm.proto.v1.model.Node> responseObserver) {
 		try {
 			Node node =  adjudicator.adjudicateQuery(pdpTx -> switch (request.getIdOrNameCase()) {
 				case ID -> pdpTx.query().graph().getNodeById(request.getId());
@@ -74,11 +76,11 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
-	public void getNodeId(IdOrNameQuery request, StreamObserver<NodeIdResponse> responseObserver) {
+	public void getNodeId(IdOrNameQuery request, StreamObserver<Int64Value> responseObserver) {
 		try {
 			long id = adjudicator.adjudicateQuery(pdpTx -> pdpTx.query().graph().getNodeId(request.getName()));
 
-			responseObserver.onNext(NodeIdResponse.newBuilder().setId(id).build());
+			responseObserver.onNext(Int64Value.newBuilder().setValue(id).build());
 			responseObserver.onCompleted();
 		} catch (UnauthorizedException e) {
 			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
@@ -95,7 +97,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 					request.getPropertiesMap()
 			));
 
-			List<NodeProto> nodeProtos = new ArrayList<>();
+			List<gov.nist.csd.pm.proto.v1.model.Node> nodeProtos = new ArrayList<>();
 			for (Node node : nodes) {
 				nodeProtos.add(ProtoUtil.toNodeProto(node));
 			}
@@ -113,7 +115,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getPolicyClasses(Empty request, StreamObserver<NodeList> responseObserver) {
 		try {
 			Collection<Long> pcs = adjudicator.adjudicateQuery(pdpTx -> pdpTx.query().graph().getPolicyClasses());
-			List<NodeProto> nodeProtos = nodeIdsToNodeProtoList(pcs);
+			List<gov.nist.csd.pm.proto.v1.model.Node> nodeProtos = nodeIdsToNodeProtoList(pcs);
 
 			responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeProtos).build());
 			responseObserver.onCompleted();
@@ -131,7 +133,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 			Collection<Long> descs = adjudicator.adjudicateQuery(pdpTx -> {
 				return pdpTx.query().graph().getAdjacentDescendants(request.getNodeId());
 			});
-			List<NodeProto> nodeProtos = nodeIdsToNodeProtoList(descs);
+			List<gov.nist.csd.pm.proto.v1.model.Node> nodeProtos = nodeIdsToNodeProtoList(descs);
 
 			responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeProtos).build());
 			responseObserver.onCompleted();
@@ -149,7 +151,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 			Collection<Long> ascs = adjudicator.adjudicateQuery(pdpTx -> {
 				return pdpTx.query().graph().getAdjacentAscendants(request.getNodeId());
 			});
-			List<NodeProto> nodeProtos = nodeIdsToNodeProtoList(ascs);
+			List<gov.nist.csd.pm.proto.v1.model.Node> nodeProtos = nodeIdsToNodeProtoList(ascs);
 
 			responseObserver.onNext(NodeList.newBuilder().addAllNodes(nodeProtos).build());
 			responseObserver.onCompleted();
@@ -168,7 +170,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 				return pdpTx.query().graph().getAssociationsWithSource(request.getNodeId());
 			});
 
-			List<AssociationProto> associationProtoList = toAssociationProtoList(associations);
+			List<gov.nist.csd.pm.proto.v1.model.Association> associationProtoList = toAssociationProtoList(associations);
 
 			responseObserver.onNext(AssociationList.newBuilder().addAllAssociations(associationProtoList).build());
 			responseObserver.onCompleted();
@@ -187,7 +189,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 				return pdpTx.query().graph().getAssociationsWithTarget(request.getNodeId());
 			});
 
-			List<AssociationProto> associationProtoList = toAssociationProtoList(associations);
+			List<gov.nist.csd.pm.proto.v1.model.Association> associationProtoList = toAssociationProtoList(associations);
 
 			responseObserver.onNext(AssociationList.newBuilder().addAllAssociations(associationProtoList).build());
 			responseObserver.onCompleted();
@@ -199,13 +201,13 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
-	public void getAscendantSubgraph(GetSubgraphQuery request, StreamObserver<SubgraphProto> responseObserver) {
+	public void getAscendantSubgraph(GetSubgraphQuery request, StreamObserver<gov.nist.csd.pm.proto.v1.query.Subgraph> responseObserver) {
 		try {
 			Subgraph subgraph = adjudicator.adjudicateQuery(pdpTx -> {
 				return pdpTx.query().graph().getAscendantSubgraph(request.getNodeId());
 			});
 
-			responseObserver.onNext(toSubgraphProto(subgraph));
+			responseObserver.onNext(toSubgraph(subgraph));
 			responseObserver.onCompleted();
 		} catch (UnauthorizedException e) {
 			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
@@ -215,13 +217,13 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
-	public void getDescendantSubgraph(GetSubgraphQuery request, StreamObserver<SubgraphProto> responseObserver) {
+	public void getDescendantSubgraph(GetSubgraphQuery request, StreamObserver<gov.nist.csd.pm.proto.v1.query.Subgraph> responseObserver) {
 		try {
 			Subgraph subgraph = adjudicator.adjudicateQuery(pdpTx -> {
 				return pdpTx.query().graph().getDescendantSubgraph(request.getNodeId());
 			});
 
-			responseObserver.onNext(toSubgraphProto(subgraph));
+			responseObserver.onNext(toSubgraph(subgraph));
 			responseObserver.onCompleted();
 		} catch (UnauthorizedException e) {
 			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
@@ -265,13 +267,13 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
-	public void isAscendant(IsAncestorQuery request, StreamObserver<BooleanResponse> responseObserver) {
+	public void isAscendant(ContainmentQuery request, StreamObserver<BoolValue> responseObserver) {
 		try {
 			boolean isAscendant = adjudicator.adjudicateQuery(pdpTx -> {
 				return pdpTx.query().graph().isAscendant(request.getAscendantId(), request.getDescendantId());
 			});
 
-			responseObserver.onNext(BooleanResponse.newBuilder().setResult(isAscendant).build());
+			responseObserver.onNext(BoolValue.newBuilder().setValue(isAscendant).build());
 			responseObserver.onCompleted();
 		} catch (UnauthorizedException e) {
 			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
@@ -281,13 +283,13 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
-	public void isDescendant(IsAncestorQuery request, StreamObserver<BooleanResponse> responseObserver) {
+	public void isDescendant(ContainmentQuery request, StreamObserver<BoolValue> responseObserver) {
 		try {
 			boolean isDescendant = adjudicator.adjudicateQuery(pdpTx -> {
 				return pdpTx.query().graph().isDescendant(request.getAscendantId(), request.getDescendantId());
 			});
 
-			responseObserver.onNext(BooleanResponse.newBuilder().setResult(isDescendant).build());
+			responseObserver.onNext(BoolValue.newBuilder().setValue(isDescendant).build());
 			responseObserver.onCompleted();
 		} catch (UnauthorizedException e) {
 			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
@@ -303,7 +305,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 				return pdpTx.query().prohibitions().getProhibitions();
 			});
 
-			List<ProhibitionProto> prohibitionProtos = new ArrayList<>();
+			List<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = new ArrayList<>();
 			for (Prohibition prohibition : prohibitions) {
 				prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
 			}
@@ -331,7 +333,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 				return pdpTx.query().prohibitions().getProhibitionsWithSubject(subject);
 			});
 
-			List<ProhibitionProto> prohibitionProtos = new ArrayList<>();
+			List<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = new ArrayList<>();
 			for (Prohibition prohibition : prohibitions) {
 				prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
 			}
@@ -346,7 +348,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
-	public void getProhibition(GetByNameQuery request, StreamObserver<ProhibitionProto> responseObserver) {
+	public void getProhibition(GetByNameQuery request, StreamObserver<gov.nist.csd.pm.proto.v1.model.Prohibition> responseObserver) {
 		try {
 			Prohibition prohibition = adjudicator.adjudicateQuery(pdpTx -> {
 				return pdpTx.query().prohibitions().getProhibition(request.getName());
@@ -369,7 +371,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 				return pdpTx.query().prohibitions().getInheritedProhibitionsFor(request.getSubjectId());
 			});
 
-			List<ProhibitionProto> prohibitionProtos = new ArrayList<>();
+			List<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = new ArrayList<>();
 			for (Prohibition prohibition : prohibitions) {
 				prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
 			}
@@ -391,7 +393,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 				return pdpTx.query().prohibitions().getProhibitionsWithContainer(request.getContainerId());
 			});
 
-			List<ProhibitionProto> prohibitionProtos = new ArrayList<>();
+			List<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = new ArrayList<>();
 			for (Prohibition prohibition : prohibitions) {
 				prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
 			}
@@ -422,7 +424,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
-	public void getObligation(GetByNameQuery request, StreamObserver<ObligationProto> responseObserver) {
+	public void getObligation(GetByNameQuery request, StreamObserver<gov.nist.csd.pm.proto.v1.model.Obligation> responseObserver) {
 		try {
 			Obligation obligation = adjudicator.adjudicateQuery(pdpTx -> {
 				return pdpTx.query().obligations().getObligation(request.getName());
@@ -684,7 +686,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 	@Override
 	public void computeSubgraphPrivileges(AccessWithRootQuery request,
-	                                      StreamObserver<SubgraphPrivilegesProto> responseObserver) {
+	                                      StreamObserver<gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges> responseObserver) {
 		try {
 			SubgraphPrivileges subgraphPrivileges = adjudicator.adjudicateQuery(pdpTx -> {
 				return pdpTx.query().access().computeSubgraphPrivileges(
@@ -741,7 +743,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
-	public void explain(ExplainQuery request, StreamObserver<ExplainProto> responseObserver) {
+	public void explain(ExplainQuery request, StreamObserver<ExplainResponse> responseObserver) {
 		try {
 			Explain explain = adjudicator.adjudicateQuery(pdpTx -> {
 				return pdpTx.query().access().explain(
@@ -778,7 +780,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	}
 
 	@Override
-	public void selfComputePrivileges(TargetContextProto request,
+	public void selfComputePrivileges(gov.nist.csd.pm.proto.v1.query.TargetContext request,
 	                                  StreamObserver<StringList> responseObserver) {
 		try {
 			AccessRightSet privs = adjudicator.adjudicateQuery(pdpTx -> {
@@ -798,7 +800,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 	@Override
 	public void selfComputeSubgraphPrivileges(SelfAccessWithRootQuery request,
-	                                          StreamObserver<SubgraphPrivilegesProto> responseObserver) {
+	                                          StreamObserver<gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges> responseObserver) {
 		try {
 			SubgraphPrivileges subgraphPrivileges = adjudicator.adjudicateQuery(pdpTx -> {
 				return pdpTx.query().selfAccess().computeSubgraphPrivileges(request.getRoot());
@@ -860,31 +862,54 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 		}
 	}
 
-	private SubgraphProto toSubgraphProto(Subgraph subgraph) {
-		List<SubgraphProto> subgraphProtos = new ArrayList<>();
-		for (Subgraph childSubgraph : subgraph.subgraphs()) {
-			subgraphProtos.add(toSubgraphProto(childSubgraph));
+	@Override
+	public void serialize(SerializeQuery request, StreamObserver<StringValue> responseObserver) {
+		PolicySerializer serializer;
+		SerializationFormat format = request.getFormat();
+		switch (format) {
+			case JSON -> serializer = new JSONSerializer();
+			default -> throw new IllegalArgumentException("Unrecognized format: " + format);
 		}
 
-		return SubgraphProto.newBuilder()
+		try {
+			String serialized = adjudicator.adjudicateQuery(pdpTx -> {
+				return pdpTx.serialize(serializer);
+			});
+
+			responseObserver.onNext(StringValue.newBuilder().setValue(serialized).build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		} catch (Exception e) {
+			responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).withCause(e).asRuntimeException());
+		}
+	}
+
+	private gov.nist.csd.pm.proto.v1.query.Subgraph toSubgraph(Subgraph subgraph) {
+		List<gov.nist.csd.pm.proto.v1.query.Subgraph> subgraphs = new ArrayList<>();
+		for (Subgraph childSubgraph : subgraph.subgraphs()) {
+			subgraphs.add(toSubgraph(childSubgraph));
+		}
+
+		return gov.nist.csd.pm.proto.v1.query.Subgraph.newBuilder()
 				.setNode(ProtoUtil.toNodeProto(subgraph.node()))
-				.addAllSubgraph(subgraphProtos)
+				.addAllSubgraph(subgraphs)
 				.build();
 	}
 
-	private SubgraphPrivilegesProto toSubgraphPrivilegesProto(SubgraphPrivileges subgraphPrivileges) {
+	private gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges toSubgraphPrivilegesProto(SubgraphPrivileges subgraphPrivileges) {
 		// prune any subgraphs in which all nodes are inaccessible
 		pruneInaccessibleSubgraphs(subgraphPrivileges);
 
-		List<SubgraphPrivilegesProto> subgraphProtos = new ArrayList<>();
+		List<gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges> subgraphs = new ArrayList<>();
 		for (SubgraphPrivileges childSubgraph : subgraphPrivileges.ascendants()) {
-			subgraphProtos.add(toSubgraphPrivilegesProto(childSubgraph));
+			subgraphs.add(toSubgraphPrivilegesProto(childSubgraph));
 		}
 
-		return SubgraphPrivilegesProto.newBuilder()
+		return gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges.newBuilder()
 				.setNode(ProtoUtil.toNodeProto(subgraphPrivileges.node()))
 				.addAllArset(subgraphPrivileges.privileges())
-				.addAllAscendants(subgraphProtos)
+				.addAllAscendants(subgraphs)
 				.build();
 	}
 
@@ -947,8 +972,8 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 		responseObserver.onCompleted();
 	}
 
-	private List<NodeProto> nodeIdsToNodeProtoList(Collection<Long> descs) {
-		List<NodeProto> nodeProtos = new ArrayList<>();
+	private List<gov.nist.csd.pm.proto.v1.model.Node> nodeIdsToNodeProtoList(Collection<Long> descs) {
+		List<gov.nist.csd.pm.proto.v1.model.Node> nodeProtos = new ArrayList<>();
 		for (Long desc : descs) {
 			try {
 				nodeProtos.add(ProtoUtil.toNodeProto(pap.query().graph().getNodeById(desc)));
@@ -960,12 +985,12 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 		return nodeProtos;
 	}
 
-	private List<AssociationProto> toAssociationProtoList(Collection<Association> associations) {
-		List<AssociationProto> associationProtos = new ArrayList<>();
+	private List<gov.nist.csd.pm.proto.v1.model.Association> toAssociationProtoList(Collection<Association> associations) {
+		List<gov.nist.csd.pm.proto.v1.model.Association> associationProtos = new ArrayList<>();
 		for (Association association : associations) {
 			try {
 				associationProtos.add(
-						AssociationProto.newBuilder()
+						gov.nist.csd.pm.proto.v1.model.Association.newBuilder()
 								.setUa(ProtoUtil.toNodeProto(pap.query().graph().getNodeById(association.getSource())))
 								.setTarget(ProtoUtil.toNodeProto(pap.query().graph().getNodeById(association.getTarget())))
 								.addAllArset(association.getAccessRightSet())
@@ -978,8 +1003,8 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 		return associationProtos;
 	}
 
-	private List<ObligationProto> toObligationProtoList(Collection<Obligation> obligations) {
-		List<ObligationProto> obligationProtos = new ArrayList<>();
+	private List<gov.nist.csd.pm.proto.v1.model.Obligation> toObligationProtoList(Collection<Obligation> obligations) {
+		List<gov.nist.csd.pm.proto.v1.model.Obligation> obligationProtos = new ArrayList<>();
 		for (Obligation obligation : obligations) {
 			try {
 				obligationProtos.add(ProtoUtil.toObligationProto(obligation, pap));

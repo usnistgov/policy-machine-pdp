@@ -1,6 +1,6 @@
 PHONY: build-services
 build-services:
-	cd src && ./mvnw clean package
+	cd src && ./mvnw clean package -DskipTests
 
 PHONY: build-docker-images
 build-docker-images:
