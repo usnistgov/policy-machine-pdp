@@ -84,7 +84,7 @@
             <dependency>
                 <groupId>com.github.usnistgov</groupId>
                 <artifactId>policy-machine-core</artifactId>
-                <version>dd60ded8</version>
+                <version>5b744ee</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -94,7 +94,7 @@
             <dependency>
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-classic</artifactId>
-                <version>1.4.7</version>
+                <version>1.4.12</version>
             </dependency>
             <dependency>
                 <groupId>io.github.resilience4j</groupId>

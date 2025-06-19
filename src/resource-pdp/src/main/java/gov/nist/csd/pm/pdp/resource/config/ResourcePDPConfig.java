@@ -23,7 +23,7 @@ public class ResourcePDPConfig {
 
     /**
      * The timeout that the EPPClient will use when waiting for the current revision to catch up
-     * to the side effect revision returned by the EPP. This value will be ignored if eppAsync is true.
+     * to the side effect revision returned by the EPP. This value will be ignored if eppMode is ASYNC.
      */
     private int eppSideEffectTimeout;
 

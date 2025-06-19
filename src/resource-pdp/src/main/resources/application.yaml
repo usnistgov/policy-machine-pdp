@@ -12,7 +12,6 @@ pm:
       port: 2113
       event-stream: pm-events-v1
       snapshot-stream: pm-snapshot-v1
-
 logging:
   level:
     root: INFO

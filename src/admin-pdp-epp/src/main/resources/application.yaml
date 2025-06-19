@@ -5,6 +5,7 @@ grpc:
 pm:
   pdp:
     admin:
+      #
       bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/policy.json"
       bootstrap-user: "u1"
       neo4j-db-path: "neo4j/data"
