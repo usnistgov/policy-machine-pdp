@@ -106,3 +106,19 @@ pm:
 ### eventstore
 [EventStoreDB](https://github.com/kurrent-io/KurrentDB) serves as the policy data store. Policy updates are stored in 
 an immutable log of events. Services can subscribe to the events to stay up to date with policy modifications.
+
+## Data Flow Diagrams
+Below are diagrams illustrating the different ways data can flow through the distributed Policy Machine PDP components.
+
+### Overall Diagram
+![policy-machine-server 1](https://github.com/user-attachments/assets/56c47730-554e-4a96-9e97-cd36e7f49058)
+
+### Admin Operation Flow
+![policy-machine-server-ao 2](https://github.com/user-attachments/assets/b00e088b-41cd-4b94-8925-24c98b349f1c)
+
+### Resource Operation Flow
+![policy-machine-server-ro 2](https://github.com/user-attachments/assets/80295f14-74f6-4564-a8a8-bc110c7b7bd5)
+
+### Event Context Flow
+![policy-machine-server-ec 1](https://github.com/user-attachments/assets/af7cc871-7c51-4719-9a2d-947fd59bb961)
+
