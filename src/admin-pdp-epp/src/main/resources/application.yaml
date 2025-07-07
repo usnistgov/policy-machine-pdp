@@ -6,7 +6,7 @@ pm:
   pdp:
     admin:
       #
-      bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/policy.json"
+      bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/bootstrap2.json"
       bootstrap-user: "u1"
       neo4j-db-path: "neo4j/data"
       esdb-consumer-group: admin-pdp-epp-cg
@@ -17,6 +17,8 @@ pm:
       port: 2113
       event-stream: pm-events-v1
       snapshot-stream: pm-snapshot-v1
+    plugins:
+      plugin-directory: "./plugins123"
 management:
   health:
     neo4j:

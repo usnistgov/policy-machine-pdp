@@ -1,6 +1,5 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
-import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.proto.v1.adjudication.AdminAdjudicationServiceGrpc;
 import gov.nist.csd.pm.proto.v1.adjudication.AdminCmdRequest;
@@ -9,11 +8,15 @@ import gov.nist.csd.pm.proto.v1.model.Value;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 @GrpcService
 public class AdjudicationService extends AdminAdjudicationServiceGrpc.AdminAdjudicationServiceImplBase {
+
+	private static final Logger logger = LoggerFactory.getLogger(AdjudicationService.class);
 
 	private final Adjudicator adjudicator;
 
@@ -33,6 +36,7 @@ public class AdjudicationService extends AdminAdjudicationServiceGrpc.AdminAdjud
 					                         .withCause(e)
 					                         .asRuntimeException());
 		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
 			responseObserver.onError(Status.INTERNAL
 					                         .withDescription(e.getMessage())
 					                         .withCause(e)

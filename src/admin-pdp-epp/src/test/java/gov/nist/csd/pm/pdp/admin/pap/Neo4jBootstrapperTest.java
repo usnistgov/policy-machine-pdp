@@ -10,6 +10,8 @@ import gov.nist.csd.pm.pdp.proto.event.Bootstrapped;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
+import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
+import gov.nist.csd.pm.pdp.shared.plugin.PluginLoaderConfig;
 import gov.nist.csd.pm.pdp.sharedtest.EventStoreTestContainer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +25,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -103,7 +104,7 @@ class Neo4jBootstrapperTest {
 				eventStoreDBConfig,
 				eventStoreConnectionManager,
 				graphDb,
-				new ArrayList<>()
+				new PluginLoader(new PluginLoaderConfig())
 		);
 
 		bootstrapper.bootstrap();
@@ -165,7 +166,7 @@ class Neo4jBootstrapperTest {
 				eventStoreDBConfig,
 				eventStoreConnectionManager,
 				graphDb,
-				new ArrayList<>()
+				new PluginLoader(new PluginLoaderConfig())
 		);
 
 		bootstrapper.bootstrap();

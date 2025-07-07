@@ -9,8 +9,7 @@ import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import gov.nist.csd.pm.pdp.shared.eventstore.PolicyEventHandler;
 import gov.nist.csd.pm.pdp.shared.eventstore.SnapshotService;
-import gov.nist.csd.pm.pdp.shared.function.FunctionLoader;
-import org.neo4j.graphdb.GraphDatabaseService;
+import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -31,8 +30,8 @@ public class PolicyEventPersistentSubscriptionListener extends PersistentSubscri
                                                      CurrentRevisionService currentRevision,
                                                      SnapshotService snapshotService,
                                                      AdminPDPConfig adminPDPConfig,
-                                                     FunctionLoader functionLoader) {
-        this.policyEventHandler = new PolicyEventHandler(pap, functionLoader);
+                                                     PluginLoader pluginLoader) {
+        this.policyEventHandler = new PolicyEventHandler(pap, pluginLoader);
         this.currentRevision = currentRevision;
         this.snapshotService = snapshotService;
         this.adminPDPConfig = adminPDPConfig;

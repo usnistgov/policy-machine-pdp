@@ -5,8 +5,9 @@ import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
 import gov.nist.csd.pm.core.common.prohibition.ContainerCondition;
 import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
 import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.function.AdminFunction;
+import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pap.serialization.json.JSONDeserializer;
+import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.PDPTx;
 
 import java.util.ArrayList;
@@ -14,7 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import gov.nist.csd.pm.pdp.admin.pap.EventTrackingPAP;
 import gov.nist.csd.pm.proto.v1.cmd.*;
 import gov.nist.csd.pm.proto.v1.model.SerializationFormat;
 import gov.nist.csd.pm.proto.v1.model.Value;
@@ -31,12 +31,13 @@ public class CommandHandler {
     /**
      * Handles an administrative command based on its type.
      *
-     * @param pap
-     * @param pdpTx          The transaction context
-     * @param adminCommand   The command to handle
-     * @throws PMException If an error occurs during command handling
+     * @param userCtx The user context.
+     * @param ngacCtx The ngac transaction context.
+     * @param pdpTx The pdp transaction context.
+     * @param adminCommand The command to handle.
+     * @throws PMException If an error occurs during command handling.
      */
-    public Value handleCommand(PAP pap, PDPTx pdpTx, AdminCommand adminCommand) throws PMException {
+    public Value handleCommand(UserContext userCtx, NGACContext ngacCtx, PDPTx pdpTx, AdminCommand adminCommand) throws PMException {
         return switch (adminCommand.getCmdCase()) {
             case CREATE_POLICY_CLASS_CMD     -> handleCreatePolicyClassCmd(pdpTx, adminCommand.getCreatePolicyClassCmd());
             case CREATE_USER_ATTRIBUTE_CMD   -> handleCreateUserAttributeCmd(pdpTx, adminCommand.getCreateUserAttributeCmd());
@@ -57,25 +58,26 @@ public class CommandHandler {
             case DELETE_ADMIN_ROUTINE_CMD    -> handleDeleteAdminRoutineCmd(pdpTx, adminCommand.getDeleteAdminRoutineCmd());
             case EXECUTE_PML_CMD             -> handleExecutePmlCmd(pdpTx, adminCommand.getExecutePmlCmd());
 	        case DESERIALIZE_CMD             -> handleDeserializeCmd(pdpTx, adminCommand.getDeserializeCmd());
-	        case GENERIC_ADMIN_CMD           -> handleGenericCmd(pap, pdpTx, adminCommand.getGenericAdminCmd());
+	        case GENERIC_ADMIN_CMD           -> handleGenericCmd(userCtx, ngacCtx, adminCommand.getGenericAdminCmd());
 	        case CMD_NOT_SET                 -> throw new PMException("cmd not set");
         };
     }
 
-    private Value handleGenericCmd(PAP pap, PDPTx pdpTx, GenericAdminCmd genericAdminCmd) throws PMException {
+    private Value handleGenericCmd(UserContext userCtx, NGACContext ngacCtx, GenericAdminCmd genericAdminCmd) throws PMException {
+        PAP pap = ngacCtx.pap();
+        PDP pdp = ngacCtx.pdp();
         String opName = genericAdminCmd.getOpName();
         ValueMap args = genericAdminCmd.getArgs();
+        Map<String, Object> argsMap = toArgsMap(args);
 
-        AdminFunction<?, ?> function;
+        Object o;
         if (pap.query().operations().getAdminOperationNames().contains(opName)) {
-            function = pap.query().operations().getAdminOperation(opName);
+            o = pdp.adjudicateAdminOperation(userCtx, opName, argsMap);
         } else if (pap.query().routines().getAdminRoutineNames().contains(opName)) {
-            function = pap.query().routines().getAdminRoutine(opName);
+            o = pdp.adjudicateAdminRoutine(userCtx, opName, argsMap);
         } else {
             throw new PMException("unknown AdminFunction " + opName);
         }
-
-        Object o = pdpTx.executeAdminFunction(function, toArgsMap(args));
 
         return objToValue(o);
     }
@@ -108,10 +110,11 @@ public class CommandHandler {
             }
 
             return builder.setMapValue(ValueMap.newBuilder().putAllValues(values)).build();
+        } else if (o instanceof String str) {
+            return builder.setStringValue(str).build();
         }
 
-        // set string for default case, this will also handle the string case
-        return builder.setStringValue(o.toString()).build();
+        return Value.newBuilder().build();
     }
 
     private Map<String, Object> toArgsMap(ValueMap args) throws PMException {

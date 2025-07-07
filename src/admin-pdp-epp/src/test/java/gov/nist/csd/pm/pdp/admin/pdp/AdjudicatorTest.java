@@ -2,7 +2,6 @@ package gov.nist.csd.pm.pdp.admin.pdp;
 
 import com.eventstore.dbclient.WrongExpectedVersionException;
 import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.PDPTx;
@@ -24,7 +23,6 @@ import org.mockito.quality.Strictness;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -87,7 +85,7 @@ public class AdjudicatorTest {
 			String expectedResult = "Success";
 			when(pdpMock.runTx(any(), any())).thenReturn(expectedResult);
 
-			String result = adjudicator.adjudicateQuery(tx -> expectedResult);
+			String result = adjudicator.adjudicateQuery((pap, pdpTx) -> expectedResult);
 
 			assertEquals(expectedResult, result);
 			verify(contextFactory).createContext();
@@ -101,7 +99,7 @@ public class AdjudicatorTest {
 
 			PMException exception = assertThrows(
 					PMException.class,
-					() -> adjudicator.adjudicateQuery(tx -> "Result")
+					() -> adjudicator.adjudicateQuery((pap, pdpTx) -> "Result")
 			);
 
 			assertEquals(pmException, exception);
@@ -134,21 +132,21 @@ public class AdjudicatorTest {
 				invocation.getArgument(2);
 				return null;
 			}).when(commandHandler)
-					.handleCommand(any(), eq(pdpTxMock), eq(cmd1));
+					.handleCommand(any(), any(), eq(pdpTxMock), eq(cmd1));
 
 			doAnswer(invocation -> {
 				invocation.getArgument(2);
 				return null;
 			}).when(commandHandler)
-					.handleCommand(any(), eq(pdpTxMock), eq(cmd2));
+					.handleCommand(any(), any(), eq(pdpTxMock), eq(cmd2));
 
 			adjudicator.adjudicateAdminCommands(List.of(cmd1, cmd2));
 
 			verify(contextFactory, times(1)).createContext();
 			verify(commandHandler, times(1))
-					.handleCommand(any(), eq(pdpTxMock), eq(cmd1));
+					.handleCommand(any(), any(), eq(pdpTxMock), eq(cmd1));
 			verify(commandHandler, times(1))
-					.handleCommand(any(), eq(pdpTxMock), eq(cmd2));
+					.handleCommand(any(), any(), eq(pdpTxMock), eq(cmd2));
 		}
 
 		@Test
@@ -166,7 +164,7 @@ public class AdjudicatorTest {
 
 			doThrow(new PMException("fail"))
 					.when(commandHandler)
-					.handleCommand(any(), eq(pdpTxMock), eq(cmd));
+					.handleCommand(any(), any(), eq(pdpTxMock), eq(cmd));
 
 			PMException ex = assertThrows(
 					PMException.class,
@@ -176,7 +174,7 @@ public class AdjudicatorTest {
 
 			verify(contextFactory, times(1)).createContext();
 			verify(commandHandler, times(1))
-					.handleCommand(any(), eq(pdpTxMock), eq(cmd));
+					.handleCommand(any(), any(), eq(pdpTxMock), eq(cmd));
 		}
 
 		@Test
@@ -201,14 +199,14 @@ public class AdjudicatorTest {
 				}
 				return null;
 			}).when(commandHandler)
-					.handleCommand(any(), eq(pdpTxMock), eq(cmd));
+					.handleCommand(any(), any(), eq(pdpTxMock), eq(cmd));
 
 			adjudicator.adjudicateAdminCommands(List.of(cmd));
 
 			assertEquals(2, attempts.get());
 			verify(contextFactory, times(2)).createContext();
 			verify(commandHandler, times(2))
-					.handleCommand(any(), eq(pdpTxMock), eq(cmd));
+					.handleCommand(any(), any(), eq(pdpTxMock), eq(cmd));
 		}
 
 		@Test
@@ -229,7 +227,7 @@ public class AdjudicatorTest {
 				attempts.incrementAndGet();
 				throw mock(WrongExpectedVersionException.class);
 			}).when(commandHandler)
-					.handleCommand(any(), eq(pdpTxMock), eq(cmd));
+					.handleCommand(any(), any(), eq(pdpTxMock), eq(cmd));
 
 			assertThrows(
 					WrongExpectedVersionException.class,
@@ -238,7 +236,7 @@ public class AdjudicatorTest {
 			assertEquals(3, attempts.get());
 			verify(contextFactory, times(3)).createContext();
 			verify(commandHandler, times(3))
-					.handleCommand(any(), eq(pdpTxMock), eq(cmd));
+					.handleCommand(any(), any(), eq(pdpTxMock), eq(cmd));
 		}
 
 	}

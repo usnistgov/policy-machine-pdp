@@ -16,7 +16,7 @@ import gov.nist.csd.pm.core.pdp.bootstrap.JSONBootstrapper;
 import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapper;
 import gov.nist.csd.pm.core.pdp.bootstrap.PolicyBootstrapper;
 import gov.nist.csd.pm.pdp.proto.event.*;
-import gov.nist.csd.pm.pdp.shared.function.FunctionLoader;
+import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,11 +25,11 @@ public class PolicyEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(PolicyEventHandler.class);
 
     private final PAP pap;
-    private final FunctionLoader functionLoader;
+    private final PluginLoader pluginLoader;
 
-    public PolicyEventHandler(PAP pap, FunctionLoader functionLoader) {
+    public PolicyEventHandler(PAP pap, PluginLoader pluginLoader) {
         this.pap = pap;
-        this.functionLoader = functionLoader;
+        this.pluginLoader = pluginLoader;
     }
 
     public synchronized void handleEvents(Iterable<PMEvent> events) throws PMException {
@@ -86,15 +86,12 @@ public class PolicyEventHandler {
         PolicyBootstrapper policyBootstrapper;
         if (type.equalsIgnoreCase("pml")) {
             policyBootstrapper = new PMLBootstrapper(
-                    functionLoader.loadOperationPlugins(),
-                    functionLoader.loadRoutinePlugins(),
+                    pluginLoader.operationPlugins(),
+                    pluginLoader.routinePlugins(),
                     bootstrapped.getBootstrapUserName(),
                     bootstrapped.getValue());
         } else if (type.equalsIgnoreCase("json")) {
-            policyBootstrapper = new JSONBootstrapper(
-                    functionLoader.loadOperationPlugins(),
-                    functionLoader.loadRoutinePlugins(),
-                    bootstrapped.getValue());
+            policyBootstrapper = new JSONBootstrapper(bootstrapped.getValue());
         } else {
             throw new IllegalStateException("Unsupported bootstrap type: " + type);
         }

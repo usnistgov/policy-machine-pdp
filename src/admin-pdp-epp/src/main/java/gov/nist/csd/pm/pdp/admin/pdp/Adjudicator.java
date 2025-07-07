@@ -19,9 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Supplier;
 
 @Component
@@ -62,7 +60,8 @@ public class Adjudicator {
      */
     public <R> R adjudicateQuery(PDPTxFunction<R> consumer) throws PMException {
         NGACContext ctx = contextFactory.createContext();
-        return ctx.pdp().runTx(contextFactory.createUserContext(ctx.pap()), consumer::apply);
+
+        return ctx.pdp().runTx(contextFactory.createUserContext(ctx.pap()), pdpTx -> consumer.apply(ctx.pap(), pdpTx));
     }
 
     /**
@@ -75,9 +74,11 @@ public class Adjudicator {
         List<Value> values = new ArrayList<>();
 
         adjudicateTransaction(ctx -> {
-            ctx.pdp().runTx(contextFactory.createUserContext(ctx.pap()), pdpTx -> {
+            UserContext userContext = contextFactory.createUserContext(ctx.pap());
+
+            ctx.pdp().runTx(userContext, pdpTx -> {
                 for (AdminCommand adminCommand : adminCommands) {
-                    Value value = commandHandler.handleCommand(ctx.pap(), pdpTx, adminCommand);
+                    Value value = commandHandler.handleCommand(userContext, ctx, pdpTx, adminCommand);
                     values.add(value);
                 }
 

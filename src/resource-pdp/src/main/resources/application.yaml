@@ -12,6 +12,8 @@ pm:
       port: 2113
       event-stream: pm-events-v1
       snapshot-stream: pm-snapshot-v1
+    plugins:
+      plugin-directory: "./plugins"
 logging:
   level:
     root: INFO

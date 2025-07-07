@@ -10,17 +10,20 @@ import gov.nist.csd.pm.pdp.proto.event.AdminOperationCreated;
 import gov.nist.csd.pm.pdp.proto.event.AdminOperationDeleted;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.proto.event.ResourceOperationsSet;
+import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 
 import java.util.List;
 
 public class EventOperationsModifier extends OperationsModifier {
 
     private final List<PMEvent> events;
+    private final PluginLoader pluginLoader;
 
-    public EventOperationsModifier(List<PMEvent> events, PolicyStore store) {
+    public EventOperationsModifier(List<PMEvent> events, PolicyStore store, PluginLoader pluginLoader) {
         super(store);
 
         this.events = events;
+        this.pluginLoader = pluginLoader;
     }
 
     @Override
@@ -40,6 +43,8 @@ public class EventOperationsModifier extends OperationsModifier {
     public void createAdminOperation(Operation<?, ?> operation) throws PMException {
         if (!(operation instanceof PMLStmtsOperation pmlStmtsOperation)) {
             throw new PMException("only PML operations are supported");
+        } else if (pluginLoader.pluginExists(operation.getName())) {
+            return;
         }
 
         PMEvent event = PMEvent.newBuilder()
@@ -55,6 +60,10 @@ public class EventOperationsModifier extends OperationsModifier {
 
     @Override
     public void deleteAdminOperation(String operation) throws PMException {
+        if (pluginLoader.pluginExists(operation)) {
+            throw new PMException("cannot delete plugin operations");
+        }
+
         PMEvent event = PMEvent.newBuilder()
             .setAdminOperationDeleted(
                     AdminOperationDeleted.newBuilder()

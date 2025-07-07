@@ -3,18 +3,15 @@ package gov.nist.csd.pm.pdp.admin.pap;
 import com.eventstore.dbclient.*;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.function.AdminFunction;
-import gov.nist.csd.pm.core.pap.function.op.Operation;
-import gov.nist.csd.pm.core.pap.function.routine.Routine;
 import gov.nist.csd.pm.core.pap.id.RandomIdGenerator;
 import gov.nist.csd.pm.core.pap.query.AccessQuerier;
 import gov.nist.csd.pm.core.pap.query.GraphQuerier;
 import gov.nist.csd.pm.core.pap.query.ObligationsQuerier;
-import gov.nist.csd.pm.core.pap.query.OperationsQuerier;
 import gov.nist.csd.pm.core.pap.query.PolicyQuerier;
 import gov.nist.csd.pm.core.pap.query.ProhibitionsQuerier;
-import gov.nist.csd.pm.core.pap.query.RoutinesQuerier;
+import gov.nist.csd.pm.core.pdp.bootstrap.PolicyBootstrapper;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
+import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,28 +23,24 @@ public class EventTrackingPAP extends PAP {
 
     private static final Logger logger = LoggerFactory.getLogger(EventTrackingPAP.class);
 
-    public EventTrackingPAP(NoCommitNeo4jPolicyStore policyStore, List<AdminFunction<?, ?>> adminFunctions) throws PMException {
+    public EventTrackingPAP(NoCommitNeo4jPolicyStore policyStore, PluginLoader pluginLoader) throws PMException {
         super(
             new PolicyQuerier(
                 new GraphQuerier(policyStore),
                 new ProhibitionsQuerier(policyStore),
                 new ObligationsQuerier(policyStore),
-                new OperationsQuerier(policyStore),
-                new RoutinesQuerier(policyStore),
+                new Neo4jEmbeddedOperationsQuerierWithPlugins(policyStore, pluginLoader),
+                new Neo4jEmbeddedRoutinesQuerierWithPlugins(policyStore, pluginLoader),
                 new AccessQuerier(policyStore)
             ),
-            EventTrackingPolicyModifier.createInstance(policyStore, new RandomIdGenerator()),
+            EventTrackingPolicyModifier.createInstance(policyStore, new RandomIdGenerator(), pluginLoader),
             policyStore
         );
+    }
 
-        // add plugin admin functions
-        for (AdminFunction<?, ?> adminFunction : adminFunctions) {
-            if (adminFunction instanceof Operation<?, ?> operation) {
-                modify().operations().createAdminOperation(operation);
-            } else if (adminFunction instanceof Routine<?, ?> routine) {
-                modify().routines().createAdminRoutine(routine);
-            }
-        }
+    @Override
+    public void bootstrap(PolicyBootstrapper bootstrapper) throws PMException {
+        super.bootstrap(bootstrapper);
     }
 
     @Override

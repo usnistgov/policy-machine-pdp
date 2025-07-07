@@ -57,7 +57,7 @@ class CommandHandlerTest {
 
 		when(graphModificationAdjudicator.createPolicyClass("pc1")).thenReturn(99L);
 
-		commandHandler.handleCommand(null, pdpTx, ac);
+		commandHandler.handleCommand(null, null, pdpTx, ac);
 
 		verify(graphModificationAdjudicator).createPolicyClass("pc1");
 	}
@@ -71,7 +71,7 @@ class CommandHandlerTest {
 		AdminCommand ac = AdminCommand.newBuilder()
 				.setSetNodePropertiesCmd(cmd).build();
 		
-		commandHandler.handleCommand(null, pdpTx, ac);
+		commandHandler.handleCommand(null, null, pdpTx, ac);
 
 		verify(graphModificationAdjudicator).setNodeProperties(42L, Collections.singletonMap("k","v"));
 	}
@@ -83,7 +83,7 @@ class CommandHandlerTest {
 				.addArset("read")
 				.build();
 
-		commandHandler.handleCommand(null, pdpTx, AdminCommand.newBuilder().setAssociateCmd(a).build());
+		commandHandler.handleCommand(null, null, pdpTx, AdminCommand.newBuilder().setAssociateCmd(a).build());
 
 		verify(graphModificationAdjudicator).associate(1L,2L,new AccessRightSet(List.of("read")));
 	}
@@ -93,7 +93,7 @@ class CommandHandlerTest {
 		DissociateCmd d = DissociateCmd.newBuilder()
 				.setUaId(1).setTargetId(2).build();
 
-		commandHandler.handleCommand(null, pdpTx, AdminCommand.newBuilder().setDissociateCmd(d).build());
+		commandHandler.handleCommand(null, null, pdpTx, AdminCommand.newBuilder().setDissociateCmd(d).build());
 
 		verify(graphModificationAdjudicator).dissociate(1L,2L);
 	}
@@ -114,7 +114,7 @@ class CommandHandlerTest {
 						.build()
 		).build();
 
-		commandHandler.handleCommand(null, pdpTx, ac);
+		commandHandler.handleCommand(null, null, pdpTx, ac);
 
 		ArgumentCaptor<ProhibitionSubject> subjCap = ArgumentCaptor.forClass(ProhibitionSubject.class);
 		ArgumentCaptor<List<ContainerCondition>> condsCap = ArgumentCaptor.forClass(List.class);
@@ -143,7 +143,7 @@ class CommandHandlerTest {
 				.build();
 		AdminCommand ac = AdminCommand.newBuilder().setCreateProhibitionCmd(p).build();
 
-		commandHandler.handleCommand(null, pdpTx, ac);
+		commandHandler.handleCommand(null, null, pdpTx, ac);
 
 		verify(prohibitionsModificationAdjudicator).createProhibition(
 				eq("p2"),
@@ -158,7 +158,7 @@ class CommandHandlerTest {
 	void handleDeleteProhibitionCmd() throws PMException {
 		DeleteProhibitionCmd cmd = DeleteProhibitionCmd.newBuilder().setName("x").build();
 		commandHandler.handleCommand(
-				null, pdpTx,
+				null, null, pdpTx,
 				AdminCommand.newBuilder().setDeleteProhibitionCmd(cmd).build()
 		);
 		verify(prohibitionsModificationAdjudicator).deleteProhibition("x");
@@ -170,7 +170,7 @@ class CommandHandlerTest {
 				.setPml("create pc \"pc1\"")
 				.build();
 		commandHandler.handleCommand(
-				null, pdpTx,
+				null, null, pdpTx,
 				AdminCommand.newBuilder().setExecutePmlCmd(cmd).build()
 		);
 		verify(pdpTx).executePML("create pc \"pc1\"");

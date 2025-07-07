@@ -43,3 +43,4 @@ build/
 **/dependency_reduced-pom.xml
 
 /neo4j
+/plugins

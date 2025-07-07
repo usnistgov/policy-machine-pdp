@@ -4,7 +4,6 @@ import com.eventstore.dbclient.*;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.Node;
 import gov.nist.csd.pm.core.common.graph.node.NodeType;
-import gov.nist.csd.pm.core.pap.function.AdminFunction;
 import gov.nist.csd.pm.core.pap.query.GraphQuery;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.core.pdp.bootstrap.JSONBootstrapper;
@@ -22,9 +21,8 @@ import gov.nist.csd.pm.pdp.proto.event.Bootstrapped;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
+import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -37,19 +35,19 @@ public class Neo4jBootstrapper {
     private final AdminPDPConfig adminPDPConfig;
     private final EventStoreDBConfig eventStoreDBConfig;
     private final EventStoreConnectionManager eventStoreConnectionManager;
-    private final List<AdminFunction<?, ?>> adminFunctions;
+    private final PluginLoader pluginLoader;
     private final GraphDatabaseService graphDb;
 
     public Neo4jBootstrapper(AdminPDPConfig adminPDPConfig,
                              EventStoreDBConfig eventStoreDBConfig,
                              EventStoreConnectionManager eventStoreConnectionManager,
                              GraphDatabaseService graphDb,
-                             List<AdminFunction<?, ?>> adminFunctions) {
+                             PluginLoader pluginLoader) {
         this.adminPDPConfig = adminPDPConfig;
         this.eventStoreDBConfig = eventStoreDBConfig;
         this.eventStoreConnectionManager = eventStoreConnectionManager;
         this.graphDb = graphDb;
-        this.adminFunctions = adminFunctions;
+        this.pluginLoader = pluginLoader;
     }
 
     @PostConstruct
@@ -84,7 +82,7 @@ public class Neo4jBootstrapper {
 
         // need to start a transaction so the initial policy admin verification succeeds
         noCommitNeo4jPolicyStore.beginTx();
-        EventTrackingPAP eventTrackingPAP = new EventTrackingPAP(noCommitNeo4jPolicyStore, adminFunctions);
+        EventTrackingPAP eventTrackingPAP = new EventTrackingPAP(noCommitNeo4jPolicyStore, pluginLoader);
         noCommitNeo4jPolicyStore.commit();
 
         eventTrackingPAP.beginTx();
@@ -139,9 +137,9 @@ public class Neo4jBootstrapper {
                 throw new PMException("bootstrap user is null but expected for PML bootstrapping");
             }
 
-            policyBootstrapper = new PMLBootstrapper(new ArrayList<>(), new ArrayList<>(), bootstrapUser, data);
+            policyBootstrapper = new PMLBootstrapper(pluginLoader.operationPlugins(), pluginLoader.routinePlugins(), bootstrapUser, data);
         } else if (bootstrapFilePath.endsWith(".json")) {
-            policyBootstrapper = new JSONBootstrapper(new ArrayList<>(), new ArrayList<>(), data);
+            policyBootstrapper = new JSONBootstrapper(data);
         } else {
             throw new PMException("unsupported bootstrap file type, expected .json or .pml");
         }
