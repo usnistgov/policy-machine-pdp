@@ -50,11 +50,13 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
             responseObserver.onNext(ProtoUtil.toNodeProto(node));
             responseObserver.onCompleted();
         } catch (UnauthorizedException e) {
+            logger.error("adjudication UNAUTHORIZED: {}", e.getMessage());
             responseObserver.onError(Status.PERMISSION_DENIED
                                              .withDescription(e.getMessage())
                                              .withCause(e)
                                              .asRuntimeException());
         } catch (Exception e) {
+            logger.error("adjudication FAILED", e);
             responseObserver.onError(Status.INTERNAL
                                              .withDescription(e.getMessage())
                                              .withCause(e)
