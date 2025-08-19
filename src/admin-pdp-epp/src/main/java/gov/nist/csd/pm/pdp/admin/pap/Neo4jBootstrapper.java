@@ -77,7 +77,10 @@ public class Neo4jBootstrapper {
             throw new PMException("Bootstrap file is empty: " + bootstrapFilePath);
         }
 
-        PolicyBootstrapper policyBootstrapper = getPolicyBootstrapper(bootstrapFilePath, data);
+        bootstrap(bootstrapFilePath, data);
+    }
+
+    private void bootstrap(String bootstrapFilePath, String data) throws PMException, ExecutionException, InterruptedException {
         NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb);
 
         // need to start a transaction so the initial policy admin verification succeeds
@@ -85,39 +88,59 @@ public class Neo4jBootstrapper {
         EventTrackingPAP eventTrackingPAP = new EventTrackingPAP(noCommitNeo4jPolicyStore, pluginLoader);
         noCommitNeo4jPolicyStore.commit();
 
+        PolicyBootstrapper policyBootstrapper;
+        String type;
+        String bootstrapUser = null;
+        if (bootstrapFilePath.endsWith(".pml")) {
+            bootstrapUser = adminPDPConfig.getBootstrapUser();
+            if (bootstrapUser == null) {
+                throw new PMException("bootstrap user is null but expected for PML bootstrapping");
+            }
+
+            policyBootstrapper = new PMLBootstrapper(pluginLoader.operationPlugins(), pluginLoader.routinePlugins(), bootstrapUser, data);
+            type = "pml";
+        } else if (bootstrapFilePath.endsWith(".json")) {
+            policyBootstrapper = new JSONBootstrapper(data);
+            type = "json";
+        } else {
+            throw new PMException("unsupported bootstrap file type, expected .json or .pml");
+        }
+
         eventTrackingPAP.beginTx();
         eventTrackingPAP.bootstrap(policyBootstrapper);
-        publishToEventStore(eventTrackingPAP.query().graph(), policyBootstrapper, data);
+        publishBootstrappedEvent(eventTrackingPAP.query().graph(), data, type, bootstrapUser);
         eventTrackingPAP.commit();
     }
 
-    private void publishToEventStore(GraphQuery graphQuery, PolicyBootstrapper policyBootstrapper, String input) throws PMException, ExecutionException, InterruptedException {
-        logger.debug("sending events from bootstrapping to event store");
+    private void publishBootstrappedEvent(GraphQuery graphQuery, String input, String type, String bootstrapUser) throws PMException, ExecutionException, InterruptedException {
+        logger.debug("sending bootstrapped event to event store");
 
+        // get the ids of the nodes created during bootstrapping
         Collection<Node> search = graphQuery.search(NodeType.ANY, new HashMap<>());
         Map<String, Long> nodeIds = new HashMap<>();
         for (Node node : search) {
             nodeIds.put(node.getName(), node.getId());
         }
 
-        String type;
-        if (policyBootstrapper instanceof PMLBootstrapper) {
-            type = "pml";
-        } else {
-            type = "json";
+        // create bootstrapped event
+        Bootstrapped.Builder builder = Bootstrapped.newBuilder()
+                .setType(type)
+                .setValue(input)
+                .putAllCreatedNodes(nodeIds);
+        // set bootstrap username if it is provided
+        if (bootstrapUser != null) {
+            builder.setBootstrapUserName(bootstrapUser);
         }
 
         PMEvent pmEvent = PMEvent.newBuilder()
-                .setBootstrapped(
-                        Bootstrapped.newBuilder()
-                                .setType(type)
-                                .setValue(input)
-                                .putAllCreatedNodes(nodeIds)
-                )
+                .setBootstrapped(builder.build())
                 .build();
-        EventData eventData = EventData.builderAsBinary(pmEvent.getDescriptorForType().getName(),
-                                                        pmEvent.toByteArray()).build();
+        EventData eventData = EventData.builderAsBinary(
+                pmEvent.getDescriptorForType().getName(),
+                pmEvent.toByteArray()
+        ).build();
 
+        // append event to stream with expectation of no existing stream since this is bootstrapping
         AppendToStreamOptions options = AppendToStreamOptions.get()
                 .expectedRevision(ExpectedRevision.noStream());
         eventStoreConnectionManager.getOrInitClient()
@@ -127,24 +150,6 @@ public class Neo4jBootstrapper {
                         eventData
                 )
                 .get();
-    }
-
-    private PolicyBootstrapper getPolicyBootstrapper(String bootstrapFilePath, String data) throws PMException {
-        PolicyBootstrapper policyBootstrapper;
-        if (bootstrapFilePath.endsWith(".pml")) {
-            String bootstrapUser = adminPDPConfig.getBootstrapUser();
-            if (bootstrapUser == null) {
-                throw new PMException("bootstrap user is null but expected for PML bootstrapping");
-            }
-
-            policyBootstrapper = new PMLBootstrapper(pluginLoader.operationPlugins(), pluginLoader.routinePlugins(), bootstrapUser, data);
-        } else if (bootstrapFilePath.endsWith(".json")) {
-            policyBootstrapper = new JSONBootstrapper(data);
-        } else {
-            throw new PMException("unsupported bootstrap file type, expected .json or .pml");
-        }
-
-        return policyBootstrapper;
     }
 
     protected boolean eventsInStream() throws ExecutionException, InterruptedException {

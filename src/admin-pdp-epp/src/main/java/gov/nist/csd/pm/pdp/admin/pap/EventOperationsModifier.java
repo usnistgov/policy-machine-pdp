@@ -4,6 +4,7 @@ import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
 import gov.nist.csd.pm.core.pap.function.op.Operation;
 import gov.nist.csd.pm.core.pap.modification.OperationsModifier;
+import gov.nist.csd.pm.core.pap.pml.function.basic.PMLStmtsBasicFunction;
 import gov.nist.csd.pm.core.pap.pml.function.operation.PMLStmtsOperation;
 import gov.nist.csd.pm.core.pap.store.PolicyStore;
 import gov.nist.csd.pm.pdp.proto.event.AdminOperationCreated;
@@ -29,11 +30,11 @@ public class EventOperationsModifier extends OperationsModifier {
     @Override
     public void setResourceOperations(AccessRightSet resourceOperations) throws PMException {
         PMEvent event = PMEvent.newBuilder()
-            .setResourceOperationsSet(
-                    ResourceOperationsSet.newBuilder()
-                    .addAllOperations(resourceOperations)
-            )
-            .build();
+                .setResourceOperationsSet(
+                        ResourceOperationsSet.newBuilder()
+                                .addAllOperations(resourceOperations)
+                )
+                .build();
         events.add(event);
 
         super.setResourceOperations(resourceOperations);
@@ -41,18 +42,23 @@ public class EventOperationsModifier extends OperationsModifier {
 
     @Override
     public void createAdminOperation(Operation<?, ?> operation) throws PMException {
-        if (!(operation instanceof PMLStmtsOperation pmlStmtsOperation)) {
-            throw new PMException("only PML operations are supported");
+        String pml;
+        if (operation instanceof PMLStmtsOperation pmlStmtsOperation) {
+            pml = pmlStmtsOperation.toFormattedString(0);
+        } else if (operation instanceof PMLStmtsBasicFunction pmlStmtsBasicFunction) {
+            pml = pmlStmtsBasicFunction.toFormattedString(0);
         } else if (pluginLoader.pluginExists(operation.getName())) {
             return;
+        } else {
+            throw new PMException("only PML operations are supported");
         }
 
         PMEvent event = PMEvent.newBuilder()
-            .setAdminOperationCreated(
-                    AdminOperationCreated.newBuilder()
-                    .setPml(pmlStmtsOperation.toFormattedString(0))
-            )
-            .build();
+                .setAdminOperationCreated(
+                        AdminOperationCreated.newBuilder()
+                                .setPml(pml)
+                )
+                .build();
         events.add(event);
 
         super.createAdminOperation(operation);
@@ -65,11 +71,11 @@ public class EventOperationsModifier extends OperationsModifier {
         }
 
         PMEvent event = PMEvent.newBuilder()
-            .setAdminOperationDeleted(
-                    AdminOperationDeleted.newBuilder()
-                    .setName(operation)
-            )
-            .build();
+                .setAdminOperationDeleted(
+                        AdminOperationDeleted.newBuilder()
+                                .setName(operation)
+                )
+                .build();
         events.add(event);
 
         super.deleteAdminOperation(operation);

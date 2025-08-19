@@ -882,11 +882,8 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	                                                   StreamObserver<NodePrivilegeList> responseObserver) {
 		try {
 			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery((pap, pdpTx) -> {
-				long s = System.nanoTime();
-				Map<Node, AccessRightSet> nodeAccessRightSetMap = pdpTx.query().selfAccess().computeAdjacentAscendantPrivileges(
+				return pdpTx.query().selfAccess().computeAdjacentAscendantPrivileges(
 						request.getRoot());
-				System.out.println(System.nanoTime() - s);
-				return nodeAccessRightSetMap;
 			});
 
 			nodePrivilegeResponse(responseObserver, map);
