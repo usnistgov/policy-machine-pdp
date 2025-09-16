@@ -6,8 +6,8 @@ pm:
   pdp:
     admin:
       #
-      bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/bootstrap2.json"
-      bootstrap-user: "u1"
+      bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/bootstrap.pml"
+      bootstrap-user: "super"
       neo4j-db-path: "neo4j/data"
       esdb-consumer-group: admin-pdp-epp-cg
       snapshot-interval: 1000
@@ -18,7 +18,7 @@ pm:
       event-stream: pm-events-v1
       snapshot-stream: pm-snapshot-v1
     plugins:
-      plugin-directory: "./plugins123"
+      plugin-directory: "./plugins"
 management:
   health:
     neo4j:

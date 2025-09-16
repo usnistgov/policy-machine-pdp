@@ -35,6 +35,10 @@ public class PluginLoader {
 		this.pluginClassLoader = createPluginClassLoader();
 	}
 
+	public URLClassLoader getPluginClassLoader() {
+		return pluginClassLoader;
+	}
+
 	@Bean
 	public List<Operation<?, ?>> operationPlugins() {
 		try {
