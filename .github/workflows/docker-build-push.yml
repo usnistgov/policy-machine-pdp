@@ -17,11 +17,11 @@ jobs:
       matrix:
         image:
           - name: csd773/pm-admin-pdp-epp
-            dockerfile: Dockerfile
             context: ./src/admin-pdp-epp/
-          - name: csd773/pm-resource-pdp
             dockerfile: Dockerfile
+          - name: csd773/pm-resource-pdp
             context: ./src/resource-pdp/
+            dockerfile: Dockerfile
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -69,7 +69,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.image.context }}
-          file: ${{ matrix.image.dockerfile }}
+          file: ${{ matrix.image.context }}/${{ matrix.image.dockerfile }}
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
