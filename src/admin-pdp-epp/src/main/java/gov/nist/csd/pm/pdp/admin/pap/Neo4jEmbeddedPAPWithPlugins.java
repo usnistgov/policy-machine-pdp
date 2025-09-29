@@ -35,8 +35,8 @@ public class Neo4jEmbeddedPAPWithPlugins extends Neo4jEmbeddedPAP {
 				new GraphQuerier(policyStore),
 				new ProhibitionsQuerier(policyStore),
 				new ObligationsQuerier(policyStore),
-				new Neo4jEmbeddedOperationsQuerierWithPlugins(policyStore, pluginLoader),
-				new Neo4jEmbeddedRoutinesQuerierWithPlugins(policyStore, pluginLoader),
+				new OperationsQuerier(policyStore),
+				new RoutinesQuerier(policyStore),
 				new AccessQuerier(policyStore)
 		);
 	}

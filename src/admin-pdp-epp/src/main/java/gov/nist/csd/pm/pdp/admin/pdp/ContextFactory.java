@@ -33,7 +33,7 @@ public class ContextFactory {
      * @throws PMException If an error occurs during context creation
      */
     public NGACContext createContext() throws PMException {
-        NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb);
+        NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb, pluginLoader.getPluginClassLoader());
         EventTrackingPAP pap = new EventTrackingPAP(noCommitNeo4jPolicyStore, pluginLoader);
         PDP pdp = new PDP(pap);
 

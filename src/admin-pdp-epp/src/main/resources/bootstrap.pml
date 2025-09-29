@@ -6,4 +6,4 @@ create o "o1" in ["oa1"]
 
 set resource operations ["read"]
 
-associate "ua1" and "oa1" with ["*"]
+associate "ua1" and "oa1" with ["read"]

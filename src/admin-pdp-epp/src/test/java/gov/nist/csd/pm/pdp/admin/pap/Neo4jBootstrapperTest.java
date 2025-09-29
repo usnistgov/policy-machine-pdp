@@ -55,7 +55,7 @@ class Neo4jBootstrapperTest {
 				.build();
 		graphDb = managementService.database(DEFAULT_DATABASE_NAME);
 		Neo4jEmbeddedPolicyStore.createIndexes(graphDb);
-		policyStore = new NoCommitNeo4jPolicyStore(graphDb);
+		policyStore = new NoCommitNeo4jPolicyStore(graphDb, Neo4jBootstrapperTest.class.getClassLoader());
 
 		eventStoreDBConfig = new EventStoreDBConfig(
 				"test-events",

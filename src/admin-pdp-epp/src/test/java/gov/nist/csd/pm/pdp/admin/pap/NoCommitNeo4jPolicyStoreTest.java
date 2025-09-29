@@ -25,8 +25,8 @@ class NoCommitNeo4jPolicyStoreTest {
             tx.commit();
         }
 
-        NoCommitNeo4jPolicyStore policyStore = new NoCommitNeo4jPolicyStore(graphDb);
-        NoCommitNeo4jPolicyStore actual = new NoCommitNeo4jPolicyStore(graphDb);
+        NoCommitNeo4jPolicyStore policyStore = new NoCommitNeo4jPolicyStore(graphDb, NoCommitNeo4jPolicyStoreTest.class.getClassLoader());
+        NoCommitNeo4jPolicyStore actual = new NoCommitNeo4jPolicyStore(graphDb, getClass().getClassLoader());
 
         policyStore.beginTx();
         policyStore.graph().createNode(1, "pc1", NodeType.PC);

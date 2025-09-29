@@ -4,11 +4,7 @@ import com.eventstore.dbclient.*;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.id.RandomIdGenerator;
-import gov.nist.csd.pm.core.pap.query.AccessQuerier;
-import gov.nist.csd.pm.core.pap.query.GraphQuerier;
-import gov.nist.csd.pm.core.pap.query.ObligationsQuerier;
-import gov.nist.csd.pm.core.pap.query.PolicyQuerier;
-import gov.nist.csd.pm.core.pap.query.ProhibitionsQuerier;
+import gov.nist.csd.pm.core.pap.query.*;
 import gov.nist.csd.pm.core.pdp.bootstrap.PolicyBootstrapper;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
@@ -29,8 +25,8 @@ public class EventTrackingPAP extends PAP {
                 new GraphQuerier(policyStore),
                 new ProhibitionsQuerier(policyStore),
                 new ObligationsQuerier(policyStore),
-                new Neo4jEmbeddedOperationsQuerierWithPlugins(policyStore, pluginLoader),
-                new Neo4jEmbeddedRoutinesQuerierWithPlugins(policyStore, pluginLoader),
+                new OperationsQuerier(policyStore),
+                new RoutinesQuerier(policyStore),
                 new AccessQuerier(policyStore)
             ),
             EventTrackingPolicyModifier.createInstance(policyStore, new RandomIdGenerator(), pluginLoader),

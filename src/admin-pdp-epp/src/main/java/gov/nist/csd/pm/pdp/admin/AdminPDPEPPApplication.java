@@ -6,6 +6,7 @@ import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.store.Neo4jEmbeddedPolicyStore;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
+import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 import gov.nist.csd.pm.pdp.shared.plugin.PluginLoaderConfig;
 import java.io.File;
 
@@ -49,9 +50,9 @@ public class AdminPDPEPPApplication {
     }
 
     @Bean
-    public Neo4jEmbeddedPolicyStore eventListenerPolicyStore(GraphDatabaseService graphDb) throws PMException {
+    public Neo4jEmbeddedPolicyStore eventListenerPolicyStore(PluginLoader pluginLoader, GraphDatabaseService graphDb) throws PMException {
         Neo4jEmbeddedPolicyStore.createIndexes(graphDb);
 
-        return new Neo4jEmbeddedPolicyStore(graphDb);
+        return new Neo4jEmbeddedPolicyStore(graphDb, pluginLoader.getPluginClassLoader());
     }
 }

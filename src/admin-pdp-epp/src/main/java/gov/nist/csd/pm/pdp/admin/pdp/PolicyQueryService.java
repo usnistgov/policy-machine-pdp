@@ -443,6 +443,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 	@Override
 	public void getObligations(Empty request, StreamObserver<ObligationList> responseObserver) {
+		long s = System.nanoTime();
 		try {
 			List<gov.nist.csd.pm.proto.v1.model.Obligation> obligationProtos = adjudicator.adjudicateQuery((pap, pdpTx) -> {
 				Collection<Obligation> obligations = pdpTx.query().obligations().getObligations();
@@ -451,6 +452,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 			responseObserver.onNext(ObligationList.newBuilder().addAllObligations(obligationProtos).build());
 			responseObserver.onCompleted();
+			System.out.println(System.nanoTime() - s);
 		} catch (UnauthorizedException e) {
 			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
 		} catch (Exception e) {

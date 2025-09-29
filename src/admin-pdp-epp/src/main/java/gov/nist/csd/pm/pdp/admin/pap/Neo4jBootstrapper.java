@@ -81,7 +81,7 @@ public class Neo4jBootstrapper {
     }
 
     private void bootstrap(String bootstrapFilePath, String data) throws PMException, ExecutionException, InterruptedException {
-        NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb);
+        NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb, pluginLoader.getPluginClassLoader());
 
         // need to start a transaction so the initial policy admin verification succeeds
         noCommitNeo4jPolicyStore.beginTx();
