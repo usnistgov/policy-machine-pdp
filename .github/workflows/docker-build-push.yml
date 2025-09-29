@@ -17,11 +17,11 @@ jobs:
       matrix:
         image:
           - name: csd773/pm-admin-pdp-epp
-            dockerfile: src/admin-pdp-epp/Dockerfile
-            context: .
+            dockerfile: Dockerfile
+            context: ./src/admin-pdp-epp/
           - name: csd773/pm-resource-pdp
-            dockerfile: src/resource-pdp/Dockerfile
-            context: .
+            dockerfile: Dockerfile
+            context: ./src/resource-pdp/
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,7 +40,7 @@ jobs:
           restore-keys: m2-${{ runner.os }}-
 
       - name: Build with Maven
-        run: mvn -B -DskipTests clean package
+        run: cd src && mvn -B -DskipTests clean package
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
