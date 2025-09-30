@@ -13,7 +13,7 @@ pm:
       event-stream: pm-events-v1
       snapshot-stream: pm-snapshot-v1
     plugins:
-      plugin-directory: "./plugins"
+      dir: "./plugins"
 logging:
   level:
     root: INFO

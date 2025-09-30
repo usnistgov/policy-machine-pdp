@@ -10,28 +10,20 @@ public class PluginLoaderConfig {
     /**
      * Directory path containing plugin JAR files for Operations and Routines
      */
-    private String pluginDirectory;
+    private String dir;
 
     public PluginLoaderConfig() {
-        this.pluginDirectory = "./plugins";
     }
 
-    public PluginLoaderConfig(String pluginDirectory) {
-        this.pluginDirectory = pluginDirectory;
+    public PluginLoaderConfig(String dir) {
+        this.dir = dir;
     }
 
-    @PostConstruct
-    public void validate() {
-        if (pluginDirectory == null || pluginDirectory.isEmpty()) {
-            pluginDirectory = "./plugins";
-        }
+    public String getDir() {
+        return dir;
     }
 
-    public String getPluginDirectory() {
-        return pluginDirectory;
-    }
-
-    public void setPluginDirectory(String pluginDirectory) {
-        this.pluginDirectory = pluginDirectory;
+    public void setDir(String dir) {
+        this.dir = dir;
     }
 } 

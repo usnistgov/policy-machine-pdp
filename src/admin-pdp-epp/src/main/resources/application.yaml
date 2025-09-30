@@ -5,7 +5,6 @@ grpc:
 pm:
   pdp:
     admin:
-      #
       bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/bootstrap.pml"
       bootstrap-user: "super"
       neo4j-db-path: "neo4j/data"
@@ -18,7 +17,7 @@ pm:
       event-stream: pm-events-v1
       snapshot-stream: pm-snapshot-v1
     plugins:
-      plugin-directory: "./plugins"
+      dir: "./plugins"
 management:
   health:
     neo4j:

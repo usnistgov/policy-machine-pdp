@@ -100,7 +100,7 @@ public class PluginLoader {
 	 */
 	private URLClassLoader createPluginClassLoader() {
 		List<URL> urls = new ArrayList<>();
-		Path root = Paths.get(config.getPluginDirectory()).toAbsolutePath().normalize();
+		Path root = Paths.get(config.getDir()).toAbsolutePath().normalize();
 		
 		if (!Files.exists(root)) {
 			logger.warn("Plugin directory does not exist: {}", root);
@@ -133,11 +133,11 @@ public class PluginLoader {
 
 	@SuppressWarnings("unchecked")
 	private <T> List<T> loadPlugins(Class<T> type) throws IOException {
-		logger.info("loading plugins from {} of type {}", config.getPluginDirectory(), type.getName());
+		logger.info("loading plugins from {} of type {}", config.getDir(), type.getName());
 
 		Set<String> loadedPlugins = new HashSet<>();
 		List<T> result = new ArrayList<>();
-		Path root = Paths.get(config.getPluginDirectory()).toAbsolutePath().normalize();
+		Path root = Paths.get(config.getDir()).toAbsolutePath().normalize();
 
 		if (!Files.exists(root)) {
 			logger.warn("Plugin directory does not exist: {}", root);
