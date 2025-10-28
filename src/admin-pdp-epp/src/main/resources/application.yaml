@@ -6,7 +6,7 @@ pm:
   pdp:
     admin:
       bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/bootstrap.pml"
-      bootstrap-user: "super"
+      bootstrap-user: "u1"
       neo4j-db-path: "neo4j/data"
       esdb-consumer-group: admin-pdp-epp-cg
       snapshot-interval: 1000

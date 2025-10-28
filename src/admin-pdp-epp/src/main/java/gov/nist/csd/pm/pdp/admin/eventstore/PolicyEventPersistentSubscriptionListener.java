@@ -29,9 +29,8 @@ public class PolicyEventPersistentSubscriptionListener extends PersistentSubscri
     public PolicyEventPersistentSubscriptionListener(Neo4jEmbeddedPAP pap,
                                                      CurrentRevisionService currentRevision,
                                                      SnapshotService snapshotService,
-                                                     AdminPDPConfig adminPDPConfig,
-                                                     PluginLoader pluginLoader) {
-        this.policyEventHandler = new PolicyEventHandler(pap, pluginLoader);
+                                                     AdminPDPConfig adminPDPConfig) {
+        this.policyEventHandler = new PolicyEventHandler(pap);
         this.currentRevision = currentRevision;
         this.snapshotService = snapshotService;
         this.adminPDPConfig = adminPDPConfig;

@@ -2,9 +2,7 @@ package gov.nist.csd.pm.pdp.admin.pap;
 
 import com.eventstore.dbclient.*;
 import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.common.graph.node.Node;
-import gov.nist.csd.pm.core.common.graph.node.NodeType;
-import gov.nist.csd.pm.core.pap.query.GraphQuery;
+import gov.nist.csd.pm.core.pap.function.PluginRegistry;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.core.pdp.bootstrap.JSONBootstrapper;
 import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapper;
@@ -17,11 +15,8 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import javax.annotation.PostConstruct;
 
-import gov.nist.csd.pm.pdp.proto.event.Bootstrapped;
-import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
-import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,19 +30,19 @@ public class Neo4jBootstrapper {
     private final AdminPDPConfig adminPDPConfig;
     private final EventStoreDBConfig eventStoreDBConfig;
     private final EventStoreConnectionManager eventStoreConnectionManager;
-    private final PluginLoader pluginLoader;
     private final GraphDatabaseService graphDb;
+    private final PluginRegistry pluginRegistry;
 
     public Neo4jBootstrapper(AdminPDPConfig adminPDPConfig,
                              EventStoreDBConfig eventStoreDBConfig,
                              EventStoreConnectionManager eventStoreConnectionManager,
                              GraphDatabaseService graphDb,
-                             PluginLoader pluginLoader) {
+                             PluginRegistry pluginRegistry) {
         this.adminPDPConfig = adminPDPConfig;
         this.eventStoreDBConfig = eventStoreDBConfig;
         this.eventStoreConnectionManager = eventStoreConnectionManager;
         this.graphDb = graphDb;
-        this.pluginLoader = pluginLoader;
+        this.pluginRegistry = pluginRegistry;
     }
 
     @PostConstruct
@@ -81,75 +76,32 @@ public class Neo4jBootstrapper {
     }
 
     private void bootstrap(String bootstrapFilePath, String data) throws PMException, ExecutionException, InterruptedException {
-        NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb, pluginLoader.getPluginClassLoader());
+        NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb, getClass().getClassLoader());
 
         // need to start a transaction so the initial policy admin verification succeeds
         noCommitNeo4jPolicyStore.beginTx();
-        EventTrackingPAP eventTrackingPAP = new EventTrackingPAP(noCommitNeo4jPolicyStore, pluginLoader);
+        EventTrackingPAP eventTrackingPAP = new EventTrackingPAP(noCommitNeo4jPolicyStore, pluginRegistry);
         noCommitNeo4jPolicyStore.commit();
 
         PolicyBootstrapper policyBootstrapper;
-        String type;
-        String bootstrapUser = null;
+        String bootstrapUser;
         if (bootstrapFilePath.endsWith(".pml")) {
             bootstrapUser = adminPDPConfig.getBootstrapUser();
             if (bootstrapUser == null) {
                 throw new PMException("bootstrap user is null but expected for PML bootstrapping");
             }
 
-            policyBootstrapper = new PMLBootstrapper(pluginLoader.operationPlugins(), pluginLoader.routinePlugins(), bootstrapUser, data);
-            type = "pml";
+            policyBootstrapper = new PMLBootstrapper(bootstrapUser, data);
         } else if (bootstrapFilePath.endsWith(".json")) {
             policyBootstrapper = new JSONBootstrapper(data);
-            type = "json";
         } else {
             throw new PMException("unsupported bootstrap file type, expected .json or .pml");
         }
 
         eventTrackingPAP.beginTx();
         eventTrackingPAP.bootstrap(policyBootstrapper);
-        publishBootstrappedEvent(eventTrackingPAP.query().graph(), data, type, bootstrapUser);
+        eventTrackingPAP.publishToEventStore(eventStoreConnectionManager.getOrInitClient(), eventStoreDBConfig.getEventStream(), 0);
         eventTrackingPAP.commit();
-    }
-
-    private void publishBootstrappedEvent(GraphQuery graphQuery, String input, String type, String bootstrapUser) throws PMException, ExecutionException, InterruptedException {
-        logger.debug("sending bootstrapped event to event store");
-
-        // get the ids of the nodes created during bootstrapping
-        Collection<Node> search = graphQuery.search(NodeType.ANY, new HashMap<>());
-        Map<String, Long> nodeIds = new HashMap<>();
-        for (Node node : search) {
-            nodeIds.put(node.getName(), node.getId());
-        }
-
-        // create bootstrapped event
-        Bootstrapped.Builder builder = Bootstrapped.newBuilder()
-                .setType(type)
-                .setValue(input)
-                .putAllCreatedNodes(nodeIds);
-        // set bootstrap username if it is provided
-        if (bootstrapUser != null) {
-            builder.setBootstrapUserName(bootstrapUser);
-        }
-
-        PMEvent pmEvent = PMEvent.newBuilder()
-                .setBootstrapped(builder.build())
-                .build();
-        EventData eventData = EventData.builderAsBinary(
-                pmEvent.getDescriptorForType().getName(),
-                pmEvent.toByteArray()
-        ).build();
-
-        // append event to stream with expectation of no existing stream since this is bootstrapping
-        AppendToStreamOptions options = AppendToStreamOptions.get()
-                .expectedRevision(ExpectedRevision.noStream());
-        eventStoreConnectionManager.getOrInitClient()
-                .appendToStream(
-                        eventStoreDBConfig.getEventStream(),
-                        options,
-                        eventData
-                )
-                .get();
     }
 
     protected boolean eventsInStream() throws ExecutionException, InterruptedException {

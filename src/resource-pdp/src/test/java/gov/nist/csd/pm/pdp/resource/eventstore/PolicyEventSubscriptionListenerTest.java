@@ -34,8 +34,7 @@ class PolicyEventSubscriptionListenerTest {
 
 		PolicyEventSubscriptionListener listener = new PolicyEventSubscriptionListener(
 				pap,
-				currentRevisionService,
-				new PluginLoader(new PluginLoaderConfig())
+				currentRevisionService
 		);
 
 		listener.processOrQueue(6, List.of(
@@ -80,8 +79,7 @@ class PolicyEventSubscriptionListenerTest {
 
 		PolicyEventSubscriptionListener listener = new PolicyEventSubscriptionListener(
 				pap,
-				currentRevisionService,
-				new PluginLoader(new PluginLoaderConfig())
+				currentRevisionService
 		);
 
 		new Thread(() -> {
@@ -145,8 +143,7 @@ class PolicyEventSubscriptionListenerTest {
 
 		PolicyEventSubscriptionListener listener = new PolicyEventSubscriptionListener(
 				pap,
-				currentRevisionService,
-				new PluginLoader(new PluginLoaderConfig())
+				currentRevisionService
 		);
 
 		listener.onEvent(null, ResolvedEventMock.of(6, PMEvent.newBuilder()

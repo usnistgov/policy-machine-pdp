@@ -16,7 +16,6 @@ import gov.nist.csd.pm.core.pdp.bootstrap.JSONBootstrapper;
 import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapper;
 import gov.nist.csd.pm.core.pdp.bootstrap.PolicyBootstrapper;
 import gov.nist.csd.pm.pdp.proto.event.*;
-import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,11 +24,9 @@ public class PolicyEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(PolicyEventHandler.class);
 
     private final PAP pap;
-    private final PluginLoader pluginLoader;
 
-    public PolicyEventHandler(PAP pap, PluginLoader pluginLoader) {
+    public PolicyEventHandler(PAP pap) {
         this.pap = pap;
-        this.pluginLoader = pluginLoader;
     }
 
     public synchronized void handleEvents(Iterable<PMEvent> events) throws PMException {
@@ -75,30 +72,8 @@ public class PolicyEventHandler {
             case RESOURCEOPERATIONSSET -> handleResourceOperationsSet(pmEvent.getResourceOperationsSet(), policyStore);
             case ADMINROUTINECREATED -> handleAdminRoutineCreated(pmEvent.getAdminRoutineCreated());
             case ADMINROUTINEDELETED -> handleAdminRoutineDeleted(pmEvent.getAdminRoutineDeleted());
-            case BOOTSTRAPPED -> handleBootstrap(pmEvent.getBootstrapped());
             case EVENT_NOT_SET -> logger.debug("event not set for {}", pmEvent);
         }
-    }
-
-    private void handleBootstrap(Bootstrapped bootstrapped) throws PMException {
-        // build the bootstrapper needed to handle the event
-        String type = bootstrapped.getType();
-        PolicyBootstrapper policyBootstrapper;
-        if (type.equalsIgnoreCase("pml")) {
-            policyBootstrapper = new PMLBootstrapper(
-                    pluginLoader.operationPlugins(),
-                    pluginLoader.routinePlugins(),
-                    bootstrapped.getBootstrapUserName(),
-                    bootstrapped.getValue());
-        } else if (type.equalsIgnoreCase("json")) {
-            policyBootstrapper = new JSONBootstrapper(bootstrapped.getValue());
-        } else {
-            throw new IllegalStateException("Unsupported bootstrap type: " + type);
-        }
-
-        // bootstrap the local PAP
-        pap.withIdGenerator(new BootstrappedRandomIdGenerator(bootstrapped.getCreatedNodesMap()));
-        pap.bootstrap(policyBootstrapper);
     }
 
     private void handleAssignmentCreated(AssignmentCreated assignmentCreated, PolicyStore policyStore) throws PMException {

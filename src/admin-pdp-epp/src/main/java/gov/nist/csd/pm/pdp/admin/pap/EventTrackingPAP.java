@@ -2,7 +2,9 @@ package gov.nist.csd.pm.pdp.admin.pap;
 
 import com.eventstore.dbclient.*;
 import gov.nist.csd.pm.core.common.exception.PMException;
+import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
 import gov.nist.csd.pm.core.pap.PAP;
+import gov.nist.csd.pm.core.pap.function.PluginRegistry;
 import gov.nist.csd.pm.core.pap.id.RandomIdGenerator;
 import gov.nist.csd.pm.core.pap.query.*;
 import gov.nist.csd.pm.core.pdp.bootstrap.PolicyBootstrapper;
@@ -15,28 +17,24 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-public class EventTrackingPAP extends PAP {
+public class EventTrackingPAP extends Neo4jEmbeddedPAP {
 
     private static final Logger logger = LoggerFactory.getLogger(EventTrackingPAP.class);
 
-    public EventTrackingPAP(NoCommitNeo4jPolicyStore policyStore, PluginLoader pluginLoader) throws PMException {
+    public EventTrackingPAP(NoCommitNeo4jPolicyStore policyStore, PluginRegistry pluginRegistry) throws PMException {
         super(
             new PolicyQuerier(
                 new GraphQuerier(policyStore),
                 new ProhibitionsQuerier(policyStore),
                 new ObligationsQuerier(policyStore),
-                new OperationsQuerier(policyStore),
-                new RoutinesQuerier(policyStore),
+                new OperationsQuerier(policyStore, pluginRegistry),
+                new RoutinesQuerier(policyStore, pluginRegistry),
                 new AccessQuerier(policyStore)
             ),
-            EventTrackingPolicyModifier.createInstance(policyStore, new RandomIdGenerator(), pluginLoader),
-            policyStore
+            EventTrackingPolicyModifier.createInstance(policyStore, new RandomIdGenerator(), pluginRegistry),
+            policyStore,
+            pluginRegistry
         );
-    }
-
-    @Override
-    public void bootstrap(PolicyBootstrapper bootstrapper) throws PMException {
-        super.bootstrap(bootstrapper);
     }
 
     @Override
@@ -45,8 +43,13 @@ public class EventTrackingPAP extends PAP {
     }
 
     public List<PMEvent> publishToEventStore(EventStoreDBClient esClient, String stream, long revision) {
-        AppendToStreamOptions options = AppendToStreamOptions.get()
-                    .expectedRevision(revision);
+        AppendToStreamOptions options = AppendToStreamOptions.get();
+
+        if (revision == 0) {
+            options.expectedRevision(ExpectedRevision.noStream());
+        } else {
+            options.expectedRevision(revision);
+        }
 
         List<PMEvent> events = modify().getEvents();
         List<EventData> eventDataList = pmEventsToEventDataList(events);

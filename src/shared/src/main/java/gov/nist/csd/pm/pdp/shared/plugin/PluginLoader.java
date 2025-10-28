@@ -22,7 +22,6 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Stream;
 
-@Configuration
 public class PluginLoader {
 
 	private static final Logger logger = LoggerFactory.getLogger(PluginLoader.class);
@@ -39,7 +38,6 @@ public class PluginLoader {
 		return pluginClassLoader;
 	}
 
-	@Bean
 	public List<Operation<?, ?>> operationPlugins() {
 		try {
 			return (List<Operation<?, ?>>)(List<?>) loadPlugins(Operation.class);
@@ -49,7 +47,6 @@ public class PluginLoader {
 		}
 	}
 
-	@Bean
 	public List<Routine<?, ?>> routinePlugins() {
 		try {
 			return (List<Routine<?, ?>>)(List<?>) loadPlugins(Routine.class);

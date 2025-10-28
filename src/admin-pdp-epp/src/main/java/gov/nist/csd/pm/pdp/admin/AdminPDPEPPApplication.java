@@ -3,12 +3,17 @@ package gov.nist.csd.pm.pdp.admin;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
+import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.store.Neo4jEmbeddedPolicyStore;
+import gov.nist.csd.pm.core.pap.function.PluginRegistry;
+import gov.nist.csd.pm.core.pap.function.op.Operation;
+import gov.nist.csd.pm.core.pap.function.routine.Routine;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
 import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 import gov.nist.csd.pm.pdp.shared.plugin.PluginLoaderConfig;
 import java.io.File;
+import java.util.List;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -50,9 +55,32 @@ public class AdminPDPEPPApplication {
     }
 
     @Bean
-    public Neo4jEmbeddedPolicyStore eventListenerPolicyStore(PluginLoader pluginLoader, GraphDatabaseService graphDb) throws PMException {
+    public Neo4jEmbeddedPolicyStore eventListenerPolicyStore(GraphDatabaseService graphDb) throws PMException {
         Neo4jEmbeddedPolicyStore.createIndexes(graphDb);
 
-        return new Neo4jEmbeddedPolicyStore(graphDb, pluginLoader.getPluginClassLoader());
+        return new Neo4jEmbeddedPolicyStore(graphDb, getClass().getClassLoader());
+    }
+
+    @Bean
+    public Neo4jEmbeddedPAP neo4jEmbeddedPAP(Neo4jEmbeddedPolicyStore eventListenerPolicyStore) throws PMException {
+        return new Neo4jEmbeddedPAP(eventListenerPolicyStore);
+    }
+
+    @Bean
+    public PluginRegistry pluginRegistry(PluginLoaderConfig config) {
+        PluginRegistry pluginRegistry = new PluginRegistry();
+
+        PluginLoader pluginLoader = new PluginLoader(config);
+        List<Operation<?, ?>> operations = pluginLoader.operationPlugins();
+        for (Operation<?, ?> operation : operations) {
+            pluginRegistry.registerOperation(operation);
+        }
+
+        List<Routine<?, ?>> routines = pluginLoader.routinePlugins();
+        for (Routine<?, ?> routine : routines) {
+            pluginRegistry.registerRoutine(routine);
+        }
+
+        return pluginRegistry;
     }
 }
