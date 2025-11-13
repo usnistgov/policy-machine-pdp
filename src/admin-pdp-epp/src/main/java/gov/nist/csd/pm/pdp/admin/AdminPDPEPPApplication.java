@@ -74,25 +74,12 @@ public class AdminPDPEPPApplication {
         return new Neo4jEmbeddedPAP(eventListenerPolicyStore);
     }
 
-    public static FormalParameter<String> TARGET_DB_URL_PARAM = new FormalParameter<>("target_db_url", Type.STRING_TYPE);
-    private static final FormalParameter<String> JDBC_CATALOG_NAME_PARAM = new FormalParameter<>("jdbc_catalog", new StringType());
-    private static final FormalParameter<String> JDBC_SCHEMA_PARAM = new FormalParameter<>("jdbc_schema", new StringType());
-    private static final FormalParameter<Map<String, List<String>>> EXCLUSIONS_PARAM =
-            new FormalParameter<>("exclusions", new MapType<>(new StringType(), new ListType<>(new StringType())));
-
     @Bean
     public PluginRegistry pluginRegistry(PluginLoader pluginLoader) throws PMException {
         PluginRegistry pluginRegistry = new PluginRegistry();
 
         List<Operation<?>> operations = pluginLoader.getOperationPlugins();
         for (Operation<?> operation : operations) {
-            if (operation.getName().equals("import_schema")) {
-                operation.execute(new MemoryPAP(), new Args(Map.of(
-                        TARGET_DB_URL_PARAM, "jdbc:mysql://root:rootroot@localhost:3306/airline_demo",
-                        JDBC_CATALOG_NAME_PARAM, "airline_demo",
-                        JDBC_SCHEMA_PARAM, "airline_demo",
-                        EXCLUSIONS_PARAM, Map.of())));
-            }
             pluginRegistry.registerOperation(operation);
         }
 
