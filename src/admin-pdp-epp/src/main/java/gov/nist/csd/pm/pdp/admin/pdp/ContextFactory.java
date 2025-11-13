@@ -2,13 +2,13 @@ package gov.nist.csd.pm.pdp.admin.pdp;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.PAP;
+import gov.nist.csd.pm.core.pap.function.PluginRegistry;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.pdp.admin.pap.EventTrackingPAP;
 import gov.nist.csd.pm.pdp.admin.pap.NoCommitNeo4jPolicyStore;
 
 import gov.nist.csd.pm.pdp.shared.auth.UserContextFromHeader;
-import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.springframework.stereotype.Component;
 
@@ -18,12 +18,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class ContextFactory {
 
-    private final PluginLoader pluginLoader;
     private final GraphDatabaseService graphDb;
+    private final PluginRegistry pluginRegistry;
 
-    public ContextFactory(GraphDatabaseService graphDb, PluginLoader pluginLoader) {
+    public ContextFactory(GraphDatabaseService graphDb, PluginRegistry pluginRegistry) {
         this.graphDb = graphDb;
-        this.pluginLoader = pluginLoader;
+        this.pluginRegistry = pluginRegistry;
     }
 
     /**
@@ -33,8 +33,8 @@ public class ContextFactory {
      * @throws PMException If an error occurs during context creation
      */
     public NGACContext createContext() throws PMException {
-        NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb, pluginLoader.getPluginClassLoader());
-        EventTrackingPAP pap = new EventTrackingPAP(noCommitNeo4jPolicyStore, pluginLoader);
+        NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb, getClass().getClassLoader());
+        EventTrackingPAP pap = new EventTrackingPAP(noCommitNeo4jPolicyStore, pluginRegistry);
         PDP pdp = new PDP(pap);
 
         return new NGACContext(pdp, pap);

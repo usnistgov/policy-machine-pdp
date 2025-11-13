@@ -36,6 +36,11 @@ public class AdminPDPConfig {
      */
     private boolean shutdownAfterBootstrap;
 
+    /**
+     * Directory path containing plugin JAR files for Operations and Routines
+     */
+    private String pluginsDir;
+
     @PostConstruct
     public void validate() {
         if (neo4jDbPath == null || neo4jDbPath.isEmpty() || neo4jDbPath.equals("null")) {
@@ -101,5 +106,13 @@ public class AdminPDPConfig {
 
     public void setShutdownAfterBootstrap(boolean shutdownAfterBootstrap) {
         this.shutdownAfterBootstrap = shutdownAfterBootstrap;
+    }
+
+    public String getPluginsDir() {
+        return pluginsDir;
+    }
+
+    public void setPluginsDir(String pluginsDir) {
+        this.pluginsDir = pluginsDir;
     }
 }
