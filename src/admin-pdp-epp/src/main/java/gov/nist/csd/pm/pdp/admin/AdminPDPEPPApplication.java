@@ -3,17 +3,25 @@ package gov.nist.csd.pm.pdp.admin;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
+import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.store.Neo4jEmbeddedPolicyStore;
 import gov.nist.csd.pm.core.pap.function.PluginRegistry;
+import gov.nist.csd.pm.core.pap.function.arg.Args;
+import gov.nist.csd.pm.core.pap.function.arg.FormalParameter;
+import gov.nist.csd.pm.core.pap.function.arg.type.ListType;
+import gov.nist.csd.pm.core.pap.function.arg.type.MapType;
+import gov.nist.csd.pm.core.pap.function.arg.type.StringType;
+import gov.nist.csd.pm.core.pap.function.arg.type.Type;
 import gov.nist.csd.pm.core.pap.function.op.Operation;
 import gov.nist.csd.pm.core.pap.function.routine.Routine;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
-import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
-import gov.nist.csd.pm.pdp.shared.plugin.PluginLoaderConfig;
+import gov.nist.csd.pm.pdp.admin.plugin.PluginLoader;
+
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -33,7 +41,7 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 @ComponentScan(
     basePackages = {"gov.nist.csd.pm.pdp"}
 )
-@EnableConfigurationProperties({EventStoreDBConfig.class, AdminPDPConfig.class, PluginLoaderConfig.class})
+@EnableConfigurationProperties({EventStoreDBConfig.class, AdminPDPConfig.class})
 public class AdminPDPEPPApplication {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminPDPEPPApplication.class);
@@ -66,18 +74,30 @@ public class AdminPDPEPPApplication {
         return new Neo4jEmbeddedPAP(eventListenerPolicyStore);
     }
 
+    public static FormalParameter<String> TARGET_DB_URL_PARAM = new FormalParameter<>("target_db_url", Type.STRING_TYPE);
+    private static final FormalParameter<String> JDBC_CATALOG_NAME_PARAM = new FormalParameter<>("jdbc_catalog", new StringType());
+    private static final FormalParameter<String> JDBC_SCHEMA_PARAM = new FormalParameter<>("jdbc_schema", new StringType());
+    private static final FormalParameter<Map<String, List<String>>> EXCLUSIONS_PARAM =
+            new FormalParameter<>("exclusions", new MapType<>(new StringType(), new ListType<>(new StringType())));
+
     @Bean
-    public PluginRegistry pluginRegistry(PluginLoaderConfig config) {
+    public PluginRegistry pluginRegistry(PluginLoader pluginLoader) throws PMException {
         PluginRegistry pluginRegistry = new PluginRegistry();
 
-        PluginLoader pluginLoader = new PluginLoader(config);
-        List<Operation<?, ?>> operations = pluginLoader.operationPlugins();
-        for (Operation<?, ?> operation : operations) {
+        List<Operation<?>> operations = pluginLoader.getOperationPlugins();
+        for (Operation<?> operation : operations) {
+            if (operation.getName().equals("import_schema")) {
+                operation.execute(new MemoryPAP(), new Args(Map.of(
+                        TARGET_DB_URL_PARAM, "jdbc:mysql://root:rootroot@localhost:3306/airline_demo",
+                        JDBC_CATALOG_NAME_PARAM, "airline_demo",
+                        JDBC_SCHEMA_PARAM, "airline_demo",
+                        EXCLUSIONS_PARAM, Map.of())));
+            }
             pluginRegistry.registerOperation(operation);
         }
 
-        List<Routine<?, ?>> routines = pluginLoader.routinePlugins();
-        for (Routine<?, ?> routine : routines) {
+        List<Routine<?>> routines = pluginLoader.getRoutinePlugins();
+        for (Routine<?> routine : routines) {
             pluginRegistry.registerRoutine(routine);
         }
 

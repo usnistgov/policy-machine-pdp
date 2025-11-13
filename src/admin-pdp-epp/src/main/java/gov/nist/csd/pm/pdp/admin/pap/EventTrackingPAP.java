@@ -3,13 +3,10 @@ package gov.nist.csd.pm.pdp.admin.pap;
 import com.eventstore.dbclient.*;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
-import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.function.PluginRegistry;
 import gov.nist.csd.pm.core.pap.id.RandomIdGenerator;
 import gov.nist.csd.pm.core.pap.query.*;
-import gov.nist.csd.pm.core.pdp.bootstrap.PolicyBootstrapper;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
-import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

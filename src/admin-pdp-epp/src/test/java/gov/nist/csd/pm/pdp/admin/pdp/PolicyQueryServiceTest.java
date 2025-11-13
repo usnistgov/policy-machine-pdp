@@ -22,8 +22,6 @@ import gov.nist.csd.pm.core.pap.query.model.subgraph.SubgraphPrivileges;
 import gov.nist.csd.pm.core.pdp.PDPTx;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.core.pdp.query.*;
-import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
-import gov.nist.csd.pm.pdp.shared.plugin.PluginLoaderConfig;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
 import gov.nist.csd.pm.proto.v1.model.*;
 import gov.nist.csd.pm.proto.v1.query.*;

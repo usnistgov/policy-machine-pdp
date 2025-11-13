@@ -5,7 +5,6 @@ import gov.nist.csd.pm.core.pap.function.PluginRegistry;
 import gov.nist.csd.pm.core.pap.id.IdGenerator;
 import gov.nist.csd.pm.core.pap.modification.PolicyModifier;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
-import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 
 import java.util.ArrayList;
 import java.util.List;

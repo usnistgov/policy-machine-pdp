@@ -6,8 +6,6 @@ import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.pdp.proto.event.ObjectCreated;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
-import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
-import gov.nist.csd.pm.pdp.shared.plugin.PluginLoaderConfig;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

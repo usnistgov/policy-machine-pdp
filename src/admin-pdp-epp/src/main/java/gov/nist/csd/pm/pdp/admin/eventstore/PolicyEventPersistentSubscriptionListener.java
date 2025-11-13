@@ -9,7 +9,6 @@ import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import gov.nist.csd.pm.pdp.shared.eventstore.PolicyEventHandler;
 import gov.nist.csd.pm.pdp.shared.eventstore.SnapshotService;
-import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;

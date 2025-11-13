@@ -39,7 +39,7 @@ public class EventOperationsModifier extends OperationsModifier {
     }
 
     @Override
-    public void createAdminOperation(Operation<?, ?> operation) throws PMException {
+    public void createAdminOperation(Operation<?> operation) throws PMException {
         String pml;
         if (operation instanceof PMLStmtsOperation pmlStmtsOperation) {
             pml = pmlStmtsOperation.toFormattedString(0);

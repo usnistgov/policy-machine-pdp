@@ -23,7 +23,7 @@ public class EventRoutinesModifier extends RoutinesModifier {
     }
 
     @Override
-    public void createAdminRoutine(Routine<?, ?> routine) throws PMException {
+    public void createAdminRoutine(Routine<?> routine) throws PMException {
         if (!(routine instanceof PMLStmtsRoutine pmlStmtsRoutine)) {
             throw new PMException("only PML routines are supported");
         }

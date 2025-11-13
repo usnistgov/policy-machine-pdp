@@ -521,18 +521,18 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getAdminOperationSignatures(Empty request,
 	                                        StreamObserver<SignatureList> responseObserver) {
 		try {
-			Collection<Operation<?, ?>> adminOperations = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Collection<Operation<?>> adminOperations = adjudicator.adjudicateQuery((pap, pdpTx) -> {
 				Collection<String> names = pdpTx.query().operations().getAdminOperationNames();
-				List<Operation<?, ?>> operations = new ArrayList<>();
+				List<Operation<?>> operations = new ArrayList<>();
 				for (String name : names) {
-					Operation<?, ?> op = pap.query().operations().getAdminOperation(name);
+					Operation<?> op = pap.query().operations().getAdminOperation(name);
 					operations.add(op);
 				}
 				return operations;
 			});
 
 			List<Signature> signatures = new ArrayList<>();
-			for (Operation<?, ?> op : adminOperations) {
+			for (Operation<?> op : adminOperations) {
 				signatures.add(Signature.newBuilder()
 						               .setName(op.getName())
 						               .addAllParams(convertParamsToProtoParams(op.getFormalParameters()))
@@ -556,7 +556,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getAdminOperationSignature(GetByNameQuery request,
 	                                       StreamObserver<gov.nist.csd.pm.proto.v1.query.Signature> responseObserver) {
 		try {
-			Operation<?, ?> operation = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Operation<?> operation = adjudicator.adjudicateQuery((pap, pdpTx) -> {
 				return pdpTx.query().operations().getAdminOperation(request.getName());
 			});
 
@@ -579,18 +579,18 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getAdminRoutineSignatures(Empty request,
 	                                      StreamObserver<SignatureList> responseObserver) {
 		try {
-			Collection<Routine<?, ?>> adminRoutines = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Collection<Routine<?>> adminRoutines = adjudicator.adjudicateQuery((pap, pdpTx) -> {
 				Collection<String> names = pdpTx.query().routines().getAdminRoutineNames();
-				List<Routine<?, ?>> routines = new ArrayList<>();
+				List<Routine<?>> routines = new ArrayList<>();
 				for (String name : names) {
-					Routine<?, ?> op = pap.query().routines().getAdminRoutine(name);
+					Routine<?> op = pap.query().routines().getAdminRoutine(name);
 					routines.add(op);
 				}
 				return routines;
 			});
 
 			List<Signature> signatures = new ArrayList<>();
-			for (Routine<?, ?> routine : adminRoutines) {
+			for (Routine<?> routine : adminRoutines) {
 				signatures.add(Signature.newBuilder()
 						               .setName(routine.getName())
 						               .addAllParams(convertParamsToProtoParams(routine.getFormalParameters()))
@@ -613,7 +613,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getAdminRoutineSignature(GetByNameQuery request, StreamObserver<Signature> responseObserver) {
 		try {
-			Routine<?, ?> routine = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Routine<?> routine = adjudicator.adjudicateQuery((pap, pdpTx) -> {
 				return pdpTx.query().routines().getAdminRoutine(request.getName());
 			});
 
