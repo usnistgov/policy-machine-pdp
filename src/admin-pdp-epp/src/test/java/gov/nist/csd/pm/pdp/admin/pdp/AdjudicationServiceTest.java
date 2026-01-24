@@ -1,109 +1,167 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
-import gov.nist.csd.pm.proto.v1.adjudication.AdminCmdRequest;
-import gov.nist.csd.pm.proto.v1.adjudication.AdminCmdResponse;
-import gov.nist.csd.pm.proto.v1.cmd.AdminCommand;
-import gov.nist.csd.pm.proto.v1.cmd.AssignCmd;
-import gov.nist.csd.pm.proto.v1.cmd.GenericAdminCmd;
+import gov.nist.csd.pm.proto.v1.adjudication.AdjudicateOperationResponse;
+import gov.nist.csd.pm.proto.v1.adjudication.AdjudicateRoutineResponse;
+import gov.nist.csd.pm.proto.v1.adjudication.OperationRequest;
+import gov.nist.csd.pm.proto.v1.adjudication.RoutineRequest;
+import gov.nist.csd.pm.proto.v1.cmd.AdminOperationCommand;
 import gov.nist.csd.pm.proto.v1.model.Value;
+import gov.nist.csd.pm.proto.v1.model.ValueMap;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class AdjudicationServiceTest {
 
-	private AdjudicationService service;
 	private Adjudicator adjudicator;
+	private AdjudicationService adjudicationService;
+
 	@BeforeEach
 	void setUp() {
-		adjudicator     = mock(Adjudicator.class);
-
-		service = new AdjudicationService(adjudicator);
+		adjudicator = mock(Adjudicator.class);
+		adjudicationService = new AdjudicationService(adjudicator);
 	}
 
 	@Nested
-	class AdjudicateAdminCmdTest {
-
+	class AdjudicateOperation {
 		@Test
-		void shouldReturnCreatedNodeIdsAndComplete() throws PMException {
-			AdminCmdRequest request = AdminCmdRequest.newBuilder().build();
+		void success() throws PMException {
+			StreamObserver<AdjudicateOperationResponse> observer = mock(StreamObserver.class);
+			Map<String, Value> args = new HashMap<>();
+			args.put("key", Value.newBuilder().setStringValue("value").build());
+			OperationRequest request = OperationRequest.newBuilder()
+					.setOpName("op")
+					.setArgs(ValueMap.newBuilder().putAllValues(args).build())
+					.build();
 
-			StreamObserver<AdminCmdResponse> observer = mock(StreamObserver.class);
+			when(adjudicator.adjudicateOperation(anyString(), anyMap())).thenReturn("result");
 
-			List<Value> values = new ArrayList<>();
-			when(adjudicator.adjudicateAdminCommands(request.getCommandsList()))
-					.thenReturn(values);
+			adjudicationService.adjudicateOperation(request, observer);
 
-			service.adjudicateAdminCmd(request, observer);
+			ArgumentCaptor<String> opNameCaptor = ArgumentCaptor.forClass(String.class);
+			ArgumentCaptor<Map<String, Object>> mapCaptor = ArgumentCaptor.forClass(Map.class);
+			verify(adjudicator).adjudicateOperation(opNameCaptor.capture(), mapCaptor.capture());
 
-			ArgumentCaptor<AdminCmdResponse> captor =
-					ArgumentCaptor.forClass(AdminCmdResponse.class);
-			verify(observer).onNext(captor.capture());
-			AdminCmdResponse resp = captor.getValue();
+			assertEquals("op", opNameCaptor.getValue());
+			assertEquals("value", mapCaptor.getValue().get("key"));
 
-			assertEquals(values, resp.getResultsList());
-
-			verify(observer).onCompleted();
-			verify(observer, never()).onError(any());
+			ArgumentCaptor<AdjudicateOperationResponse> responseCaptor = ArgumentCaptor
+					.forClass(AdjudicateOperationResponse.class);
+			verify(observer).onNext(responseCaptor.capture());
+			assertTrue(responseCaptor.getValue().getValue().hasStringValue());
+			assertEquals("result", responseCaptor.getValue().getValue().getStringValue());
 		}
 
 		@Test
-		void shouldOnErrorWhenAdjudicatorThrows() throws PMException {
-			AdminCmdRequest request = AdminCmdRequest.newBuilder().build();
-			StreamObserver<AdminCmdResponse> observer = mock(StreamObserver.class);
+		void unauthorized() throws PMException {
+			StreamObserver<AdjudicateOperationResponse> observer = mock(StreamObserver.class);
+			OperationRequest request = OperationRequest.newBuilder()
+					.setOpName("op")
+					.build();
 
-			doThrow(new RuntimeException("test exception"))
-					.when(adjudicator)
-					.adjudicateAdminCommands(request.getCommandsList());
+			UnauthorizedException ex = mock(UnauthorizedException.class);
+			when(ex.getMessage()).thenReturn("unauthorized");
+			doThrow(ex).when(adjudicator).adjudicateOperation(anyString(), anyMap());
 
-			service.adjudicateAdminCmd(request, observer);
+			adjudicationService.adjudicateOperation(request, observer);
 
-			ArgumentCaptor<Throwable> errorCaptor =
-					ArgumentCaptor.forClass(Throwable.class);
+			ArgumentCaptor<Throwable> errorCaptor = ArgumentCaptor.forClass(Throwable.class);
 			verify(observer).onError(errorCaptor.capture());
 
-			assertEquals("INTERNAL: test exception", errorCaptor.getValue().getMessage());
-
-			verify(observer, never()).onNext(any());
-			verify(observer, never()).onCompleted();
+			assertTrue(errorCaptor.getValue() instanceof StatusRuntimeException);
+			StatusRuntimeException exception = (StatusRuntimeException) errorCaptor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
 		}
 
 		@Test
-		void shouldOnErrorWithPermissionDeniedWhenUnauthorized() throws PMException {
-			AdminCmdRequest request = AdminCmdRequest.newBuilder().build();
-			StreamObserver<AdminCmdResponse> observer = mock(StreamObserver.class);
+		void error() throws PMException {
+			StreamObserver<AdjudicateOperationResponse> observer = mock(StreamObserver.class);
+			OperationRequest request = OperationRequest.newBuilder()
+					.setOpName("op")
+					.build();
 
-			UnauthorizedException unauthorizedException = mock(UnauthorizedException.class);
-			when(unauthorizedException.getMessage()).thenReturn("unauthorized");
+			doThrow(new RuntimeException("error"))
+					.when(adjudicator).adjudicateOperation(anyString(), anyMap());
 
-			doThrow(unauthorizedException)
-					.when(adjudicator)
-					.adjudicateAdminCommands(request.getCommandsList());
+			adjudicationService.adjudicateOperation(request, observer);
 
-			service.adjudicateAdminCmd(request, observer);
-
-			ArgumentCaptor<Throwable> errorCaptor =
-					ArgumentCaptor.forClass(Throwable.class);
+			ArgumentCaptor<Throwable> errorCaptor = ArgumentCaptor.forClass(Throwable.class);
 			verify(observer).onError(errorCaptor.capture());
 
-			assertThat(errorCaptor.getValue())
-					.hasMessage("PERMISSION_DENIED: unauthorized");
-
-			verify(observer, never()).onNext(any());
-			verify(observer, never()).onCompleted();
+			assertTrue(errorCaptor.getValue() instanceof StatusRuntimeException);
+			StatusRuntimeException exception = (StatusRuntimeException) errorCaptor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
 		}
 	}
+
+	@Nested
+	class AdjudicateRoutine {
+		@Test
+		void success() throws PMException {
+			StreamObserver<AdjudicateRoutineResponse> observer = mock(StreamObserver.class);
+			RoutineRequest request = RoutineRequest.newBuilder()
+					.addCommands(AdminOperationCommand.newBuilder().build())
+					.build();
+
+			adjudicationService.adjudicateRoutine(request, observer);
+
+			verify(adjudicator).adjudicateRoutine(anyList());
+			verify(observer).onNext(any(AdjudicateRoutineResponse.class));
+			verify(observer).onCompleted();
+		}
+
+		@Test
+		void unauthorized() throws PMException {
+			StreamObserver<AdjudicateRoutineResponse> observer = mock(StreamObserver.class);
+			RoutineRequest request = RoutineRequest.newBuilder()
+					.addCommands(AdminOperationCommand.newBuilder().build())
+					.build();
+
+			UnauthorizedException ex = mock(UnauthorizedException.class);
+			when(ex.getMessage()).thenReturn("unauthorized");
+			doThrow(ex).when(adjudicator).adjudicateRoutine(anyList());
+
+			adjudicationService.adjudicateRoutine(request, observer);
+
+			ArgumentCaptor<Throwable> errorCaptor = ArgumentCaptor.forClass(Throwable.class);
+			verify(observer).onError(errorCaptor.capture());
+
+			assertTrue(errorCaptor.getValue() instanceof StatusRuntimeException);
+			StatusRuntimeException exception = (StatusRuntimeException) errorCaptor.getValue();
+			assertEquals(Status.PERMISSION_DENIED.getCode(), exception.getStatus().getCode());
+		}
+
+		@Test
+		void error() throws PMException {
+			StreamObserver<AdjudicateRoutineResponse> observer = mock(StreamObserver.class);
+			RoutineRequest request = RoutineRequest.newBuilder()
+					.addCommands(AdminOperationCommand.newBuilder().build())
+					.build();
+
+			doThrow(new RuntimeException("error"))
+					.when(adjudicator).adjudicateRoutine(anyList());
+
+			adjudicationService.adjudicateRoutine(request, observer);
+
+			ArgumentCaptor<Throwable> errorCaptor = ArgumentCaptor.forClass(Throwable.class);
+			verify(observer).onError(errorCaptor.capture());
+
+			assertTrue(errorCaptor.getValue() instanceof StatusRuntimeException);
+			StatusRuntimeException exception = (StatusRuntimeException) errorCaptor.getValue();
+			assertEquals(Status.INTERNAL.getCode(), exception.getStatus().getCode());
+		}
+	}
+
 }

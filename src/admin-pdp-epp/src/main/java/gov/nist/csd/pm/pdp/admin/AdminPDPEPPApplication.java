@@ -3,25 +3,15 @@ package gov.nist.csd.pm.pdp.admin;
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.store.Neo4jEmbeddedPolicyStore;
-import gov.nist.csd.pm.core.pap.function.PluginRegistry;
-import gov.nist.csd.pm.core.pap.function.arg.Args;
-import gov.nist.csd.pm.core.pap.function.arg.FormalParameter;
-import gov.nist.csd.pm.core.pap.function.arg.type.ListType;
-import gov.nist.csd.pm.core.pap.function.arg.type.MapType;
-import gov.nist.csd.pm.core.pap.function.arg.type.StringType;
-import gov.nist.csd.pm.core.pap.function.arg.type.Type;
-import gov.nist.csd.pm.core.pap.function.op.Operation;
-import gov.nist.csd.pm.core.pap.function.routine.Routine;
+import gov.nist.csd.pm.core.pap.operation.Operation;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
 import gov.nist.csd.pm.pdp.admin.plugin.PluginLoader;
 
 import java.io.File;
 import java.util.List;
-import java.util.Map;
 
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -70,24 +60,19 @@ public class AdminPDPEPPApplication {
     }
 
     @Bean
-    public Neo4jEmbeddedPAP neo4jEmbeddedPAP(Neo4jEmbeddedPolicyStore eventListenerPolicyStore) throws PMException {
-        return new Neo4jEmbeddedPAP(eventListenerPolicyStore);
+    public List<Operation<?>> loadPlugins(PluginLoader pluginLoader) {
+        return pluginLoader.loadPlugins();
     }
 
     @Bean
-    public PluginRegistry pluginRegistry(PluginLoader pluginLoader) throws PMException {
-        PluginRegistry pluginRegistry = new PluginRegistry();
+    public Neo4jEmbeddedPAP neo4jEmbeddedPAP(Neo4jEmbeddedPolicyStore eventListenerPolicyStore, List<Operation<?>> pluginOps) throws PMException {
+        Neo4jEmbeddedPAP neo4jEmbeddedPAP = new Neo4jEmbeddedPAP(eventListenerPolicyStore);
 
-        List<Operation<?>> operations = pluginLoader.getOperationPlugins();
-        for (Operation<?> operation : operations) {
-            pluginRegistry.registerOperation(operation);
+        for (Operation<?> op : pluginOps) {
+            neo4jEmbeddedPAP.plugins().addOperation(op);
         }
 
-        List<Routine<?>> routines = pluginLoader.getRoutinePlugins();
-        for (Routine<?> routine : routines) {
-            pluginRegistry.registerRoutine(routine);
-        }
-
-        return pluginRegistry;
+        return neo4jEmbeddedPAP;
     }
+
 }

@@ -1,7 +1,7 @@
-package gov.nist.csd.pm.pdp.admin.pap;
+package gov.nist.csd.pm.pdp.admin.pap.modifier;
 
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.store.Neo4jEmbeddedPolicyStore;
-import gov.nist.csd.pm.core.pap.function.PluginRegistry;
+import gov.nist.csd.pm.core.pap.PluginRegistry;
 import gov.nist.csd.pm.core.pap.id.IdGenerator;
 import gov.nist.csd.pm.core.pap.modification.PolicyModifier;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
@@ -17,10 +17,9 @@ public class EventTrackingPolicyModifier extends PolicyModifier {
                                         EventGraphModifier eventGraphModifier,
                                         EventProhibitionsModifier eventProhibitionsModifier,
                                         EventObligationsModifier eventObligationsModifier,
-                                        EventOperationsModifier eventOperationsModifier,
-                                        EventRoutinesModifier eventRoutinesModifier) {
+                                        EventOperationsModifier eventOperationsModifier) {
         super(eventGraphModifier, eventProhibitionsModifier, eventObligationsModifier,
-              eventOperationsModifier, eventRoutinesModifier);
+              eventOperationsModifier);
         this.events = events;
     }
 
@@ -31,10 +30,9 @@ public class EventTrackingPolicyModifier extends PolicyModifier {
         EventProhibitionsModifier prohibitionsModifier = new EventProhibitionsModifier(events, policyStore);
         EventObligationsModifier obligationsModifier = new EventObligationsModifier(events, policyStore);
         EventOperationsModifier operationsModifier = new EventOperationsModifier(events, policyStore, pluginRegistry);
-        EventRoutinesModifier routinesModifier = new EventRoutinesModifier(events, policyStore, pluginRegistry);
 
         return new EventTrackingPolicyModifier(events, graphModifier, prohibitionsModifier, obligationsModifier,
-            operationsModifier, routinesModifier);
+                                               operationsModifier);
     }
 
     public List<PMEvent> getEvents() {

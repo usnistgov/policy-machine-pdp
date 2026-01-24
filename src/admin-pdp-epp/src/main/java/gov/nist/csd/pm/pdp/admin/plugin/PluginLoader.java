@@ -1,8 +1,12 @@
 package gov.nist.csd.pm.pdp.admin.plugin;
 
-import gov.nist.csd.pm.core.pap.function.op.Operation;
-import gov.nist.csd.pm.core.pap.function.routine.Routine;
+import gov.nist.csd.pm.core.pap.operation.*;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
+import gov.nist.csd.pm.pdp.admin.plugin.wrapper.AdminOperationPluginWrapper;
+import gov.nist.csd.pm.pdp.admin.plugin.wrapper.FunctionPluginWrapper;
+import gov.nist.csd.pm.pdp.admin.plugin.wrapper.QueryOperationPluginWrapper;
+import gov.nist.csd.pm.pdp.admin.plugin.wrapper.ResourceOperationPluginWrapper;
+import gov.nist.csd.pm.pdp.admin.plugin.wrapper.RoutinePluginWrapper;
 import org.pf4j.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +37,7 @@ public class PluginLoader {
 				: new DefaultPluginManager(this.pluginsRoot);
 	}
 
-	public List<Operation<?>> getOperationPlugins() {
+	public List<Operation<?>> loadPlugins() {
 		if (!ensurePluginManagerStarted()) {
 			return Collections.emptyList();
 		}
@@ -47,28 +51,15 @@ public class PluginLoader {
 			PluginWrapper wrapper = pluginManager.whichPlugin(op.getClass());
 			ClassLoader pluginCl = wrapper.getPluginClassLoader();
 
-			wrapped.add(new OperationPluginWrapper<>(op, pluginCl));
-		}
+			Operation wrappedOp = switch (op) {
+				case AdminOperation adminOperation -> new AdminOperationPluginWrapper<>(adminOperation, pluginCl);
+				case Function function ->  new FunctionPluginWrapper(function, pluginCl);
+				case QueryOperation queryOperation ->  new QueryOperationPluginWrapper(queryOperation, pluginCl);
+				case ResourceOperation resourceOperation ->  new ResourceOperationPluginWrapper(resourceOperation, pluginCl);
+				case Routine routine ->  new RoutinePluginWrapper(routine, pluginCl);
+			};
 
-		logger.info("Loaded {} Operation plugins via PF4J extensions", wrapped.size());
-		return wrapped;
-	}
-
-	public List<Routine<?>> getRoutinePlugins() {
-		if (!ensurePluginManagerStarted()) {
-			return Collections.emptyList();
-		}
-
-		List<Routine<?>> wrapped = new ArrayList<>();
-
-		// PF4J will return *instances* of all @Extension classes across all plugins
-		List<Routine> providers = pluginManager.getExtensions(Routine.class);
-
-		for (Routine routine : providers) {
-			PluginWrapper wrapper = pluginManager.whichPlugin(routine.getClass());
-			ClassLoader pluginCl = wrapper.getPluginClassLoader();
-
-			wrapped.add(new RoutinePluginWrapper<>(routine, pluginCl));
+			wrapped.add(wrappedOp);
 		}
 
 		logger.info("Loaded {} Operation plugins via PF4J extensions", wrapped.size());

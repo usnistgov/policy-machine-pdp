@@ -4,6 +4,6 @@ create oa "oa1" in ["pc1"]
 assign "u1" to ["ua1"]
 create o "o1" in ["oa1"]
 
-set resource operations ["read"]
+set resource access rights ["read"]
 
 associate "ua1" and "oa1" with ["read"]

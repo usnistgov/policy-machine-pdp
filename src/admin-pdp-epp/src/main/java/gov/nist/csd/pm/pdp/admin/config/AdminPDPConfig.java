@@ -27,7 +27,7 @@ public class AdminPDPConfig {
     private String esdbConsumerGroup;
 
     /**
-     * Name of the event store stream for snapshots
+     * Snapshot event revision interval (e.g. snapshot every 1000 events)
      */
     private int snapshotInterval;
 

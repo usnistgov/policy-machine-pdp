@@ -1,9 +1,10 @@
-package gov.nist.csd.pm.pdp.admin.pap;
+package gov.nist.csd.pm.pdp.admin.pap.modifier;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.modification.ObligationsModifier;
 import gov.nist.csd.pm.core.pap.obligation.Obligation;
-import gov.nist.csd.pm.core.pap.obligation.Rule;
+import gov.nist.csd.pm.core.pap.obligation.event.EventPattern;
+import gov.nist.csd.pm.core.pap.obligation.response.ObligationResponse;
 import gov.nist.csd.pm.core.pap.store.PolicyStore;
 import gov.nist.csd.pm.pdp.proto.event.ObligationCreated;
 import gov.nist.csd.pm.pdp.proto.event.ObligationDeleted;
@@ -22,18 +23,18 @@ public class EventObligationsModifier extends ObligationsModifier {
     }
 
     @Override
-    public void createObligation(long author, String name, List<Rule> rules) throws
-                                                                             PMException {
+    public void createObligation(long authorId, String name, EventPattern eventPattern,
+                                 ObligationResponse response) throws PMException {
         PMEvent event = PMEvent.newBuilder()
-            .setObligationCreated(
-                    ObligationCreated.newBuilder()
-                    .setAuthor(author)
-                    .setPml(new Obligation(author, name, rules).toString())
-            )
-            .build();
+                .setObligationCreated(
+                        ObligationCreated.newBuilder()
+                                .setAuthor(authorId)
+                                .setPml(new Obligation(authorId, name, eventPattern, response).toString())
+                )
+                .build();
         events.add(event);
 
-        super.createObligation(author, name, rules);
+        super.createObligation(authorId, name, eventPattern, response);
     }
 
     @Override

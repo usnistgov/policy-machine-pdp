@@ -4,27 +4,21 @@ import gov.nist.csd.pm.core.common.event.EventContext;
 import gov.nist.csd.pm.core.epp.EPP;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pdp.PDP;
-import gov.nist.csd.pm.epp.proto.ResourceEPPServiceGrpc;
-import gov.nist.csd.pm.epp.proto.ResourceEventContext;
-import gov.nist.csd.pm.epp.proto.SideEffectEvents;
-import gov.nist.csd.pm.pdp.proto.event.PMEvent;
+import gov.nist.csd.pm.pdp.resource.RevisionCatchUpGate;
 import gov.nist.csd.pm.pdp.resource.config.EPPMode;
 import gov.nist.csd.pm.pdp.resource.config.ResourcePDPConfig;
-import gov.nist.csd.pm.pdp.resource.eventstore.PolicyEventSubscriptionListener;
-import gov.nist.csd.pm.pdp.shared.protobuf.EventContextUtil;
+import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
+import gov.nist.csd.pm.proto.v1.epp.EPPServiceGrpc;
+import gov.nist.csd.pm.proto.v1.epp.ProcessEventResponse;
+import gov.nist.csd.pm.proto.v1.model.Value;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import javax.annotation.PostConstruct;
 
-import org.bitbucket.inkytonik.kiama.output.Side;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -35,19 +29,19 @@ public class EPPClient extends EPP {
     private static final Logger logger = LoggerFactory.getLogger(EPPClient.class);
 
     private final PDP pdp;
-    private final PolicyEventSubscriptionListener listener;
     private final ResourcePDPConfig resourcePDPConfig;
-    private ResourceEPPServiceGrpc.ResourceEPPServiceBlockingStub blockingStub;
-    private ResourceEPPServiceGrpc.ResourceEPPServiceStub stub;
+    private EPPServiceGrpc.EPPServiceBlockingStub blockingStub;
+    private EPPServiceGrpc.EPPServiceStub stub;
+    private final RevisionCatchUpGate revisionCatchUpGate;
 
     public EPPClient(PDP pdp,
                      PAP pap,
-                     PolicyEventSubscriptionListener listener,
-                     ResourcePDPConfig resourcePDPConfig) {
+                     ResourcePDPConfig resourcePDPConfig,
+                     RevisionCatchUpGate revisionCatchUpGate) {
         super(pdp, pap);
         this.pdp = pdp;
-        this.listener = listener;
         this.resourcePDPConfig = resourcePDPConfig;
+        this.revisionCatchUpGate = revisionCatchUpGate;
     }
 
     @PostConstruct
@@ -56,9 +50,10 @@ public class EPPClient extends EPP {
             return;
         }
 
+        // subscribe to the PDP bean
         this.pdp.addEventSubscriber(this);
 
-        // init epp client to admin pdp epp
+        // init epp client to admin pdp epp service
         ManagedChannel channel = ManagedChannelBuilder
                 .forAddress(resourcePDPConfig.getAdminHostname(), resourcePDPConfig.getAdminPort())
                 .defaultServiceConfig(buildGrpcConfigMap())
@@ -67,9 +62,9 @@ public class EPPClient extends EPP {
                 .build();
 
         if (resourcePDPConfig.getEppMode() == EPPMode.ASYNC) {
-            this.stub = ResourceEPPServiceGrpc.newStub(channel);
+            this.stub = EPPServiceGrpc.newStub(channel);
         } else {
-            this.blockingStub = ResourceEPPServiceGrpc.newBlockingStub(channel);
+            this.blockingStub = EPPServiceGrpc.newBlockingStub(channel);
         }
     }
 
@@ -79,22 +74,26 @@ public class EPPClient extends EPP {
             return;
         }
 
-        logger.info("sending event {}", eventCtx);
+        logger.info("sending to EPP {}", eventCtx);
 
-        ResourceEventContext eventCtxProto = EventContextUtil.toProto(eventCtx);
+        gov.nist.csd.pm.proto.v1.epp.EventContext eventCtxProto = ProtoUtil.toEventContextProto(eventCtx);
 
         if (stub != null) {
             processEventAsync(eventCtxProto);
         } else {
-            processEventSync(eventCtxProto);
+	        try {
+		        processEventSync(eventCtxProto);
+	        } catch (InterruptedException e) {
+		        throw new RuntimeException(e);
+	        }
         }
     }
 
-    private void processEventAsync(ResourceEventContext eventCtx) {
+    private void processEventAsync(gov.nist.csd.pm.proto.v1.epp.EventContext eventCtx) {
         stub.processEvent(eventCtx, new StreamObserver<>() {
             @Override
-            public void onNext(SideEffectEvents eppResponse) {
-                logger.info("EPP returned {} side effect events for event {}", eppResponse.getEventsCount(), eventCtx);
+            public void onNext(ProcessEventResponse processEventResponse) {
+
             }
 
             @Override
@@ -111,32 +110,30 @@ public class EPPClient extends EPP {
 
     /**
      * Process the given even context synchronously in the EPP server. If no errors occur and the event context matched
-     * an obligation event pattern, the EPP will respond with a list of events and the revision number of the first event.
+     * an obligation event pattern, the EPP will respond with the revision of the last event generated. This method will
+     * wait a configurable amount of time before returning for the local event subscription to catch up. If this process
+     * times out, the method will return a success still, but subsequent calls to the PDP will fail until it's caught up.
+     * @param eventCtx the EventContext proto to send to the EPP server.
      */
-    private void processEventSync(ResourceEventContext eventCtx) {
-        SideEffectEvents eppResponse = blockingStub.processEvent(eventCtx);
+    private void processEventSync(gov.nist.csd.pm.proto.v1.epp.EventContext eventCtx) throws InterruptedException {
+        ProcessEventResponse eppResponse = blockingStub.processEvent(eventCtx);
 
-        List<PMEvent> eventsList = eppResponse.getEventsList();
-        long startRevision = eppResponse.getStartRevision();
-        logger.debug("epp returned start revision {} and {} events", startRevision, eventsList.size());
-
-        if (startRevision == 0 || eventsList.isEmpty()) {
+        // if there is no result than the EPP did generate any events
+        if (!eppResponse.hasResult()) {
             return;
         }
 
-        // Send the epp side effect events to the listener. The listener will return a CompletableFuture that
-        // completes when the given tx has been applied. If it times out based on the value set in the configuration,
-        // there is no error. Instead, the current thread returns and the tx will be processed at a later time by the listener.
-        CompletableFuture<Void> eppSideEffectEventsProcessed = listener.processOrQueue(startRevision, eventsList);
+        Value responseValue = eppResponse.getResult().getValuesMap().get("last_event_revision");
+        long lastEventRevision = responseValue.getInt64Value();
+        logger.debug("epp returned last_event_revision {}", lastEventRevision);
 
-        try {
-            eppSideEffectEventsProcessed.get(resourcePDPConfig.getEppSideEffectTimeout(), TimeUnit.SECONDS);
-        } catch (ExecutionException | TimeoutException e) {
-            logger.warn("error processing epp side effect events", e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logger.warn("thread interrupted processing epp side effect events", e);
-        }
+        // notify the revision catchup gate to wait for the last epp revision
+        revisionCatchUpGate.setWaitForRevision(lastEventRevision);
+
+        // wait for the service to catch up
+        // if this times out without being caught up the current request will still return a success
+        // subsequent calls will fail fast until caught up
+        revisionCatchUpGate.awaitCatchUp();
     }
 
     private Map<String, Object> buildGrpcConfigMap() {

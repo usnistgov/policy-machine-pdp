@@ -2,7 +2,7 @@ package gov.nist.csd.pm.pdp.admin.pap;
 
 import com.eventstore.dbclient.*;
 import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.pap.function.PluginRegistry;
+import gov.nist.csd.pm.core.pap.operation.Operation;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.core.pdp.bootstrap.JSONBootstrapper;
 import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapper;
@@ -31,18 +31,18 @@ public class Neo4jBootstrapper {
     private final EventStoreDBConfig eventStoreDBConfig;
     private final EventStoreConnectionManager eventStoreConnectionManager;
     private final GraphDatabaseService graphDb;
-    private final PluginRegistry pluginRegistry;
+    private final List<Operation<?>> pluginOps;
 
     public Neo4jBootstrapper(AdminPDPConfig adminPDPConfig,
                              EventStoreDBConfig eventStoreDBConfig,
                              EventStoreConnectionManager eventStoreConnectionManager,
                              GraphDatabaseService graphDb,
-                             PluginRegistry pluginRegistry) {
+                             List<Operation<?>> pluginOps) {
         this.adminPDPConfig = adminPDPConfig;
         this.eventStoreDBConfig = eventStoreDBConfig;
         this.eventStoreConnectionManager = eventStoreConnectionManager;
         this.graphDb = graphDb;
-        this.pluginRegistry = pluginRegistry;
+        this.pluginOps = pluginOps;
     }
 
     @PostConstruct
@@ -80,7 +80,7 @@ public class Neo4jBootstrapper {
 
         // need to start a transaction so the initial policy admin verification succeeds
         noCommitNeo4jPolicyStore.beginTx();
-        EventTrackingPAP eventTrackingPAP = new EventTrackingPAP(noCommitNeo4jPolicyStore, pluginRegistry);
+        EventTrackingPAP eventTrackingPAP = new EventTrackingPAP(noCommitNeo4jPolicyStore, pluginOps);
         noCommitNeo4jPolicyStore.commit();
 
         PolicyBootstrapper policyBootstrapper;

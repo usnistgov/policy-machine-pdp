@@ -1,14 +1,14 @@
 package gov.nist.csd.pm.pdp.resource;
 
-import gov.nist.csd.pm.core.common.graph.node.Node;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextFromHeader;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
+import gov.nist.csd.pm.proto.v1.adjudication.AdjudicateOperationResponse;
+import gov.nist.csd.pm.proto.v1.adjudication.OperationRequest;
 import gov.nist.csd.pm.proto.v1.adjudication.ResourceAdjudicationServiceGrpc;
-import gov.nist.csd.pm.proto.v1.adjudication.ResourceOperationCmd;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
@@ -22,32 +22,34 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
 
     private final PDP pdp;
     private final PAP pap;
+    private final RevisionCatchUpGate revisionCatchUpGate;
 
-    public ResourcePDPService(PDP pdp, PAP pap) {
+    public ResourcePDPService(PDP pdp, PAP pap, RevisionCatchUpGate revisionCatchUpGate) {
         this.pdp = pdp;
         this.pap = pap;
+        this.revisionCatchUpGate = revisionCatchUpGate;
     }
 
     @Override
-    public void adjudicateResourceOperation(ResourceOperationCmd request,
-                                            StreamObserver<gov.nist.csd.pm.proto.v1.model.Node> responseObserver) {
+    public void adjudicateResourceOperation(OperationRequest request,
+                                            StreamObserver<AdjudicateOperationResponse> responseObserver) {
+        if (revisionCatchUpGate.isClosed()) {
+            responseObserver.onError(Status.UNAVAILABLE
+                                             .withDescription("the resource PDP timed out waiting for the last EPP revision")
+                                             .asRuntimeException());
+            return;
+        }
+
         try {
             UserContext userCtx = UserContextFromHeader.get(pap);
-            String operation = request.getOperation();
-            long targetId = 0;
-            if (request.getTargetCase() == ResourceOperationCmd.TargetCase.ID) {
-                targetId = request.getId();
-            } else if (request.getTargetCase() == ResourceOperationCmd.TargetCase.NAME) {
-                targetId = pap.query().graph().getNodeId(request.getName());
-            } else {
-                responseObserver.onError(Status.INVALID_ARGUMENT
-                                                 .withDescription("ID or name not set")
-                                                 .asRuntimeException());
-            }
 
-            logger.info("adjudicating resource operation {} on {} by {}", operation, targetId, userCtx);
-            Node node = pdp.adjudicateResourceOperation(userCtx, targetId, operation);
-            responseObserver.onNext(ProtoUtil.toNodeProto(node));
+            Object result = pdp.adjudicateOperation(
+                    userCtx,
+                    request.getOpName(),
+                    ProtoUtil.valueMapToObjectMap(request.getArgs())
+            );
+
+            responseObserver.onNext(AdjudicateOperationResponse.newBuilder().setValue(ProtoUtil.objectToValue(result)).build());
             responseObserver.onCompleted();
         } catch (UnauthorizedException e) {
             logger.error("adjudication UNAUTHORIZED: {}", e.getMessage());
