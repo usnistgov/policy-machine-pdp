@@ -31,11 +31,7 @@ public class EPPService extends EPPServiceGrpc.EPPServiceImplBase {
 		try {
 			long lastRevision = adjudicator.adjudicateTransaction(ctx -> {
 				try {
-					EPP epp = new EPP(ctx.pdp(), ctx.pap());
-
-					// subscribe to PDP so the EPP will also process any operations executed during processEvent
-					epp.subscribeTo(ctx.pdp());
-					epp.processEvent(ProtoUtil.fromEventContextProto(request));
+					ctx.epp().processEvent(ProtoUtil.fromEventContextProto(request));
 				} catch (PMException e) {
 					throw new RuntimeException(e);
 				}

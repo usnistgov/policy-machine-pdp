@@ -165,8 +165,7 @@ public class EventGraphModifier extends GraphModifier {
     }
 
     @Override
-    public void associate(long ua, long target, AccessRightSet accessRights) throws
-                                                                             PMException {
+    public void associate(long ua, long target, AccessRightSet accessRights) throws PMException {
         PMEvent event = PMEvent.newBuilder()
             .setAssociationCreated(
                 AssociationCreated.newBuilder()

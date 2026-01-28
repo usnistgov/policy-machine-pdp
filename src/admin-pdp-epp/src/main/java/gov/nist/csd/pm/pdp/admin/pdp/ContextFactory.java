@@ -1,6 +1,7 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
+import gov.nist.csd.pm.core.epp.EPP;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.operation.Operation;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
@@ -39,7 +40,11 @@ public class ContextFactory {
         EventTrackingPAP pap = new EventTrackingPAP(noCommitNeo4jPolicyStore, plugins);
         PDP pdp = new PDP(pap);
 
-        return new NGACContext(pdp, pap);
+        // set up EPP to process events in the PDP
+        EPP epp = new EPP(pdp, pap);
+        epp.subscribeTo(pdp);
+
+        return new NGACContext(pdp, epp, pap);
     }
 
     public UserContext createUserContext(PAP pap) throws PMException {

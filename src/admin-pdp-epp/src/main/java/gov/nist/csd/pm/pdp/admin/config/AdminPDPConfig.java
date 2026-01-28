@@ -12,11 +12,6 @@ public class AdminPDPConfig {
     private String neo4jDbPath;
 
     /**
-     * The user bootstrapping the policy
-     */
-    private String bootstrapUser;
-
-    /**
      * The file to the policy file to bootstrap the PDP with
      */
     private String bootstrapFilePath;
@@ -66,14 +61,6 @@ public class AdminPDPConfig {
 
     public void setNeo4jDbPath(String neo4jDbPath) {
         this.neo4jDbPath = neo4jDbPath;
-    }
-
-    public String getBootstrapUser() {
-        return bootstrapUser;
-    }
-
-    public void setBootstrapUser(String bootstrapUser) {
-        this.bootstrapUser = bootstrapUser;
     }
 
     public String getBootstrapFilePath() {

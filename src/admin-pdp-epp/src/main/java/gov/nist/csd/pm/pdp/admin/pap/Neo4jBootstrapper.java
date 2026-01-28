@@ -3,6 +3,7 @@ package gov.nist.csd.pm.pdp.admin.pap;
 import com.eventstore.dbclient.*;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.operation.Operation;
+import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapperWithSuper;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.core.pdp.bootstrap.JSONBootstrapper;
 import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapper;
@@ -84,14 +85,8 @@ public class Neo4jBootstrapper {
         noCommitNeo4jPolicyStore.commit();
 
         PolicyBootstrapper policyBootstrapper;
-        String bootstrapUser;
         if (bootstrapFilePath.endsWith(".pml")) {
-            bootstrapUser = adminPDPConfig.getBootstrapUser();
-            if (bootstrapUser == null) {
-                throw new PMException("bootstrap user is null but expected for PML bootstrapping");
-            }
-
-            policyBootstrapper = new PMLBootstrapper(bootstrapUser, data);
+            policyBootstrapper = new PMLBootstrapperWithSuper(false, data);
         } else if (bootstrapFilePath.endsWith(".json")) {
             policyBootstrapper = new JSONBootstrapper(data);
         } else {

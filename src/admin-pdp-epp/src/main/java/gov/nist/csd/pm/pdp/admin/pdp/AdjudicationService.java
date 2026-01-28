@@ -28,12 +28,16 @@ public class AdjudicationService extends AdminAdjudicationServiceGrpc.AdminAdjud
 		try {
 			String opName = request.getOpName();
 			Map<String, Object> args = ProtoUtil.valueMapToObjectMap(request.getArgs());
+			logger.info("adjudicating operation {} with args {}", opName, args);
 
 			Object result = adjudicator.adjudicateOperation(opName, args);
 
-			responseObserver.onNext(AdjudicateOperationResponse.newBuilder()
-					                        .setValue(ProtoUtil.objectToValue(result))
-					                        .build());
+			AdjudicateOperationResponse.Builder builder = AdjudicateOperationResponse.newBuilder();
+			if (result != null) {
+				builder.setValue(ProtoUtil.objectToValue(result));
+			}
+			responseObserver.onNext(builder.build());
+			responseObserver.onCompleted();
 		} catch (UnauthorizedException e) {
 			responseObserver.onError(Status.PERMISSION_DENIED
 					                         .withDescription(e.getMessage())
