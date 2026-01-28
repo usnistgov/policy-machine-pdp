@@ -4,7 +4,6 @@ import gov.nist.csd.pm.pdp.resource.config.ResourcePDPConfig;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import org.springframework.stereotype.Component;
 
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;

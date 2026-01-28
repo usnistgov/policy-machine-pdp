@@ -1,6 +1,5 @@
 package gov.nist.csd.pm.pdp.shared.eventstore;
 
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.atomic.AtomicLong;

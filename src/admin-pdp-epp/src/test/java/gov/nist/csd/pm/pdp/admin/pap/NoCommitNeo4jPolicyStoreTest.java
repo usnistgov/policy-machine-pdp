@@ -1,17 +1,17 @@
 package gov.nist.csd.pm.pdp.admin.pap;
 
-import static org.junit.Assert.assertFalse;
-import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
-
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.NodeType;
-import java.io.File;
-
 import org.junit.jupiter.api.Test;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
+
+import java.io.File;
+
+import static org.junit.Assert.assertFalse;
+import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
 class NoCommitNeo4jPolicyStoreTest {
 

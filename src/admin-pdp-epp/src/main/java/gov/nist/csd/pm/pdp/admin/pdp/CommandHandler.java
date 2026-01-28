@@ -5,14 +5,8 @@ import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
 import gov.nist.csd.pm.core.common.prohibition.ContainerCondition;
 import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
 import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pap.serialization.json.JSONDeserializer;
 import gov.nist.csd.pm.core.pdp.PDPTx;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
 import gov.nist.csd.pm.proto.v1.cmd.*;
 import gov.nist.csd.pm.proto.v1.model.SerializationFormat;
@@ -20,6 +14,10 @@ import gov.nist.csd.pm.proto.v1.model.Value;
 import gov.nist.csd.pm.proto.v1.model.ValueList;
 import gov.nist.csd.pm.proto.v1.model.ValueMap;
 import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Handles the execution of administrative commands.

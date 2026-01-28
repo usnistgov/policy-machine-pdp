@@ -9,11 +9,11 @@ import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
 import gov.nist.csd.pm.proto.v1.adjudication.AdjudicateOperationResponse;
 import gov.nist.csd.pm.proto.v1.adjudication.OperationRequest;
 import gov.nist.csd.pm.proto.v1.adjudication.ResourceAdjudicationServiceGrpc;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import io.grpc.Status;
 
 @GrpcService
 public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.ResourceAdjudicationServiceImplBase {

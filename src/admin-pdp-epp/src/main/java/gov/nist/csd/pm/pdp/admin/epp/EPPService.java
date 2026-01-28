@@ -1,7 +1,6 @@
 package gov.nist.csd.pm.pdp.admin.epp;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.epp.EPP;
 import gov.nist.csd.pm.pdp.admin.pdp.Adjudicator;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
 import gov.nist.csd.pm.proto.v1.epp.EPPServiceGrpc;

@@ -21,7 +21,9 @@ import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -34,10 +36,6 @@ class ProtoUtilTest {
 
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     PolicyQuery query;
-
-    // -------------------------------------------------------------------------
-    // Value <-> Object conversions
-    // -------------------------------------------------------------------------
 
     @Test
     void valueToObject_int64() {
@@ -179,16 +177,11 @@ class ProtoUtilTest {
         assertEquals("test", back.getValuesMap().get("b").getStringValue());
     }
 
-    // -------------------------------------------------------------------------
-    // NodeRef resolution
-    // -------------------------------------------------------------------------
-
     @Test
     void resolveNodeRefId_idCase() throws Exception {
         NodeRef ref = NodeRef.newBuilder().setId(1).build();
         assertEquals(1L, ProtoUtil.resolveNodeRefId(pap, ref));
 
-        // graph shouldn't be consulted
         verify(pap, never()).query();
     }
 
@@ -229,10 +222,6 @@ class ProtoUtilTest {
         assertEquals(List.of(1L, 2L), ids);
     }
 
-    // -------------------------------------------------------------------------
-    // Query UserContext / TargetContext proto -> model
-    // -------------------------------------------------------------------------
-
     @Test
     void fromUserContextProto_userNode() throws Exception {
         gov.nist.csd.pm.proto.v1.query.UserContext proto =
@@ -247,7 +236,6 @@ class ProtoUtilTest {
 
     @Test
     void fromUserContextProto_userAttributes() throws Exception {
-        // NodeRefList is assumed to exist in your proto model
         NodeRefList attrs = NodeRefList.newBuilder()
                 .addNodes(NodeRef.newBuilder().setId(1).build())
                 .addNodes(NodeRef.newBuilder().setId(2).build())
@@ -310,10 +298,6 @@ class ProtoUtilTest {
         assertEquals("target context not set", ex.getMessage());
     }
 
-    // -------------------------------------------------------------------------
-    // Node -> proto
-    // -------------------------------------------------------------------------
-
     @Test
     void toNodeProto_setsFields() {
         Node node = mock(Node.class);
@@ -333,10 +317,6 @@ class ProtoUtilTest {
         assertEquals(NodeType.UA, proto.getType());
         assertEquals("test", proto.getPropertiesMap().get("a"));
     }
-
-    // -------------------------------------------------------------------------
-    // Prohibition -> proto
-    // -------------------------------------------------------------------------
 
     @Test
     void toProhibitionProto_subjectNode_andContainers() throws Exception {
@@ -407,10 +387,6 @@ class ProtoUtilTest {
         assertEquals("test", proto.getProcess());
     }
 
-    // -------------------------------------------------------------------------
-    // Obligation -> proto
-    // -------------------------------------------------------------------------
-
     @Test
     void toObligationProto_mapsFields() throws Exception {
         Obligation obligation = mock(Obligation.class);
@@ -433,10 +409,6 @@ class ProtoUtilTest {
         assertEquals(1L, proto.getAuthor().getId());
         assertEquals("test", proto.getPml());
     }
-
-    // -------------------------------------------------------------------------
-    // Explain -> proto
-    // -------------------------------------------------------------------------
 
     @Test
     void buildExplainProto_nullExplain_returnsEmpty() {
@@ -470,10 +442,6 @@ class ProtoUtilTest {
         assertEquals(0, resp.getPolicyClassesCount());
         assertEquals(0, resp.getProhibitionsCount());
     }
-
-    // -------------------------------------------------------------------------
-    // EventContext <-> proto
-    // -------------------------------------------------------------------------
 
     @Nested
     class EventContextTests {

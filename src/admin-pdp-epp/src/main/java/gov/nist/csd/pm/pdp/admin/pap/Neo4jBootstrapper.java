@@ -1,27 +1,29 @@
 package gov.nist.csd.pm.pdp.admin.pap;
 
-import com.eventstore.dbclient.*;
+import com.eventstore.dbclient.ReadResult;
+import com.eventstore.dbclient.ReadStreamOptions;
+import com.eventstore.dbclient.ResolvedEvent;
+import com.eventstore.dbclient.StreamNotFoundException;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.operation.Operation;
-import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapperWithSuper;
-import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.core.pdp.bootstrap.JSONBootstrapper;
-import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapper;
+import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapperWithSuper;
 import gov.nist.csd.pm.core.pdp.bootstrap.PolicyBootstrapper;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-import javax.annotation.PostConstruct;
-
+import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 @Component(value = "Neo4jBootstrapper")
 public class Neo4jBootstrapper {

@@ -3,11 +3,11 @@ package gov.nist.csd.pm.pdp.shared.eventstore;
 import com.eventstore.dbclient.EventStoreDBClient;
 import com.eventstore.dbclient.EventStoreDBClientSettings;
 import com.eventstore.dbclient.EventStoreDBPersistentSubscriptionsClient;
-
-import javax.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+
+import javax.annotation.PreDestroy;
 
 @Service
 public class EventStoreConnectionManager {

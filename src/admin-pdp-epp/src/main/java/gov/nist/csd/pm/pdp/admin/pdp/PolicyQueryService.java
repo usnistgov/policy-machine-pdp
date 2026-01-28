@@ -20,7 +20,8 @@ import gov.nist.csd.pm.core.pap.serialization.PolicySerializer;
 import gov.nist.csd.pm.core.pap.serialization.json.JSONSerializer;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
-import gov.nist.csd.pm.proto.v1.model.*;
+import gov.nist.csd.pm.proto.v1.model.SerializationFormat;
+import gov.nist.csd.pm.proto.v1.model.StringList;
 import gov.nist.csd.pm.proto.v1.query.*;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -28,7 +29,10 @@ import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 @GrpcService
 public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServiceImplBase {

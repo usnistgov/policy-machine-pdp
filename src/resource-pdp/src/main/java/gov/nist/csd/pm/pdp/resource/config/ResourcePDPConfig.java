@@ -1,7 +1,8 @@
 package gov.nist.csd.pm.pdp.resource.config;
 
-import javax.annotation.PostConstruct;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import javax.annotation.PostConstruct;
 
 @ConfigurationProperties(prefix = "pm.pdp.resource")
 public class ResourcePDPConfig {

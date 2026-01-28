@@ -38,7 +38,6 @@ class UserContextInterceptorTest {
 
 	@Test
 	void interceptCall_withoutHeaders_setsToNull() {
-		// Empty metadata
 		Metadata headers = new Metadata();
 
 		ServerCallHandler<String, String> handler = (call1, headers1) -> {
@@ -53,7 +52,6 @@ class UserContextInterceptorTest {
 
 	@Test
 	void interceptCall_invalidAttrsFormat_throwsRuntimeException() {
-		// Empty metadata
 		Metadata headers = new Metadata();
 
 		headers.put(PM_USER_ATTRS_METADATA_KEY, "\"test\"");

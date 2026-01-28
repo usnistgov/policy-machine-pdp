@@ -2,12 +2,10 @@ package gov.nist.csd.pm.pdp.admin.plugin;
 
 import gov.nist.csd.pm.core.pap.operation.*;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
-import gov.nist.csd.pm.pdp.admin.plugin.wrapper.AdminOperationPluginWrapper;
-import gov.nist.csd.pm.pdp.admin.plugin.wrapper.FunctionPluginWrapper;
-import gov.nist.csd.pm.pdp.admin.plugin.wrapper.QueryOperationPluginWrapper;
-import gov.nist.csd.pm.pdp.admin.plugin.wrapper.ResourceOperationPluginWrapper;
-import gov.nist.csd.pm.pdp.admin.plugin.wrapper.RoutinePluginWrapper;
-import org.pf4j.*;
+import gov.nist.csd.pm.pdp.admin.plugin.wrapper.*;
+import org.pf4j.DefaultPluginManager;
+import org.pf4j.PluginManager;
+import org.pf4j.PluginWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
@@ -44,7 +42,6 @@ public class PluginLoader {
 
 		List<Operation<?>> wrapped = new ArrayList<>();
 
-		// PF4J will return *instances* of all @Extension classes across all plugins
 		List<Operation> providers = pluginManager.getExtensions(Operation.class);
 
 		for (Operation op : providers) {
