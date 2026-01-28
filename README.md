@@ -52,8 +52,6 @@ pm:
     admin:
       # The file path to the policy file used to bootstrap the PDP.
       bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/policy.json"
-      # The user bootstrapping the policy.
-      bootstrap-user: "u1"
       # Path to store Neo4j policy locally.
       neo4j-db-path: "neo4j/data"
       # Name of the EventStoreDB consumer group.
@@ -226,9 +224,9 @@ pm:
       admin-port: 50052
       # The mode of the EPP client: ASYNC, SYNC, or DISABLED. Default is ASYNC.
       epp-mode: sync
-      # The timeout that the EPPClient will use when waiting for the current revision to catch up
+      # The timeout (in milliseconds) that the EPPClient will use when waiting for the current revision to catch up
       # to the side effect revision returned by the EPP. This value will be ignored if epp-mode is ASYNC.
-      epp-side-effect-timeout: 10
+      epp-sync-catch-up-timeout: 10000
     esdb:
       # Event store hostname.
       hostname: localhost
