@@ -37,6 +37,11 @@ public class AdminPDPConfig {
      */
     private String pluginsDir;
 
+    /**
+     * The amount of time, in milliseconds, that the service will wait to ensure revision consistency with event store.
+     */
+    private int revisionConsistencyTimeout;
+
     @PostConstruct
     public void validate() {
         if (neo4jDbPath == null || neo4jDbPath.isEmpty() || neo4jDbPath.equals("null")) {
@@ -53,6 +58,10 @@ public class AdminPDPConfig {
 
         if (snapshotInterval <= 0) {
             setSnapshotInterval(1000);
+        }
+
+        if (revisionConsistencyTimeout <= 0) {
+            setRevisionConsistencyTimeout(1000);
         }
     }
 
@@ -102,5 +111,13 @@ public class AdminPDPConfig {
 
     public void setPluginsDir(String pluginsDir) {
         this.pluginsDir = pluginsDir;
+    }
+
+    public int getRevisionConsistencyTimeout() {
+        return revisionConsistencyTimeout;
+    }
+
+    public void setRevisionConsistencyTimeout(int revisionConsistencyTimeout) {
+        this.revisionConsistencyTimeout = revisionConsistencyTimeout;
     }
 }

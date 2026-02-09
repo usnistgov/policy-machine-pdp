@@ -13,7 +13,7 @@ public class QueryOperationPluginWrapper<T> extends QueryOperation<T> implements
 	private final ClassLoader classLoader;
 
 	public QueryOperationPluginWrapper(QueryOperation<T> operation, ClassLoader classLoader) {
-		super(operation.getName(), operation.getReturnType(), operation.getFormalParameters());
+		super(operation.getName(), operation.getReturnType(), operation.getFormalParameters(), operation.getRequiredCapabilities());
 		this.operation = operation;
 		this.classLoader = classLoader;
 	}

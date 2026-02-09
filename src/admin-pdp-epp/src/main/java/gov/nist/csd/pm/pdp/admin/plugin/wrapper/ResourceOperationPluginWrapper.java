@@ -13,7 +13,7 @@ public class ResourceOperationPluginWrapper<T> extends ResourceOperation<T> impl
 	private final ClassLoader classLoader;
 
 	public ResourceOperationPluginWrapper(ResourceOperation<T> operation, ClassLoader classLoader) {
-		super(operation.getName(), operation.getReturnType(), operation.getFormalParameters());
+		super(operation.getName(), operation.getReturnType(), operation.getFormalParameters(), operation.getRequiredCapabilities());
 		this.operation = operation;
 		this.classLoader = classLoader;
 	}

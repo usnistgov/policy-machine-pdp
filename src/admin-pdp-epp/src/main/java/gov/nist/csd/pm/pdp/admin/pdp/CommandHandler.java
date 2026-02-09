@@ -1,14 +1,12 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
-import gov.nist.csd.pm.core.common.prohibition.ContainerCondition;
-import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
 import gov.nist.csd.pm.core.pap.PAP;
+import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
 import gov.nist.csd.pm.core.pap.serialization.json.JSONDeserializer;
 import gov.nist.csd.pm.core.pdp.PDPTx;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
-import gov.nist.csd.pm.proto.v1.cmd.*;
+import gov.nist.csd.pm.proto.v1.pdp.cmd.*;
 import gov.nist.csd.pm.proto.v1.model.SerializationFormat;
 import gov.nist.csd.pm.proto.v1.model.Value;
 import gov.nist.csd.pm.proto.v1.model.ValueList;
@@ -16,6 +14,7 @@ import gov.nist.csd.pm.proto.v1.model.ValueMap;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -35,25 +34,26 @@ public class CommandHandler {
      */
     public Value handleCommand(NGACContext ngacCtx, PDPTx pdpTx, AdminOperationCommand adminCommand) throws PMException {
         return switch (adminCommand.getCmdCase()) {
-            case CREATE_POLICY_CLASS_CMD     -> handleCreatePolicyClassCmd(pdpTx, adminCommand.getCreatePolicyClassCmd());
-            case CREATE_USER_ATTRIBUTE_CMD   -> handleCreateUserAttributeCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateUserAttributeCmd());
-            case CREATE_USER_CMD             -> handleCreateUserCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateUserCmd());
-            case CREATE_OBJECT_ATTRIBUTE_CMD -> handleCreateObjectAttributeCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateObjectAttributeCmd());
-            case CREATE_OBJECT_CMD           -> handleCreateObjectCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateObjectCmd());
-            case SET_NODE_PROPERTIES_CMD     -> handleSetNodePropertiesCmd(pdpTx, ngacCtx.pap(), adminCommand.getSetNodePropertiesCmd());
-            case DELETE_NODE_CMD             -> handleDeleteNodeCmd(pdpTx, ngacCtx.pap(), adminCommand.getDeleteNodeCmd());
-            case ASSIGN_CMD                  -> handleAssignCmd(pdpTx, ngacCtx.pap(), adminCommand.getAssignCmd());
-            case DEASSIGN_CMD                -> handleDeassignCmd(pdpTx, ngacCtx.pap(), adminCommand.getDeassignCmd());
-            case ASSOCIATE_CMD               -> handleAssociateCmd(pdpTx, ngacCtx.pap(), adminCommand.getAssociateCmd());
-            case DISSOCIATE_CMD              -> handleDissociateCmd(pdpTx, ngacCtx.pap(), adminCommand.getDissociateCmd());
-            case CREATE_PROHIBITION_CMD      -> handleCreateProhibitionCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateProhibitionCmd());
-            case DELETE_PROHIBITION_CMD      -> handleDeleteProhibitionCmd(pdpTx, adminCommand.getDeleteProhibitionCmd());
-            case DELETE_OBLIGATION_CMD       -> handleDeleteObligationCmd(pdpTx, adminCommand.getDeleteObligationCmd());
-            case DELETE_ADMIN_OPERATION_CMD  -> handleDeleteOperationCmd(pdpTx, adminCommand.getDeleteAdminOperationCmd());
-            case SET_RESOURCE_OPERATIONS_CMD -> handleSetResourceOperationsCmd(pdpTx, adminCommand.getSetResourceOperationsCmd());
-            case EXECUTE_PML_CMD             -> handleExecutePmlCmd(pdpTx, adminCommand.getExecutePmlCmd());
-	        case DESERIALIZE_CMD             -> handleDeserializeCmd(pdpTx, adminCommand.getDeserializeCmd());
-	        case CMD_NOT_SET                 -> throw new PMException("cmd not set");
+            case CREATE_POLICY_CLASS_CMD        -> handleCreatePolicyClassCmd(pdpTx, adminCommand.getCreatePolicyClassCmd());
+            case CREATE_USER_ATTRIBUTE_CMD      -> handleCreateUserAttributeCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateUserAttributeCmd());
+            case CREATE_USER_CMD                -> handleCreateUserCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateUserCmd());
+            case CREATE_OBJECT_ATTRIBUTE_CMD    -> handleCreateObjectAttributeCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateObjectAttributeCmd());
+            case CREATE_OBJECT_CMD              -> handleCreateObjectCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateObjectCmd());
+            case SET_NODE_PROPERTIES_CMD        -> handleSetNodePropertiesCmd(pdpTx, ngacCtx.pap(), adminCommand.getSetNodePropertiesCmd());
+            case DELETE_NODE_CMD                -> handleDeleteNodeCmd(pdpTx, ngacCtx.pap(), adminCommand.getDeleteNodeCmd());
+            case ASSIGN_CMD                     -> handleAssignCmd(pdpTx, ngacCtx.pap(), adminCommand.getAssignCmd());
+            case DEASSIGN_CMD                   -> handleDeassignCmd(pdpTx, ngacCtx.pap(), adminCommand.getDeassignCmd());
+            case ASSOCIATE_CMD                  -> handleAssociateCmd(pdpTx, ngacCtx.pap(), adminCommand.getAssociateCmd());
+            case DISSOCIATE_CMD                 -> handleDissociateCmd(pdpTx, ngacCtx.pap(), adminCommand.getDissociateCmd());
+	        case CREATE_NODE_PROHIBITION_CMD    -> handleCreateNodeProhibitionCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateNodeProhibitionCmd());
+	        case CREATE_PROCESS_PROHIBITION_CMD -> handleCreateProcessProhibitionCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateProcessProhibitionCmd());
+            case DELETE_PROHIBITION_CMD         -> handleDeleteProhibitionCmd(pdpTx, adminCommand.getDeleteProhibitionCmd());
+            case DELETE_OBLIGATION_CMD          -> handleDeleteObligationCmd(pdpTx, adminCommand.getDeleteObligationCmd());
+            case DELETE_ADMIN_OPERATION_CMD     -> handleDeleteOperationCmd(pdpTx, adminCommand.getDeleteAdminOperationCmd());
+            case SET_RESOURCE_OPERATIONS_CMD    -> handleSetResourceOperationsCmd(pdpTx, adminCommand.getSetResourceOperationsCmd());
+            case EXECUTE_PML_CMD                -> handleExecutePmlCmd(pdpTx, adminCommand.getExecutePmlCmd());
+	        case DESERIALIZE_CMD                -> handleDeserializeCmd(pdpTx, adminCommand.getDeserializeCmd());
+	        case CMD_NOT_SET                    -> throw new PMException("cmd not set");
         };
     }
 
@@ -148,27 +148,28 @@ public class CommandHandler {
         return Value.newBuilder().build();
     }
 
-    private Value handleCreateProhibitionCmd(PDPTx pdpTx, PAP pap, CreateProhibitionCmd cmd) throws PMException {
-        ProhibitionSubject subject = switch (cmd.getSubjectCase()) {
-            case NODE -> new ProhibitionSubject(ProtoUtil.resolveNodeRefId(pap, cmd.getNode()));
-            case PROCESS -> new ProhibitionSubject(cmd.getProcess());
-            case SUBJECT_NOT_SET -> throw new PMException("subject not set");
-        };
-
-        List<ContainerCondition> containerConditions = new ArrayList<>();
-        for (CreateProhibitionCmd.ContainerCondition ccProto : cmd.getContainerConditionsList()) {
-            containerConditions.add(new ContainerCondition(
-                    ProtoUtil.resolveNodeRefId(pap, ccProto.getContainer()),
-                    ccProto.getComplement()
-            ));
-        }
-
-        pdpTx.modify().prohibitions().createProhibition(
+    private Value handleCreateNodeProhibitionCmd(PDPTx pdpTx, PAP pap, CreateNodeProhibitionCmd cmd) throws PMException {
+        pdpTx.modify().prohibitions().createNodeProhibition(
                 cmd.getName(),
-                subject,
+                ProtoUtil.resolveNodeRefId(pap, cmd.getNode()),
                 new AccessRightSet(cmd.getArsetList()),
-                cmd.getIntersection(),
-                containerConditions
+                new HashSet<>(ProtoUtil.resolveNodeRefIdList(pap, cmd.getInclusionSet().getNodesList())),
+                new HashSet<>(ProtoUtil.resolveNodeRefIdList(pap, cmd.getExclusionSet().getNodesList())),
+                cmd.getIsConjunctive()
+        );
+
+        return Value.newBuilder().build();
+    }
+
+    private Value handleCreateProcessProhibitionCmd(PDPTx pdpTx, PAP pap, CreateProcessProhibitionCmd cmd) throws PMException {
+        pdpTx.modify().prohibitions().createProcessProhibition(
+                cmd.getName(),
+                ProtoUtil.resolveNodeRefId(pap, cmd.getNode()),
+				cmd.getProcess(),
+                new AccessRightSet(cmd.getArsetList()),
+                new HashSet<>(ProtoUtil.resolveNodeRefIdList(pap, cmd.getInclusionSet().getNodesList())),
+                new HashSet<>(ProtoUtil.resolveNodeRefIdList(pap, cmd.getExclusionSet().getNodesList())),
+                cmd.getIsConjunctive()
         );
 
         return Value.newBuilder().build();

@@ -2,19 +2,15 @@ package gov.nist.csd.pm.pdp.shared.eventstore;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.NodeType;
-import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
-import gov.nist.csd.pm.core.common.prohibition.ContainerCondition;
-import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
 import gov.nist.csd.pm.core.pap.PAP;
+import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pap.store.PolicyStore;
 import gov.nist.csd.pm.pdp.proto.event.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class PolicyEventHandler {
 
@@ -137,23 +133,34 @@ public class PolicyEventHandler {
     }
 
     private void handleProhibitionCreated(ProhibitionCreated prohibitionCreated, PolicyStore policyStore) throws PMException {
-        Map<Long, Boolean> containerConditionsMap = prohibitionCreated.getContainerConditionsMap();
-        List<ContainerCondition> containerConditions = new ArrayList<>();
-        for (Map.Entry<Long, Boolean> entry : containerConditionsMap.entrySet()) {
-            containerConditions.add(new ContainerCondition(entry.getKey(), entry.getValue()));
+        String name = prohibitionCreated.getName();
+        long node = prohibitionCreated.getNode();
+        String process = prohibitionCreated.hasProcess() ? prohibitionCreated.getProcess() : null;
+        AccessRightSet accessRightSet = new AccessRightSet(prohibitionCreated.getArsetList());
+        List<Long> inclusionSetList = prohibitionCreated.getInclusionSetList();
+        List<Long> exclusionSetList = prohibitionCreated.getExclusionSetList();
+        boolean isConjunctive = prohibitionCreated.getIsConjunctive();
+
+        if (process == null) {
+            policyStore.prohibitions().createNodeProhibition(
+                    name,
+                    node,
+                    accessRightSet,
+                    new HashSet<>(inclusionSetList),
+                    new HashSet<>(exclusionSetList),
+                    isConjunctive
+            );
+        } else {
+            policyStore.prohibitions().createProcessProhibition(
+                    name,
+                    node,
+                    process,
+                    accessRightSet,
+                    new HashSet<>(inclusionSetList),
+                    new HashSet<>(exclusionSetList),
+                    isConjunctive
+            );
         }
-
-        ProhibitionSubject prohibitionSubject = (prohibitionCreated.getSubjectCase() == ProhibitionCreated.SubjectCase.NODE)
-                ? new ProhibitionSubject(prohibitionCreated.getNode())
-                : new ProhibitionSubject(prohibitionCreated.getProcess());
-
-        policyStore.prohibitions().createProhibition(
-                prohibitionCreated.getName(),
-                prohibitionSubject,
-                new AccessRightSet(prohibitionCreated.getArsetList()),
-                prohibitionCreated.getIntersection(),
-                containerConditions
-        );
     }
 
     private void handleProhibitionDeleted(ProhibitionDeleted prohibitionDeleted, PolicyStore policyStore) throws PMException {

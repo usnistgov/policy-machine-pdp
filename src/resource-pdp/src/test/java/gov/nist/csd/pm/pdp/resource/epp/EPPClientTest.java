@@ -3,7 +3,6 @@ package gov.nist.csd.pm.pdp.resource.epp;
 import gov.nist.csd.pm.core.common.event.EventContext;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pdp.PDP;
-import gov.nist.csd.pm.pdp.resource.RevisionCatchUpGate;
 import gov.nist.csd.pm.pdp.resource.config.EPPMode;
 import gov.nist.csd.pm.pdp.resource.config.ResourcePDPConfig;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
@@ -36,7 +35,6 @@ class EPPClientTest {
 	@Mock private PDP pdp;
 	@Mock private PAP pap;
 	@Mock private ResourcePDPConfig resourcePDPConfig;
-	@Mock private RevisionCatchUpGate revisionCatchUpGate;
 
 	@Mock private EPPServiceGrpc.EPPServiceBlockingStub blockingStub;
 	@Mock private EPPServiceGrpc.EPPServiceStub asyncStub;
@@ -45,7 +43,7 @@ class EPPClientTest {
 
 	@BeforeEach
 	void setUp() {
-		client = new EPPClient(pdp, pap, resourcePDPConfig, revisionCatchUpGate);
+		client = new EPPClient(pdp, pap, resourcePDPConfig);
 	}
 
 	@Test
@@ -126,7 +124,7 @@ class EPPClientTest {
 
 		client.processEvent(mock(EventContext.class));
 
-		verifyNoInteractions(asyncStub, blockingStub, revisionCatchUpGate);
+		verifyNoInteractions(asyncStub, blockingStub);
 	}
 
 	@Test
@@ -144,7 +142,6 @@ class EPPClientTest {
 			client.processEvent(eventCtx);
 
 			verify(asyncStub).processEvent(eq(protoCtx), any(StreamObserver.class));
-			verifyNoInteractions(revisionCatchUpGate);
 		}
 	}
 
@@ -166,7 +163,6 @@ class EPPClientTest {
 			client.processEvent(eventCtx);
 
 			verify(blockingStub).processEvent(protoCtx);
-			verifyNoInteractions(revisionCatchUpGate);
 		}
 	}
 
@@ -187,34 +183,6 @@ class EPPClientTest {
 			client.processEvent(eventCtx);
 
 			verify(blockingStub).processEvent(protoCtx);
-			verify(revisionCatchUpGate).setWaitForRevision(5);
-			verify(revisionCatchUpGate).awaitCatchUp();
-		}
-	}
-
-	@Test
-	void processEvent_whenSync_andAwaitInterrupted_wrapsInRuntimeException() throws Exception {
-		when(resourcePDPConfig.getEppMode()).thenReturn(EPPMode.SYNC);
-		writeField(client, "stub", null);
-		writeField(client, "blockingStub", blockingStub);
-
-		EventContext eventCtx = mock(EventContext.class);
-		gov.nist.csd.pm.proto.v1.epp.EventContext protoCtx = mock(gov.nist.csd.pm.proto.v1.epp.EventContext.class);
-
-		when(blockingStub.processEvent(protoCtx)).thenReturn(responseWithLastRevision(7));
-
-		doThrow(new InterruptedException("test exception"))
-				.when(revisionCatchUpGate)
-				.awaitCatchUp();
-
-		try (MockedStatic<ProtoUtil> protoUtil = mockStatic(ProtoUtil.class)) {
-			protoUtil.when(() -> ProtoUtil.toEventContextProto(eventCtx)).thenReturn(protoCtx);
-
-			RuntimeException ex = assertThrows(RuntimeException.class, () -> client.processEvent(eventCtx));
-			assertInstanceOf(InterruptedException.class, ex.getCause());
-
-			verify(revisionCatchUpGate).setWaitForRevision(7);
-			verify(revisionCatchUpGate).awaitCatchUp();
 		}
 	}
 

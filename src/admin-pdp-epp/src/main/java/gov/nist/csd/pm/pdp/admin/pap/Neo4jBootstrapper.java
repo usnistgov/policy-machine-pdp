@@ -88,7 +88,7 @@ public class Neo4jBootstrapper {
 
         PolicyBootstrapper policyBootstrapper;
         if (bootstrapFilePath.endsWith(".pml")) {
-            policyBootstrapper = new PMLBootstrapperWithSuper(false, data);
+            policyBootstrapper = new PMLBootstrapperWithSuper(data);
         } else if (bootstrapFilePath.endsWith(".json")) {
             policyBootstrapper = new JSONBootstrapper(data);
         } else {

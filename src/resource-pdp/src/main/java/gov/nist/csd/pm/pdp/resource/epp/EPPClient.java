@@ -4,7 +4,6 @@ import gov.nist.csd.pm.core.common.event.EventContext;
 import gov.nist.csd.pm.core.epp.EPP;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pdp.PDP;
-import gov.nist.csd.pm.pdp.resource.RevisionCatchUpGate;
 import gov.nist.csd.pm.pdp.resource.config.EPPMode;
 import gov.nist.csd.pm.pdp.resource.config.ResourcePDPConfig;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
@@ -32,16 +31,13 @@ public class EPPClient extends EPP {
     private final ResourcePDPConfig resourcePDPConfig;
     private EPPServiceGrpc.EPPServiceBlockingStub blockingStub;
     private EPPServiceGrpc.EPPServiceStub stub;
-    private final RevisionCatchUpGate revisionCatchUpGate;
 
     public EPPClient(PDP pdp,
                      PAP pap,
-                     ResourcePDPConfig resourcePDPConfig,
-                     RevisionCatchUpGate revisionCatchUpGate) {
+                     ResourcePDPConfig resourcePDPConfig) {
         super(pdp, pap);
         this.pdp = pdp;
         this.resourcePDPConfig = resourcePDPConfig;
-        this.revisionCatchUpGate = revisionCatchUpGate;
     }
 
     @PostConstruct
@@ -81,11 +77,7 @@ public class EPPClient extends EPP {
         if (stub != null) {
             processEventAsync(eventCtxProto);
         } else {
-	        try {
-		        processEventSync(eventCtxProto);
-	        } catch (InterruptedException e) {
-		        throw new RuntimeException(e);
-	        }
+	        processEventSync(eventCtxProto);
         }
     }
 
@@ -115,25 +107,8 @@ public class EPPClient extends EPP {
      * times out, the method will return a success still, but subsequent calls to the PDP will fail until it's caught up.
      * @param eventCtx the EventContext proto to send to the EPP server.
      */
-    private void processEventSync(gov.nist.csd.pm.proto.v1.epp.EventContext eventCtx) throws InterruptedException {
-        ProcessEventResponse eppResponse = blockingStub.processEvent(eventCtx);
-
-        // if there is no result than the EPP did generate any events
-        if (!eppResponse.hasResult()) {
-            return;
-        }
-
-        Value responseValue = eppResponse.getResult().getValuesMap().get("last_event_revision");
-        long lastEventRevision = responseValue.getInt64Value();
-        logger.debug("epp returned last_event_revision {}", lastEventRevision);
-
-        // notify the revision catchup gate to wait for the last epp revision
-        revisionCatchUpGate.setWaitForRevision(lastEventRevision);
-
-        // wait for the service to catch up
-        // if this times out without being caught up the current request will still return a success
-        // subsequent calls will fail fast until caught up
-        revisionCatchUpGate.awaitCatchUp();
+    private void processEventSync(gov.nist.csd.pm.proto.v1.epp.EventContext eventCtx) {
+        blockingStub.processEvent(eventCtx);
     }
 
     private Map<String, Object> buildGrpcConfigMap() {

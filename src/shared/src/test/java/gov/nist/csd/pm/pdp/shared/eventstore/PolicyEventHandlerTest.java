@@ -2,19 +2,18 @@ package gov.nist.csd.pm.pdp.shared.eventstore;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.NodeType;
-import gov.nist.csd.pm.core.common.prohibition.ContainerCondition;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.store.*;
 import gov.nist.csd.pm.pdp.proto.event.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -270,52 +269,47 @@ class PolicyEventHandlerTest {
 				.setName("test")
 				.setNode(1)
 				.addAllArset(List.of("read", "write"))
-				.setIntersection(true)
-				.putContainerConditions(2L, true)
-				.putContainerConditions(3L, false)
+				.setIsConjunctive(true)
+				.addAllInclusionSet(List.of(2L, 3L))
+				.addAllExclusionSet(List.of(4L))
 				.build();
 
 		PMEvent event = PMEvent.newBuilder().setProhibitionCreated(created).build();
 
 		handler.handleEvent(event);
 
-		@SuppressWarnings("unchecked")
-		ArgumentCaptor<List<ContainerCondition>> ccCaptor = ArgumentCaptor.forClass(List.class);
-
-		verify(prohibitions).createProhibition(
+		verify(prohibitions).createNodeProhibition(
 				eq("test"),
-				argThat(subject -> subject.isNode() && subject.getNodeId() == 1L),
+				eq(1L),
 				argThat(arset -> arset.contains("read") && arset.contains("write")),
-				eq(true),
-				ccCaptor.capture()
+				eq(Set.of(2L, 3L)),
+				eq(Set.of(4L)),
+				eq(true)
 		);
-
-		List<ContainerCondition> ccs = ccCaptor.getValue();
-		assertEquals(2, ccs.size());
-
-		assertTrue(ccs.stream().anyMatch(cc -> cc.getId() == 2L && cc.isComplement()));
-		assertTrue(ccs.stream().anyMatch(cc -> cc.getId() == 3L && !cc.isComplement()));
 	}
 
 	@Test
 	void prohibitionCreated_subjectProcess_createsProhibition() throws Exception {
 		ProhibitionCreated created = ProhibitionCreated.newBuilder()
 				.setName("test")
-				.setProcess("test")
+				.setNode(1)
+				.setProcess("testProcess")
 				.addAllArset(List.of("read"))
-				.setIntersection(false)
+				.setIsConjunctive(false)
 				.build();
 
 		PMEvent event = PMEvent.newBuilder().setProhibitionCreated(created).build();
 
 		handler.handleEvent(event);
 
-		verify(prohibitions).createProhibition(
+		verify(prohibitions).createProcessProhibition(
 				eq("test"),
-				argThat(subject -> !subject.isNode() && "test".equals(subject.getProcess())),
+				eq(1L),
+				eq("testProcess"),
 				argThat(arset -> arset.contains("read")),
-				eq(false),
-				anyList()
+				eq(Set.of()),
+				eq(Set.of()),
+				eq(false)
 		);
 	}
 

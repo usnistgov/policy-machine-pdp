@@ -3,16 +3,16 @@ package gov.nist.csd.pm.pdp.admin.pdp;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.Node;
 import gov.nist.csd.pm.core.common.graph.node.NodeType;
-import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
-import gov.nist.csd.pm.core.common.graph.relationship.Association;
 import gov.nist.csd.pm.core.common.prohibition.Prohibition;
-import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
 import gov.nist.csd.pm.core.pap.PAP;
+import gov.nist.csd.pm.core.pap.graph.Association;
 import gov.nist.csd.pm.core.pap.obligation.Obligation;
 import gov.nist.csd.pm.core.pap.operation.*;
+import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
 import gov.nist.csd.pm.core.pap.operation.arg.type.Type;
-import gov.nist.csd.pm.core.pap.operation.param.FormalParameter;
-import gov.nist.csd.pm.core.pap.operation.param.NodeFormalParameter;
+import gov.nist.csd.pm.core.pap.operation.param.*;
+import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredCapability;
+import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilege;
 import gov.nist.csd.pm.core.pap.query.model.explain.Explain;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.Subgraph;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.SubgraphPrivileges;
@@ -21,8 +21,7 @@ import gov.nist.csd.pm.core.pap.serialization.json.JSONSerializer;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
 import gov.nist.csd.pm.proto.v1.model.SerializationFormat;
-import gov.nist.csd.pm.proto.v1.model.StringList;
-import gov.nist.csd.pm.proto.v1.query.*;
+import gov.nist.csd.pm.proto.v1.pdp.query.*;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
@@ -346,16 +345,17 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	                                     StreamObserver<GetProhibitionsBySubjectResponse> responseObserver) {
 		try {
 			Collection<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitions = adjudicator.adjudicateQuery((pap, pdpTx) -> {
-				ProhibitionSubject subject = switch (request.getSubjectCase()) {
-					case NODE -> new ProhibitionSubject(ProtoUtil.resolveNodeRefId(pap, request.getNode()));
-					case PROCESS -> new ProhibitionSubject(request.getProcess());
-					case SUBJECT_NOT_SET -> throw new PMException("subject not set");
-				};
-
-				Collection<Prohibition> prohibitionsWithSubject = pdpTx.query().prohibitions().getProhibitionsWithSubject(subject);
+				Collection<Prohibition> prohibitionsWithSubject = pdpTx.query().prohibitions().getNodeProhibitions(ProtoUtil.resolveNodeRefId(pap, request.getNode()));
 				List<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = new ArrayList<>();
 				for (Prohibition prohibition : prohibitionsWithSubject) {
 					prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
+				}
+
+				if (request.hasProcess()) {
+					prohibitionsWithSubject = pdpTx.query().prohibitions().getProcessProhibitions(request.getProcess());
+					for (Prohibition prohibition : prohibitionsWithSubject) {
+						prohibitionProtos.add(ProtoUtil.toProhibitionProto(prohibition, pap.query()));
+					}
 				}
 
 				return prohibitionProtos;
@@ -445,7 +445,6 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 	@Override
 	public void getObligations(GetObligationsRequest request, StreamObserver<GetObligationsResponse> responseObserver) {
-		long s = System.nanoTime();
 		try {
 			List<gov.nist.csd.pm.proto.v1.model.Obligation> obligationProtos = adjudicator.adjudicateQuery((pap, pdpTx) -> {
 				Collection<Obligation> obligations = pdpTx.query().obligations().getObligations();
@@ -454,7 +453,6 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 			responseObserver.onNext(GetObligationsResponse.newBuilder().addAllObligations(obligationProtos).build());
 			responseObserver.onCompleted();
-			System.out.println(System.nanoTime() - s);
 		} catch (UnauthorizedException e) {
 			responseObserver.onError(Status.PERMISSION_DENIED.withDescription(e.getMessage()).withCause(e).asRuntimeException());
 		} catch (Exception e) {
@@ -996,28 +994,28 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 		}
 	}
 
-	private gov.nist.csd.pm.proto.v1.query.Subgraph toSubgraph(Subgraph subgraph) {
-		List<gov.nist.csd.pm.proto.v1.query.Subgraph> subgraphs = new ArrayList<>();
+	private gov.nist.csd.pm.proto.v1.pdp.query.Subgraph toSubgraph(Subgraph subgraph) {
+		List<gov.nist.csd.pm.proto.v1.pdp.query.Subgraph> subgraphs = new ArrayList<>();
 		for (Subgraph childSubgraph : subgraph.subgraphs()) {
 			subgraphs.add(toSubgraph(childSubgraph));
 		}
 
-		return gov.nist.csd.pm.proto.v1.query.Subgraph.newBuilder()
+		return gov.nist.csd.pm.proto.v1.pdp.query.Subgraph.newBuilder()
 				.setNode(ProtoUtil.toNodeProto(subgraph.node()))
 				.addAllSubgraphs(subgraphs)
 				.build();
 	}
 
-	private gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges toSubgraphPrivilegesProto(SubgraphPrivileges subgraphPrivileges) {
+	private gov.nist.csd.pm.proto.v1.pdp.query.SubgraphPrivileges toSubgraphPrivilegesProto(SubgraphPrivileges subgraphPrivileges) {
 		// prune any subgraphs in which all nodes are inaccessible
 		pruneInaccessibleSubgraphs(subgraphPrivileges);
 
-		List<gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges> subgraphs = new ArrayList<>();
+		List<gov.nist.csd.pm.proto.v1.pdp.query.SubgraphPrivileges> subgraphs = new ArrayList<>();
 		for (SubgraphPrivileges childSubgraph : subgraphPrivileges.ascendants()) {
 			subgraphs.add(toSubgraphPrivilegesProto(childSubgraph));
 		}
 
-		return gov.nist.csd.pm.proto.v1.query.SubgraphPrivileges.newBuilder()
+		return gov.nist.csd.pm.proto.v1.pdp.query.SubgraphPrivileges.newBuilder()
 				.setNode(ProtoUtil.toNodeProto(subgraphPrivileges.node()))
 				.addAllArset(subgraphPrivileges.privileges())
 				.addAllAscendants(subgraphs)
@@ -1048,9 +1046,9 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 			try {
 				entriesProto.add(NodePrivileges.newBuilder()
-						.setNode(ProtoUtil.toNodeProto(pap.query().graph().getNodeById(entry.getKey())))
-						.addAllArset(arset)
-						.build());
+						                 .setNode(ProtoUtil.toNodeProto(pap.query().graph().getNodeById(entry.getKey())))
+						                 .addAllArset(arset)
+						                 .build());
 			} catch (PMException e) {
 				throw new RuntimeException(e);
 			}
@@ -1098,9 +1096,9 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 			try {
 				associationProtos.add(
 						gov.nist.csd.pm.proto.v1.model.Association.newBuilder()
-								.setUa(ProtoUtil.toNodeProto(pap.query().graph().getNodeById(association.getSource())))
-								.setTarget(ProtoUtil.toNodeProto(pap.query().graph().getNodeById(association.getTarget())))
-								.addAllArset(association.getAccessRightSet())
+								.setUa(ProtoUtil.toNodeProto(pap.query().graph().getNodeById(association.source())))
+								.setTarget(ProtoUtil.toNodeProto(pap.query().graph().getNodeById(association.target())))
+								.addAllArset(association.arset())
 								.build()
 				);
 			} catch (PMException e) {
@@ -1128,11 +1126,19 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 		for (FormalParameter<?> formalParameter : formalParameters) {
 			Param.Builder builder = Param.newBuilder()
-					.setName(formalParameter.getName())
-					.setType(typeToParamType(formalParameter.getType()));
+					.setName(formalParameter.getName());
 
-			if (formalParameter instanceof NodeFormalParameter<?> nodeFormalParameter) {
-				builder.setReqCaps(StringList.newBuilder().addAllValues(nodeFormalParameter.getRequiredCapabilities()).build());
+			switch (formalParameter) {
+				case NodeIdFormalParameter nodeIdFormalParameter ->
+						builder.setNodeIdFormalParam(NodeIdFormalParam.newBuilder().build());
+				case NodeIdListFormalParameter nodeIdListFormalParameter ->
+						builder.setNodeIdListFormalParam(NodeIdListFormalParam.newBuilder().build());
+				case NodeNameFormalParameter nodeNameFormalParameter ->
+						builder.setNodeNameFormalParam(NodeNameFormalParam.newBuilder().build());
+				case NodeNameListFormalParameter nodeNameListFormalParameter ->
+						builder.setNodeNameListFormalParam(NodeNameListFormalParam.newBuilder().build());
+				default ->
+						builder.setFormalParam(FormalParam.newBuilder().setType(typeToParamType(formalParameter.getType())).build());
 			}
 
 			params.add(builder.build());
@@ -1206,7 +1212,38 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 		return Signature.newBuilder()
 				.setName(op.getName())
 				.addAllParams(convertParamsToProtoParams(op.getFormalParameters()))
+				.addAllRequiredCapabilities(convertReqCapsToProto(op.getRequiredCapabilities()))
 				.build();
+	}
+
+	private List<gov.nist.csd.pm.proto.v1.pdp.query.RequiredCapability> convertReqCapsToProto(List<RequiredCapability> requiredCapabilities) {
+		List<gov.nist.csd.pm.proto.v1.pdp.query.RequiredCapability> reqCapProto = new ArrayList<>();
+		for (RequiredCapability reqcap : requiredCapabilities) {
+			List<RequiredPrivilege> requiredPrivileges = reqcap.getRequiredPrivileges();
+
+			List<gov.nist.csd.pm.proto.v1.pdp.query.RequiredPrivilege> reqPrivProtos = new ArrayList<>();
+			for (RequiredPrivilege reqpriv : requiredPrivileges) {
+				switch (reqpriv) {
+					case gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilegeOnNode requiredPrivilegeOnNode ->
+							reqPrivProtos.add(gov.nist.csd.pm.proto.v1.pdp.query.RequiredPrivilege.newBuilder()
+									                  .setNode(requiredPrivilegeOnNode.getName())
+									                  .addAllRequired(requiredPrivilegeOnNode.getRequired())
+									                  .build());
+					case gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilegeOnParameter requiredPrivilegeOnParameter ->
+							reqPrivProtos.add(gov.nist.csd.pm.proto.v1.pdp.query.RequiredPrivilege.newBuilder()
+									                  .setParam(requiredPrivilegeOnParameter.param().getName())
+									                  .addAllRequired(requiredPrivilegeOnParameter.getRequired())
+									                  .build());
+					default -> throw new IllegalStateException("unsupported RequiredPrivilege instance in PolicyQueryService" + reqpriv.getClass().getName());
+				}
+			}
+
+			reqCapProto.add(gov.nist.csd.pm.proto.v1.pdp.query.RequiredCapability.newBuilder()
+					                .addAllRequiredPrivileges(reqPrivProtos)
+					                .build());
+		}
+
+		return reqCapProto;
 	}
 
 }

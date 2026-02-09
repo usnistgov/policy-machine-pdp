@@ -8,7 +8,7 @@ import gov.nist.csd.pm.pdp.admin.pap.EventTrackingPAP;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
-import gov.nist.csd.pm.proto.v1.cmd.AdminOperationCommand;
+import gov.nist.csd.pm.proto.v1.pdp.cmd.AdminOperationCommand;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import org.slf4j.Logger;

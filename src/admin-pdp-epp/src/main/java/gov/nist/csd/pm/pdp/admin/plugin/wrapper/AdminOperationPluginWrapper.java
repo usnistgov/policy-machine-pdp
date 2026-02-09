@@ -12,7 +12,7 @@ public class AdminOperationPluginWrapper<T> extends AdminOperation<T> implements
 	private final ClassLoader classLoader;
 
 	public AdminOperationPluginWrapper(AdminOperation<T> operation, ClassLoader classLoader) {
-		super(operation.getName(), operation.getReturnType(), operation.getFormalParameters());
+		super(operation.getName(), operation.getReturnType(), operation.getFormalParameters(), operation.getRequiredCapabilities());
 		this.operation = operation;
 		this.classLoader = classLoader;
 	}

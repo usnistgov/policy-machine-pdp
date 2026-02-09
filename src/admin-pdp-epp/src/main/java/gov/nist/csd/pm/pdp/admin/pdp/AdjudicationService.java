@@ -2,7 +2,7 @@ package gov.nist.csd.pm.pdp.admin.pdp;
 
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
-import gov.nist.csd.pm.proto.v1.adjudication.*;
+import gov.nist.csd.pm.proto.v1.pdp.adjudication.*;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;

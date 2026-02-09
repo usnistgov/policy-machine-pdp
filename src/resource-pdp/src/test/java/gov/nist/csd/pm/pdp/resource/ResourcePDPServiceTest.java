@@ -7,8 +7,8 @@ import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextFromHeader;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
-import gov.nist.csd.pm.proto.v1.adjudication.AdjudicateOperationResponse;
-import gov.nist.csd.pm.proto.v1.adjudication.OperationRequest;
+import gov.nist.csd.pm.proto.v1.pdp.adjudication.AdjudicateOperationResponse;
+import gov.nist.csd.pm.proto.v1.pdp.adjudication.OperationRequest;
 import gov.nist.csd.pm.proto.v1.model.Value;
 import gov.nist.csd.pm.proto.v1.model.ValueMap;
 import io.grpc.Status;
@@ -35,7 +35,6 @@ class ResourcePDPServiceTest {
 
 	@Mock private PDP pdp;
 	@Mock private PAP pap;
-	@Mock private RevisionCatchUpGate revisionCatchUpGate;
 
 	@Mock private StreamObserver<AdjudicateOperationResponse> responseObserver;
 
@@ -43,39 +42,11 @@ class ResourcePDPServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new ResourcePDPService(pdp, pap, revisionCatchUpGate);
-	}
-
-	@Test
-	void adjudicateResourceOperation_gateClosed_returnsUnavailable() {
-		when(revisionCatchUpGate.isClosed()).thenReturn(true);
-
-		OperationRequest request = OperationRequest.newBuilder()
-				.setOpName("op")
-				.setArgs(ValueMap.newBuilder().build())
-				.build();
-
-		service.adjudicateResourceOperation(request, responseObserver);
-
-		ArgumentCaptor<Throwable> errCaptor = ArgumentCaptor.forClass(Throwable.class);
-		verify(responseObserver).onError(errCaptor.capture());
-
-		Status status = Status.fromThrowable(errCaptor.getValue());
-		assertEquals(Status.Code.UNAVAILABLE, status.getCode());
-		assertEquals(
-				"the resource PDP timed out waiting for the last EPP revision",
-				status.getDescription()
-		);
-
-		verify(responseObserver, never()).onNext(any());
-		verify(responseObserver, never()).onCompleted();
-		verifyNoInteractions(pdp);
+		service = new ResourcePDPService(pdp, pap);
 	}
 
 	@Test
 	void adjudicateResourceOperation_success_callsPdp_andReturnsResponse() throws PMException {
-		when(revisionCatchUpGate.isClosed()).thenReturn(false);
-
 		OperationRequest request = OperationRequest.newBuilder()
 				.setOpName("op1")
 				.setArgs(ValueMap.newBuilder().build())
@@ -121,8 +92,6 @@ class ResourcePDPServiceTest {
 
 	@Test
 	void adjudicateResourceOperation_unauthorized_returnsPermissionDenied() throws PMException {
-		when(revisionCatchUpGate.isClosed()).thenReturn(false);
-
 		OperationRequest request = OperationRequest.newBuilder()
 				.setOpName("op1")
 				.setArgs(ValueMap.newBuilder().build())
@@ -164,8 +133,6 @@ class ResourcePDPServiceTest {
 
 	@Test
 	void adjudicateResourceOperation_genericException_returnsInternal() throws PMException {
-		when(revisionCatchUpGate.isClosed()).thenReturn(false);
-
 		OperationRequest request = OperationRequest.newBuilder()
 				.setOpName("op1")
 				.setArgs(ValueMap.newBuilder().build())

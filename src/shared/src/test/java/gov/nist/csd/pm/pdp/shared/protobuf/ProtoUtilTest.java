@@ -3,14 +3,13 @@ package gov.nist.csd.pm.pdp.shared.protobuf;
 import gov.nist.csd.pm.core.common.event.EventContext;
 import gov.nist.csd.pm.core.common.event.EventContextUser;
 import gov.nist.csd.pm.core.common.graph.node.Node;
-import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
-import gov.nist.csd.pm.core.common.prohibition.ContainerCondition;
-import gov.nist.csd.pm.core.common.prohibition.Prohibition;
-import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
+import gov.nist.csd.pm.core.common.prohibition.NodeProhibition;
+import gov.nist.csd.pm.core.common.prohibition.ProcessProhibition;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.obligation.Obligation;
 import gov.nist.csd.pm.core.pap.query.PolicyQuery;
 import gov.nist.csd.pm.core.pap.query.model.context.TargetContext;
+import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pap.query.model.explain.Explain;
 import gov.nist.csd.pm.proto.v1.model.*;
@@ -24,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -224,8 +224,8 @@ class ProtoUtilTest {
 
     @Test
     void fromUserContextProto_userNode() throws Exception {
-        gov.nist.csd.pm.proto.v1.query.UserContext proto =
-                gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder()
+        gov.nist.csd.pm.proto.v1.pdp.query.UserContext proto =
+                gov.nist.csd.pm.proto.v1.pdp.query.UserContext.newBuilder()
                         .setProcess("test")
                         .setUserNode(NodeRef.newBuilder().setId(1).build())
                         .build();
@@ -241,8 +241,8 @@ class ProtoUtilTest {
                 .addNodes(NodeRef.newBuilder().setId(2).build())
                 .build();
 
-        gov.nist.csd.pm.proto.v1.query.UserContext proto =
-                gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder()
+        gov.nist.csd.pm.proto.v1.pdp.query.UserContext proto =
+                gov.nist.csd.pm.proto.v1.pdp.query.UserContext.newBuilder()
                         .setProcess("test")
                         .setUserAttributes(attrs)
                         .build();
@@ -253,8 +253,8 @@ class ProtoUtilTest {
 
     @Test
     void fromUserContextProto_notSet_throws() {
-        gov.nist.csd.pm.proto.v1.query.UserContext proto =
-                gov.nist.csd.pm.proto.v1.query.UserContext.newBuilder()
+        gov.nist.csd.pm.proto.v1.pdp.query.UserContext proto =
+                gov.nist.csd.pm.proto.v1.pdp.query.UserContext.newBuilder()
                         .setProcess("test")
                         .build();
 
@@ -264,8 +264,8 @@ class ProtoUtilTest {
 
     @Test
     void fromTargetContextProto_targetNode() throws Exception {
-        gov.nist.csd.pm.proto.v1.query.TargetContext proto =
-                gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder()
+        gov.nist.csd.pm.proto.v1.pdp.query.TargetContext proto =
+                gov.nist.csd.pm.proto.v1.pdp.query.TargetContext.newBuilder()
                         .setTargetNode(NodeRef.newBuilder().setId(1).build())
                         .build();
 
@@ -280,8 +280,8 @@ class ProtoUtilTest {
                 .addNodes(NodeRef.newBuilder().setId(2).build())
                 .build();
 
-        gov.nist.csd.pm.proto.v1.query.TargetContext proto =
-                gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder()
+        gov.nist.csd.pm.proto.v1.pdp.query.TargetContext proto =
+                gov.nist.csd.pm.proto.v1.pdp.query.TargetContext.newBuilder()
                         .setTargetAttributes(attrs)
                         .build();
 
@@ -291,8 +291,8 @@ class ProtoUtilTest {
 
     @Test
     void fromTargetContextProto_notSet_throws() {
-        gov.nist.csd.pm.proto.v1.query.TargetContext proto =
-                gov.nist.csd.pm.proto.v1.query.TargetContext.newBuilder().build();
+        gov.nist.csd.pm.proto.v1.pdp.query.TargetContext proto =
+                gov.nist.csd.pm.proto.v1.pdp.query.TargetContext.newBuilder().build();
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> ProtoUtil.fromTargetContextProto(pap, proto));
         assertEquals("target context not set", ex.getMessage());
@@ -319,22 +319,15 @@ class ProtoUtilTest {
     }
 
     @Test
-    void toProhibitionProto_subjectNode_andContainers() throws Exception {
-        Prohibition prohibition = mock(Prohibition.class);
-        ProhibitionSubject subject = mock(ProhibitionSubject.class);
+    void toProhibitionProto_nodeProhibition_withContainers() throws Exception {
+        NodeProhibition prohibition = mock(NodeProhibition.class);
 
         when(prohibition.getName()).thenReturn("test");
         when(prohibition.getAccessRightSet()).thenReturn(new AccessRightSet("read", "write"));
-        when(prohibition.isIntersection()).thenReturn(false);
-
-        when(prohibition.getSubject()).thenReturn(subject);
-        when(subject.isNode()).thenReturn(true);
-        when(subject.getNodeId()).thenReturn(1L);
-
-        ContainerCondition cc = mock(ContainerCondition.class);
-        when(cc.getId()).thenReturn(2L);
-        when(cc.isComplement()).thenReturn(true);
-        when(prohibition.getContainers()).thenReturn(List.of(cc));
+        when(prohibition.isConjunctive()).thenReturn(false);
+        when(prohibition.getNodeId()).thenReturn(1L);
+        when(prohibition.getInclusionSet()).thenReturn(Set.of(2L));
+        when(prohibition.getExclusionSet()).thenReturn(Set.of());
 
         Node node1 = mock(Node.class);
         when(node1.getId()).thenReturn(1L);
@@ -355,35 +348,30 @@ class ProtoUtilTest {
 
         assertEquals("test", proto.getName());
         assertEquals(List.of("read", "write"), proto.getArsetList());
-        assertFalse(proto.getIntersection());
+        assertFalse(proto.getIsConjunctive());
         assertTrue(proto.hasNode());
 
         assertEquals(1L, proto.getNode().getId());
-        assertEquals(1, proto.getContainerConditionsCount());
-        assertEquals(2L, proto.getContainerConditions(0).getContainer().getId());
-        assertTrue(proto.getContainerConditions(0).getComplement());
+        assertEquals(1, proto.getInclusionSetCount());
+        assertEquals(2L, proto.getInclusionSet(0).getId());
     }
 
     @Test
-    void toProhibitionProto_subjectProcess() throws Exception {
-        Prohibition prohibition = mock(Prohibition.class);
-        ProhibitionSubject subject = mock(ProhibitionSubject.class);
+    void toProhibitionProto_processProhibition() throws Exception {
+        ProcessProhibition prohibition = mock(ProcessProhibition.class);
 
         when(prohibition.getName()).thenReturn("test");
         when(prohibition.getAccessRightSet()).thenReturn(new AccessRightSet(List.of("read")));
-        when(prohibition.isIntersection()).thenReturn(true);
-
-        when(prohibition.getSubject()).thenReturn(subject);
-        when(subject.isNode()).thenReturn(false);
-        when(subject.getProcess()).thenReturn("test");
-
-        when(prohibition.getContainers()).thenReturn(List.of());
+        when(prohibition.isConjunctive()).thenReturn(true);
+        when(prohibition.getProcess()).thenReturn("test");
+        when(prohibition.getInclusionSet()).thenReturn(Set.of());
+        when(prohibition.getExclusionSet()).thenReturn(Set.of());
 
         gov.nist.csd.pm.proto.v1.model.Prohibition proto = ProtoUtil.toProhibitionProto(prohibition, query);
 
         assertEquals("test", proto.getName());
         assertEquals(List.of("read"), proto.getArsetList());
-        assertTrue(proto.getIntersection());
+        assertTrue(proto.getIsConjunctive());
         assertEquals("test", proto.getProcess());
     }
 
@@ -411,8 +399,8 @@ class ProtoUtilTest {
     }
 
     @Test
-    void buildExplainProto_nullExplain_returnsEmpty() {
-        gov.nist.csd.pm.proto.v1.query.ExplainResponse resp = ProtoUtil.buildExplainProto(null, query);
+    void buildExplainProto_nullExplain_returnsEmpty() throws Exception {
+        gov.nist.csd.pm.proto.v1.pdp.query.ExplainResponse resp = ProtoUtil.buildExplainProto(null, query);
         assertNotNull(resp);
         assertEquals(0, resp.getPrivilegesCount());
         assertEquals(0, resp.getDeniedPrivilegesCount());
@@ -421,7 +409,7 @@ class ProtoUtilTest {
     }
 
     @Test
-    void buildExplainProto_minimalExplain_noPolicyClasses_noProhibitions() {
+    void buildExplainProto_minimalExplain_noPolicyClasses_noProhibitions() throws Exception {
         Explain explain = mock(Explain.class);
 
         AccessRightSet allowed = new AccessRightSet();
@@ -435,7 +423,7 @@ class ProtoUtilTest {
         when(explain.getPolicyClasses()).thenReturn(List.of());
         when(explain.getProhibitions()).thenReturn(List.of());
 
-        gov.nist.csd.pm.proto.v1.query.ExplainResponse resp = ProtoUtil.buildExplainProto(explain, query);
+        gov.nist.csd.pm.proto.v1.pdp.query.ExplainResponse resp = ProtoUtil.buildExplainProto(explain, query);
 
         assertEquals(List.of("read"), resp.getPrivilegesList());
         assertEquals(List.of("write"), resp.getDeniedPrivilegesList());

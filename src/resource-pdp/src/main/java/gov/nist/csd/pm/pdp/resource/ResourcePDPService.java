@@ -6,9 +6,9 @@ import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextFromHeader;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
-import gov.nist.csd.pm.proto.v1.adjudication.AdjudicateOperationResponse;
-import gov.nist.csd.pm.proto.v1.adjudication.OperationRequest;
-import gov.nist.csd.pm.proto.v1.adjudication.ResourceAdjudicationServiceGrpc;
+import gov.nist.csd.pm.proto.v1.pdp.adjudication.AdjudicateOperationResponse;
+import gov.nist.csd.pm.proto.v1.pdp.adjudication.OperationRequest;
+import gov.nist.csd.pm.proto.v1.pdp.adjudication.ResourceAdjudicationServiceGrpc;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
@@ -22,24 +22,15 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
 
     private final PDP pdp;
     private final PAP pap;
-    private final RevisionCatchUpGate revisionCatchUpGate;
 
-    public ResourcePDPService(PDP pdp, PAP pap, RevisionCatchUpGate revisionCatchUpGate) {
+    public ResourcePDPService(PDP pdp, PAP pap) {
         this.pdp = pdp;
         this.pap = pap;
-        this.revisionCatchUpGate = revisionCatchUpGate;
     }
 
     @Override
     public void adjudicateResourceOperation(OperationRequest request,
                                             StreamObserver<AdjudicateOperationResponse> responseObserver) {
-        if (revisionCatchUpGate.isClosed()) {
-            responseObserver.onError(Status.UNAVAILABLE
-                                             .withDescription("the resource PDP timed out waiting for the last EPP revision")
-                                             .asRuntimeException());
-            return;
-        }
-
         try {
             UserContext userCtx = UserContextFromHeader.get(pap);
 
