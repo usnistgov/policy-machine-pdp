@@ -30,7 +30,7 @@ class ResourcePDPGrpcInterceptorConfigTest {
     @BeforeEach
     void setUp() {
         configBean = new ResourcePDPGrpcInterceptorConfig();
-        resourcePDPConfig = new ResourcePDPConfig("localhost", 9090, EPPMode.ASYNC, 1000);
+        resourcePDPConfig = new ResourcePDPConfig("localhost", 9090, 1000);
         eventStoreDBConfig = new EventStoreDBConfig("test-stream", "test-snapshots", "localhost", 2113);
         currentRevisionService = new CurrentRevisionService();
         connectionManager = mock(EventStoreConnectionManager.class);
@@ -117,7 +117,7 @@ class ResourcePDPGrpcInterceptorConfigTest {
     void consistencyInterceptor_blocksWhenNotCaughtUp() throws Exception {
         currentRevisionService.set(5);
         mockLatestRevision(100);
-        resourcePDPConfig = new ResourcePDPConfig("localhost", 9090, EPPMode.ASYNC, 50);
+        resourcePDPConfig = new ResourcePDPConfig("localhost", 9090, 50);
 
         RevisionConsistencyInterceptor interceptor = configBean.consistencyInterceptor(
                 resourcePDPConfig,
@@ -167,7 +167,7 @@ class ResourcePDPGrpcInterceptorConfigTest {
 
     @Test
     void consistencyInterceptor_usesConfiguredTimeout() throws Exception {
-        resourcePDPConfig = new ResourcePDPConfig("localhost", 9090, EPPMode.ASYNC, 200);
+        resourcePDPConfig = new ResourcePDPConfig("localhost", 9090, 200);
         currentRevisionService.set(5);
         mockLatestRevision(10);
 

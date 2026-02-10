@@ -47,17 +47,7 @@ class EPPClientTest {
 	}
 
 	@Test
-	void subscribeToPDP_whenDisabled_doesNotRegisterSubscriber() {
-		when(resourcePDPConfig.getEppMode()).thenReturn(EPPMode.DISABLED);
-
-		client.subscribeToPDP();
-
-		verify(pdp, never()).addEventSubscriber(any());
-	}
-
-	@Test
 	void subscribeToPDP_whenAsync_setsAsyncStub_andRegistersSubscriber() throws Exception {
-		when(resourcePDPConfig.getEppMode()).thenReturn(EPPMode.ASYNC);
 		when(resourcePDPConfig.getAdminHostname()).thenReturn("localhost");
 		when(resourcePDPConfig.getAdminPort()).thenReturn(50051);
 
@@ -87,7 +77,6 @@ class EPPClientTest {
 
 	@Test
 	void subscribeToPDP_whenSync_setsBlockingStub_andRegistersSubscriber() throws Exception {
-		when(resourcePDPConfig.getEppMode()).thenReturn(EPPMode.SYNC);
 		when(resourcePDPConfig.getAdminHostname()).thenReturn("localhost");
 		when(resourcePDPConfig.getAdminPort()).thenReturn(50051);
 
@@ -117,8 +106,6 @@ class EPPClientTest {
 
 	@Test
 	void processEvent_whenDisabled_shortCircuits() throws Exception {
-		when(resourcePDPConfig.getEppMode()).thenReturn(EPPMode.DISABLED);
-
 		writeField(client, "stub", asyncStub);
 		writeField(client, "blockingStub", blockingStub);
 
@@ -129,7 +116,6 @@ class EPPClientTest {
 
 	@Test
 	void processEvent_whenAsync_forwardsEventToAsyncStub() throws Exception {
-		when(resourcePDPConfig.getEppMode()).thenReturn(EPPMode.ASYNC);
 		writeField(client, "stub", asyncStub);
 		writeField(client, "blockingStub", null);
 
@@ -147,7 +133,6 @@ class EPPClientTest {
 
 	@Test
 	void processEvent_whenSync_andNoResult_doesNothingExtra() throws Exception {
-		when(resourcePDPConfig.getEppMode()).thenReturn(EPPMode.SYNC);
 		writeField(client, "stub", null);
 		writeField(client, "blockingStub", blockingStub);
 
@@ -168,7 +153,6 @@ class EPPClientTest {
 
 	@Test
 	void processEvent_whenSync_andResultContainsLastRevision_waitsForCatchUp() throws Exception {
-		when(resourcePDPConfig.getEppMode()).thenReturn(EPPMode.SYNC);
 		writeField(client, "stub", null);
 		writeField(client, "blockingStub", blockingStub);
 
