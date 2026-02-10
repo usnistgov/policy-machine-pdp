@@ -177,59 +177,61 @@ the plugin to work.
 To create a class that will be loaded as a plugin, annotate the class with `@org.pf4j.Extension` and implement
 `org.pf4j.ExtensionPoint`. The plugin must extend one of the following operation types from the `gov.nist.csd.pm.core.pap.operation` package:
 
-| Type | Description | Authorization | Execution Context |
-|------|-------------|---------------|-------------------|
-| `AdminOperation<T>` | Modifies policy state | `canExecute()` required | `PAP` (read/write) |
-| `ResourceOperation<T>` | Resource access operations | `canExecute()` required | `PolicyQuery` (read-only) |
-| `QueryOperation<T>` | Policy query operations | `canExecute()` required | `PolicyQuery` (read-only) |
-| `Routine<T>` | Multi-step policy modifications | None | `PAP` (read/write) |
-| `Function<T>` | Pure functions (no policy access) | None | `Args` only |
+| Type | Description | Authorization            | Execution Context |
+|------|-------------|--------------------------|-------------------|
+| `AdminOperation<T>` | Modifies policy state | `List<RequiredCapability>` | `PAP` (read/write) |
+| `ResourceOperation<T>` | Resource access operations | `List<RequiredCapability>`  | `PolicyQuery` (read-only) |
+| `QueryOperation<T>` | Policy query operations | `List<RequiredCapability>`  | `PolicyQuery` (read-only) |
+| `Routine<T>` | Multi-step policy modifications | None                     | `PAP` (read/write) |
+| `Function<T>` | Pure functions (no policy access) | None                     | `Args` only |
 
 #### AdminOperation Example
 Use for operations that modify policy and require authorization.
 
 ```java
+package testplugin;
+
+import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.operation.AdminOperation;
+import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
 import gov.nist.csd.pm.core.pap.operation.arg.Args;
-import gov.nist.csd.pm.core.pap.operation.arg.type.ListType;
-import gov.nist.csd.pm.core.pap.operation.param.FormalParameter;
-import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
-import gov.nist.csd.pm.core.common.exception.PMException;
+import gov.nist.csd.pm.core.pap.operation.param.NodeNameFormalParameter;
+import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredCapability;
+import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilegeOnParameter;
 import org.pf4j.Extension;
 import org.pf4j.ExtensionPoint;
 
 import java.util.List;
 
-import static gov.nist.csd.pm.core.pap.operation.arg.type.BasicTypes.*;
+import static gov.nist.csd.pm.core.pap.operation.arg.type.BasicTypes.VOID_TYPE;
 
 @Extension
-public class CustomAdminOperation extends AdminOperation<Void> implements ExtensionPoint {
+public class TestPluginOperation extends AdminOperation<Void> implements ExtensionPoint {
 
-    // Define custom formal parameters
-    private static final FormalParameter<String> TARGET_PARAM =
-        new FormalParameter<>("target", STRING_TYPE);
+	public static NodeNameFormalParameter NODE_NAME_PARAM = new NodeNameFormalParameter("name");
 
-    public CustomAdminOperation() {
-        super(
-            "customAdminOp",
+	public TestPluginOperation() {
+		super(
+		    "testPlugin",
             VOID_TYPE,
-            List.of(TARGET_PARAM)
-        );
-    }
-
-    @Override
-    public void canExecute(PAP pap, UserContext userCtx, Args args) throws PMException {
-        // Check if user is authorized to execute this operation
-    }
+            List.of(
+			    NODE_NAME_PARAM
+            ),
+            List.of(
+                new RequiredCapability(List.of(
+                    new RequiredPrivilegeOnParameter(NODE_NAME_PARAM, new AccessRightSet("read"))
+                ))
+            )
+		);
+	}
 
     @Override
     public Void execute(PAP pap, Args args) throws PMException {
-        String target = args.get(TARGET_PARAM);
-        // Modify policy using PAP
         return null;
     }
 }
+
 ```
 
 3. JAR and set plugin path

@@ -4,11 +4,11 @@ import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import gov.nist.csd.pm.pdp.shared.eventstore.LatestRevisionTracker;
 import io.grpc.*;
 import org.slf4j.Logger;
-import java.util.concurrent.TimeoutException;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeoutException;
 
 /**
  * gRPC interceptor that ensures strong consistency by checking that the local

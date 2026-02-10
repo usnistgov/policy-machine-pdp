@@ -8,10 +8,8 @@ import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.proto.event.ProhibitionCreated;
 import gov.nist.csd.pm.pdp.proto.event.ProhibitionDeleted;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class EventProhibitionsModifier extends ProhibitionsModifier {
 

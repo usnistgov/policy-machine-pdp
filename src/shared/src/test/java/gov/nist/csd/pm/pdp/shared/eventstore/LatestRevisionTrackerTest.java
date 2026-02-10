@@ -3,12 +3,12 @@ package gov.nist.csd.pm.pdp.shared.eventstore;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-import java.util.concurrent.TimeoutException;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 class LatestRevisionTrackerTest {

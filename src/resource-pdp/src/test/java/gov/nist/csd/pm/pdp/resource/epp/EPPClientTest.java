@@ -3,7 +3,6 @@ package gov.nist.csd.pm.pdp.resource.epp;
 import gov.nist.csd.pm.core.common.event.EventContext;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pdp.PDP;
-import gov.nist.csd.pm.pdp.resource.config.EPPMode;
 import gov.nist.csd.pm.pdp.resource.config.ResourcePDPConfig;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
 import gov.nist.csd.pm.proto.v1.epp.EPPServiceGrpc;
@@ -12,7 +11,6 @@ import gov.nist.csd.pm.proto.v1.model.Value;
 import gov.nist.csd.pm.proto.v1.model.ValueMap;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import io.grpc.stub.StreamObserver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)

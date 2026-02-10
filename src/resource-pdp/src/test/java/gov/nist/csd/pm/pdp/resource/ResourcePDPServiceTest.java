@@ -3,8 +3,6 @@ package gov.nist.csd.pm.pdp.resource;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.operation.AdminOperation;
-import gov.nist.csd.pm.core.pap.operation.Operation;
-import gov.nist.csd.pm.core.pap.operation.QueryOperation;
 import gov.nist.csd.pm.core.pap.operation.ResourceOperation;
 import gov.nist.csd.pm.core.pap.query.OperationsQuery;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
@@ -19,7 +17,6 @@ import gov.nist.csd.pm.proto.v1.pdp.adjudication.OperationRequest;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +25,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

@@ -1,6 +1,5 @@
 package gov.nist.csd.pm.pdp.resource;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.operation.Operation;
 import gov.nist.csd.pm.core.pap.operation.ResourceOperation;
