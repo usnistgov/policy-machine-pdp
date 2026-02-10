@@ -1,65 +1,55 @@
 package gov.nist.csd.pm.pdp.resource.config;
 
-import com.eventstore.dbclient.*;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
-import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
-import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
+import gov.nist.csd.pm.pdp.shared.eventstore.LatestRevisionTracker;
 import gov.nist.csd.pm.pdp.shared.interceptor.RevisionConsistencyInterceptor;
 import io.grpc.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 class ResourcePDPGrpcInterceptorConfigTest {
 
     private ResourcePDPGrpcInterceptorConfig configBean;
     private ResourcePDPConfig resourcePDPConfig;
-    private EventStoreDBConfig eventStoreDBConfig;
     private CurrentRevisionService currentRevisionService;
-    private EventStoreConnectionManager connectionManager;
-    private EventStoreDBClient esClient;
+    private LatestRevisionTracker latestRevisionTracker;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws InterruptedException, TimeoutException {
         configBean = new ResourcePDPGrpcInterceptorConfig();
-        resourcePDPConfig = new ResourcePDPConfig("localhost", 9090, EPPMode.ASYNC, 1000);
-        eventStoreDBConfig = new EventStoreDBConfig("test-stream", "test-snapshots", "localhost", 2113);
+        resourcePDPConfig = new ResourcePDPConfig("localhost", 9090, 1000);
         currentRevisionService = new CurrentRevisionService();
-        connectionManager = mock(EventStoreConnectionManager.class);
-        esClient = mock(EventStoreDBClient.class);
-        when(connectionManager.getOrInitClient()).thenReturn(esClient);
+        latestRevisionTracker = mock(LatestRevisionTracker.class);
+        when(latestRevisionTracker.get(anyLong())).thenReturn(-1L);
     }
 
     @Test
     void consistencyInterceptor_createsInterceptor() {
         RevisionConsistencyInterceptor interceptor = configBean.consistencyInterceptor(
                 resourcePDPConfig,
-                eventStoreDBConfig,
                 currentRevisionService,
-                connectionManager
+                latestRevisionTracker
         );
 
         assertNotNull(interceptor, "Interceptor should not be null");
     }
 
     @Test
-    void consistencyInterceptor_hasNoExcludedMethods() throws Exception {
+    void consistencyInterceptor_hasNoExcludedMethods() throws InterruptedException, TimeoutException {
         currentRevisionService.set(10);
-        mockLatestRevision(10);
+        when(latestRevisionTracker.get(anyLong())).thenReturn(10L);
 
         RevisionConsistencyInterceptor interceptor = configBean.consistencyInterceptor(
                 resourcePDPConfig,
-                eventStoreDBConfig,
                 currentRevisionService,
-                connectionManager
+                latestRevisionTracker
         );
 
         AtomicBoolean handlerCalled = new AtomicBoolean(false);
@@ -74,19 +64,18 @@ class ResourcePDPGrpcInterceptorConfigTest {
         interceptor.interceptCall(call, new Metadata(), handler);
 
         assertTrue(handlerCalled.get(), "Handler should be called");
-        verify(esClient).readStream(eq("test-stream"), any(ReadStreamOptions.class));
+        verify(latestRevisionTracker).get(anyLong());
     }
 
     @Test
-    void consistencyInterceptor_checksConsistencyForAllMethods() throws Exception {
+    void consistencyInterceptor_checksConsistencyForAllMethods() throws InterruptedException, TimeoutException {
         currentRevisionService.set(10);
-        mockLatestRevision(10);
+        when(latestRevisionTracker.get(anyLong())).thenReturn(10L);
 
         RevisionConsistencyInterceptor interceptor = configBean.consistencyInterceptor(
                 resourcePDPConfig,
-                eventStoreDBConfig,
                 currentRevisionService,
-                connectionManager
+                latestRevisionTracker
         );
 
         String[] methodNames = {
@@ -96,8 +85,8 @@ class ResourcePDPGrpcInterceptorConfigTest {
         };
 
         for (String methodName : methodNames) {
-            reset(esClient);
-            mockLatestRevision(10);
+            reset(latestRevisionTracker);
+            when(latestRevisionTracker.get(anyLong())).thenReturn(10L);
 
             AtomicBoolean handlerCalled = new AtomicBoolean(false);
             ServerCallHandler<String, String> handler = (call, headers) -> {
@@ -109,21 +98,20 @@ class ResourcePDPGrpcInterceptorConfigTest {
             interceptor.interceptCall(call, new Metadata(), handler);
 
             assertTrue(handlerCalled.get(), "Handler should be called for: " + methodName);
-            verify(esClient).readStream(eq("test-stream"), any(ReadStreamOptions.class));
+            verify(latestRevisionTracker).get(anyLong());
         }
     }
 
     @Test
-    void consistencyInterceptor_blocksWhenNotCaughtUp() throws Exception {
+    void consistencyInterceptor_blocksWhenNotCaughtUp() throws InterruptedException, TimeoutException {
         currentRevisionService.set(5);
-        mockLatestRevision(100);
-        resourcePDPConfig = new ResourcePDPConfig("localhost", 9090, EPPMode.ASYNC, 50);
+        when(latestRevisionTracker.get(anyLong())).thenReturn(100L);
+        resourcePDPConfig = new ResourcePDPConfig("localhost", 9090, 50);
 
         RevisionConsistencyInterceptor interceptor = configBean.consistencyInterceptor(
                 resourcePDPConfig,
-                eventStoreDBConfig,
                 currentRevisionService,
-                connectionManager
+                latestRevisionTracker
         );
 
         AtomicBoolean handlerCalled = new AtomicBoolean(false);
@@ -141,15 +129,14 @@ class ResourcePDPGrpcInterceptorConfigTest {
     }
 
     @Test
-    void consistencyInterceptor_proceedsWhenCaughtUp() throws Exception {
+    void consistencyInterceptor_proceedsWhenCaughtUp() throws InterruptedException, TimeoutException {
         currentRevisionService.set(15);
-        mockLatestRevision(10);
+        when(latestRevisionTracker.get(anyLong())).thenReturn(10L);
 
         RevisionConsistencyInterceptor interceptor = configBean.consistencyInterceptor(
                 resourcePDPConfig,
-                eventStoreDBConfig,
                 currentRevisionService,
-                connectionManager
+                latestRevisionTracker
         );
 
         AtomicBoolean handlerCalled = new AtomicBoolean(false);
@@ -166,16 +153,15 @@ class ResourcePDPGrpcInterceptorConfigTest {
     }
 
     @Test
-    void consistencyInterceptor_usesConfiguredTimeout() throws Exception {
-        resourcePDPConfig = new ResourcePDPConfig("localhost", 9090, EPPMode.ASYNC, 200);
+    void consistencyInterceptor_usesConfiguredTimeout() throws InterruptedException, TimeoutException {
+        resourcePDPConfig = new ResourcePDPConfig("localhost", 9090, 200);
         currentRevisionService.set(5);
-        mockLatestRevision(10);
+        when(latestRevisionTracker.get(anyLong())).thenReturn(10L);
 
         RevisionConsistencyInterceptor interceptor = configBean.consistencyInterceptor(
                 resourcePDPConfig,
-                eventStoreDBConfig,
                 currentRevisionService,
-                connectionManager
+                latestRevisionTracker
         );
 
         AtomicBoolean handlerCalled = new AtomicBoolean(false);
@@ -197,24 +183,14 @@ class ResourcePDPGrpcInterceptorConfigTest {
         catchUpThread.start();
 
         interceptor.interceptCall(call, new Metadata(), handler);
-        catchUpThread.join();
+
+        try {
+            catchUpThread.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
 
         assertTrue(handlerCalled.get(), "Handler should be called after catching up within timeout");
-    }
-
-    private void mockLatestRevision(long revision) throws Exception {
-        RecordedEvent recordedEvent = mock(RecordedEvent.class);
-        when(recordedEvent.getRevision()).thenReturn(revision);
-
-        ResolvedEvent resolvedEvent = mock(ResolvedEvent.class);
-        when(resolvedEvent.getEvent()).thenReturn(recordedEvent);
-
-        ReadResult readResult = mock(ReadResult.class);
-        when(readResult.getEvents()).thenReturn(List.of(resolvedEvent));
-
-        CompletableFuture<ReadResult> future = CompletableFuture.completedFuture(readResult);
-        when(esClient.readStream(eq("test-stream"), any(ReadStreamOptions.class)))
-                .thenReturn(future);
     }
 
     private static class TestServerCall<ReqT, RespT> extends ServerCall<ReqT, RespT> {

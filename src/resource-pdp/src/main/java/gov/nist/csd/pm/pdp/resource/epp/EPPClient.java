@@ -4,15 +4,11 @@ import gov.nist.csd.pm.core.common.event.EventContext;
 import gov.nist.csd.pm.core.epp.EPP;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pdp.PDP;
-import gov.nist.csd.pm.pdp.resource.config.EPPMode;
 import gov.nist.csd.pm.pdp.resource.config.ResourcePDPConfig;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
 import gov.nist.csd.pm.proto.v1.epp.EPPServiceGrpc;
-import gov.nist.csd.pm.proto.v1.epp.ProcessEventResponse;
-import gov.nist.csd.pm.proto.v1.model.Value;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -30,7 +26,6 @@ public class EPPClient extends EPP {
     private final PDP pdp;
     private final ResourcePDPConfig resourcePDPConfig;
     private EPPServiceGrpc.EPPServiceBlockingStub blockingStub;
-    private EPPServiceGrpc.EPPServiceStub stub;
 
     public EPPClient(PDP pdp,
                      PAP pap,
@@ -42,10 +37,6 @@ public class EPPClient extends EPP {
 
     @PostConstruct
     public void subscribeToPDP() {
-        if (resourcePDPConfig.getEppMode() == EPPMode.DISABLED) {
-            return;
-        }
-
         // subscribe to the PDP bean
         this.pdp.addEventSubscriber(this);
 
@@ -57,58 +48,16 @@ public class EPPClient extends EPP {
                 .usePlaintext()
                 .build();
 
-        if (resourcePDPConfig.getEppMode() == EPPMode.ASYNC) {
-            this.stub = EPPServiceGrpc.newStub(channel);
-        } else {
-            this.blockingStub = EPPServiceGrpc.newBlockingStub(channel);
-        }
+        this.blockingStub = EPPServiceGrpc.newBlockingStub(channel);
     }
 
     @Override
     public void processEvent(EventContext eventCtx) {
-        if (resourcePDPConfig.getEppMode() == EPPMode.DISABLED) {
-            return;
-        }
-
         logger.info("sending to EPP {}", eventCtx);
 
         gov.nist.csd.pm.proto.v1.epp.EventContext eventCtxProto = ProtoUtil.toEventContextProto(eventCtx);
 
-        if (stub != null) {
-            processEventAsync(eventCtxProto);
-        } else {
-	        processEventSync(eventCtxProto);
-        }
-    }
-
-    private void processEventAsync(gov.nist.csd.pm.proto.v1.epp.EventContext eventCtx) {
-        stub.processEvent(eventCtx, new StreamObserver<>() {
-            @Override
-            public void onNext(ProcessEventResponse processEventResponse) {
-
-            }
-
-            @Override
-            public void onError(Throwable throwable) {
-                logger.error("EPP error", throwable);
-            }
-
-            @Override
-            public void onCompleted() {
-
-            }
-        });
-    }
-
-    /**
-     * Process the given even context synchronously in the EPP server. If no errors occur and the event context matched
-     * an obligation event pattern, the EPP will respond with the revision of the last event generated. This method will
-     * wait a configurable amount of time before returning for the local event subscription to catch up. If this process
-     * times out, the method will return a success still, but subsequent calls to the PDP will fail until it's caught up.
-     * @param eventCtx the EventContext proto to send to the EPP server.
-     */
-    private void processEventSync(gov.nist.csd.pm.proto.v1.epp.EventContext eventCtx) {
-        blockingStub.processEvent(eventCtx);
+        blockingStub.processEvent(eventCtxProto);
     }
 
     private Map<String, Object> buildGrpcConfigMap() {

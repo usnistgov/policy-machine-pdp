@@ -1,8 +1,7 @@
 package gov.nist.csd.pm.pdp.admin.config;
 
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
-import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
-import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
+import gov.nist.csd.pm.pdp.shared.eventstore.LatestRevisionTracker;
 import gov.nist.csd.pm.pdp.shared.interceptor.RevisionConsistencyInterceptor;
 import net.devh.boot.grpc.server.interceptor.GrpcGlobalServerInterceptor;
 import org.springframework.context.annotation.Bean;
@@ -17,10 +16,11 @@ public class AdminPDPGrpcInterceptorConfig {
     @Bean
     @GrpcGlobalServerInterceptor
     public RevisionConsistencyInterceptor consistencyInterceptor(AdminPDPConfig adminPDPConfig,
-                                                                 EventStoreDBConfig eventStoreDBConfig,
                                                                  CurrentRevisionService currentRevisionService,
-                                                                 EventStoreConnectionManager connectionManager) {
+                                                                 LatestRevisionTracker latestRevisionTracker) {
         Set<String> excluded = new HashSet<>();
+
+        // these methods already have revision checks when appending to the event store
         excluded.add("gov.nist.csd.pm.proto.v1.epp.EPPService/processEvent");
         excluded.add("gov.nist.csd.pm.proto.v1.pdp.adjudication.AdminAdjudicationService/adjudicateOperation");
         excluded.add("gov.nist.csd.pm.proto.v1.pdp.adjudication.AdminAdjudicationService/adjudicateRoutine");
@@ -28,9 +28,8 @@ public class AdminPDPGrpcInterceptorConfig {
         return new RevisionConsistencyInterceptor(
                 adminPDPConfig.getRevisionConsistencyTimeout(),
                 excluded,
-                eventStoreDBConfig,
                 currentRevisionService,
-                connectionManager
+                latestRevisionTracker
         );
     }
 }

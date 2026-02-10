@@ -1,6 +1,8 @@
 package gov.nist.csd.pm.pdp.resource;
 
 import gov.nist.csd.pm.core.pap.PAP;
+import gov.nist.csd.pm.core.pap.operation.Operation;
+import gov.nist.csd.pm.core.pap.operation.ResourceOperation;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
@@ -34,6 +36,12 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
         try {
             UserContext userCtx = UserContextFromHeader.get(pap);
 
+            // only allow resource operations to be adjudicated
+            Operation<?> operation = pap.query().operations().getOperation(request.getOpName());
+            if (!(operation instanceof ResourceOperation<?>)) {
+                throw new OperationIsNotResourceOperationException();
+            }
+
             Object result = pdp.adjudicateOperation(
                     userCtx,
                     request.getOpName(),
@@ -48,12 +56,24 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
                                              .withDescription(e.getMessage())
                                              .withCause(e)
                                              .asRuntimeException());
+        } catch (OperationIsNotResourceOperationException e) {
+            logger.error("adjudication FAILED", e);
+            responseObserver.onError(Status.INVALID_ARGUMENT
+                                             .withDescription(e.getMessage())
+                                             .withCause(e)
+                                             .asRuntimeException());
         } catch (Exception e) {
             logger.error("adjudication FAILED", e);
             responseObserver.onError(Status.INTERNAL
                                              .withDescription(e.getMessage())
                                              .withCause(e)
                                              .asRuntimeException());
+        }
+    }
+
+    static class OperationIsNotResourceOperationException extends Exception {
+        public OperationIsNotResourceOperationException() {
+            super("only subclasses of ResourceOperation are allowed to be invoked in the resource-pdp");
         }
     }
 }

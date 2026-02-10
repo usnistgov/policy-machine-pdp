@@ -6,14 +6,13 @@ import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
 import gov.nist.csd.pm.core.pap.serialization.json.JSONDeserializer;
 import gov.nist.csd.pm.core.pdp.PDPTx;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
-import gov.nist.csd.pm.proto.v1.pdp.cmd.*;
 import gov.nist.csd.pm.proto.v1.model.SerializationFormat;
 import gov.nist.csd.pm.proto.v1.model.Value;
 import gov.nist.csd.pm.proto.v1.model.ValueList;
 import gov.nist.csd.pm.proto.v1.model.ValueMap;
+import gov.nist.csd.pm.proto.v1.pdp.cmd.*;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;

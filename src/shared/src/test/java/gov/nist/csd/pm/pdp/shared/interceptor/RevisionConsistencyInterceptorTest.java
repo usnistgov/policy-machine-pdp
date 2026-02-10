@@ -1,40 +1,32 @@
 package gov.nist.csd.pm.pdp.shared.interceptor;
 
-import com.eventstore.dbclient.*;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
-import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
-import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
+import gov.nist.csd.pm.pdp.shared.eventstore.LatestRevisionTracker;
 import io.grpc.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class RevisionConsistencyInterceptorTest {
 
     private CurrentRevisionService currentRevisionService;
-    private EventStoreConnectionManager connectionManager;
-    private EventStoreDBConfig config;
-    private EventStoreDBClient esClient;
+    private LatestRevisionTracker latestRevisionTracker;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws InterruptedException, TimeoutException {
         currentRevisionService = new CurrentRevisionService();
-        connectionManager = mock(EventStoreConnectionManager.class);
-        config = new EventStoreDBConfig("test-stream", "test-snapshots", "localhost", 2113);
-        esClient = mock(EventStoreDBClient.class);
-        when(connectionManager.getOrInitClient()).thenReturn(esClient);
+        latestRevisionTracker = mock(LatestRevisionTracker.class);
+        // Default: tracker is initialized and returns -1
+        when(latestRevisionTracker.get(anyLong())).thenReturn(-1L);
     }
 
     @Test
@@ -43,7 +35,7 @@ class RevisionConsistencyInterceptorTest {
         excluded.add("test.Service/excludedMethod");
 
         RevisionConsistencyInterceptor interceptor = new RevisionConsistencyInterceptor(
-                1000, excluded, config, currentRevisionService, connectionManager
+                1000, excluded, currentRevisionService, latestRevisionTracker
         );
 
         AtomicBoolean handlerCalled = new AtomicBoolean(false);
@@ -57,19 +49,18 @@ class RevisionConsistencyInterceptorTest {
 
         assertTrue(handlerCalled.get(), "Handler should be called for excluded method");
         assertNull(call.closedStatus, "Call should not be closed for excluded method");
-        verifyNoInteractions(esClient);
     }
 
     @Test
-    void interceptCall_nonExcludedMethod_performsConsistencyCheck() throws Exception {
+    void interceptCall_nonExcludedMethod_performsConsistencyCheck() throws InterruptedException, TimeoutException {
         Set<String> excluded = new HashSet<>();
         excluded.add("test.Service/excludedMethod");
 
         currentRevisionService.set(10);
-        mockLatestRevision(10);
+        when(latestRevisionTracker.get(anyLong())).thenReturn(10L);
 
         RevisionConsistencyInterceptor interceptor = new RevisionConsistencyInterceptor(
-                1000, excluded, config, currentRevisionService, connectionManager
+                1000, excluded, currentRevisionService, latestRevisionTracker
         );
 
         AtomicBoolean handlerCalled = new AtomicBoolean(false);
@@ -86,12 +77,12 @@ class RevisionConsistencyInterceptorTest {
     }
 
     @Test
-    void interceptCall_localRevisionCaughtUp_proceedsWithCall() throws Exception {
+    void interceptCall_localRevisionCaughtUp_proceedsWithCall() throws InterruptedException, TimeoutException {
         currentRevisionService.set(15);
-        mockLatestRevision(10);
+        when(latestRevisionTracker.get(anyLong())).thenReturn(10L);
 
         RevisionConsistencyInterceptor interceptor = new RevisionConsistencyInterceptor(
-                1000, config, currentRevisionService, connectionManager
+                1000, currentRevisionService, latestRevisionTracker
         );
 
         AtomicBoolean handlerCalled = new AtomicBoolean(false);
@@ -108,12 +99,12 @@ class RevisionConsistencyInterceptorTest {
     }
 
     @Test
-    void interceptCall_localRevisionBehindButCatchesUp_proceedsWithCall() throws Exception {
+    void interceptCall_localRevisionBehindButCatchesUp_proceedsWithCall() throws InterruptedException, TimeoutException {
         currentRevisionService.set(5);
-        mockLatestRevision(10);
+        when(latestRevisionTracker.get(anyLong())).thenReturn(10L);
 
         RevisionConsistencyInterceptor interceptor = new RevisionConsistencyInterceptor(
-                1000, config, currentRevisionService, connectionManager
+                1000, currentRevisionService, latestRevisionTracker
         );
 
         AtomicBoolean handlerCalled = new AtomicBoolean(false);
@@ -136,19 +127,23 @@ class RevisionConsistencyInterceptorTest {
 
         interceptor.interceptCall(call, new Metadata(), handler);
 
-        catchUpThread.join();
+        try {
+            catchUpThread.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
 
         assertTrue(handlerCalled.get(), "Handler should be called after catching up");
         assertNull(call.closedStatus, "Call should not be closed after catching up");
     }
 
     @Test
-    void interceptCall_timeoutWaitingForCatchUp_closesCallWithUnavailable() throws Exception {
+    void interceptCall_timeoutWaitingForCatchUp_closesCallWithUnavailable() throws InterruptedException, TimeoutException {
         currentRevisionService.set(5);
-        mockLatestRevision(100);
+        when(latestRevisionTracker.get(anyLong())).thenReturn(100L);
 
         RevisionConsistencyInterceptor interceptor = new RevisionConsistencyInterceptor(
-                50, config, currentRevisionService, connectionManager
+                50, currentRevisionService, latestRevisionTracker
         );
 
         AtomicBoolean handlerCalled = new AtomicBoolean(false);
@@ -167,16 +162,12 @@ class RevisionConsistencyInterceptorTest {
     }
 
     @Test
-    void interceptCall_eventStoreException_closesCallWithUnavailable() throws Exception {
-        currentRevisionService.set(5);
-
-        CompletableFuture<ReadResult> failedFuture = new CompletableFuture<>();
-        failedFuture.completeExceptionally(new TimeoutException("Connection timeout"));
-        when(esClient.readStream(eq("test-stream"), any(ReadStreamOptions.class)))
-                .thenReturn(failedFuture);
+    void interceptCall_trackerNotInitialized_closesCallWithUnavailable() throws InterruptedException, TimeoutException {
+        // tracker.get(timeout) throws TimeoutException when not initialized within timeout
+        when(latestRevisionTracker.get(anyLong())).thenThrow(new TimeoutException("Latest revision tracker not initialized within timeout"));
 
         RevisionConsistencyInterceptor interceptor = new RevisionConsistencyInterceptor(
-                1000, config, currentRevisionService, connectionManager
+                50, currentRevisionService, latestRevisionTracker
         );
 
         AtomicBoolean handlerCalled = new AtomicBoolean(false);
@@ -188,19 +179,40 @@ class RevisionConsistencyInterceptorTest {
         TestServerCall<String, String> call = new TestServerCall<>("test.Service/method");
         interceptor.interceptCall(call, new Metadata(), handler);
 
-        assertFalse(handlerCalled.get(), "Handler should not be called on exception");
-        assertNotNull(call.closedStatus, "Call should be closed on exception");
+        assertFalse(handlerCalled.get(), "Handler should not be called when tracker not initialized");
+        assertNotNull(call.closedStatus, "Call should be closed when tracker not initialized");
         assertEquals(Status.Code.UNAVAILABLE, call.closedStatus.getCode());
-        assertTrue(call.closedStatus.getDescription().contains("errored"));
     }
 
     @Test
-    void interceptCall_emptyEventStream_proceedsWithCall() throws Exception {
-        currentRevisionService.set(-1);
-        mockEmptyEventStream();
+    void interceptCall_trackerBecomesInitialized_proceedsWithCall() throws InterruptedException, TimeoutException {
+        when(latestRevisionTracker.get(anyLong())).thenReturn(10L);
+        currentRevisionService.set(10);
 
         RevisionConsistencyInterceptor interceptor = new RevisionConsistencyInterceptor(
-                1000, config, currentRevisionService, connectionManager
+                1000, currentRevisionService, latestRevisionTracker
+        );
+
+        AtomicBoolean handlerCalled = new AtomicBoolean(false);
+        ServerCallHandler<String, String> handler = (call, headers) -> {
+            handlerCalled.set(true);
+            return new ServerCall.Listener<>() {};
+        };
+
+        TestServerCall<String, String> call = new TestServerCall<>("test.Service/method");
+        interceptor.interceptCall(call, new Metadata(), handler);
+
+        assertTrue(handlerCalled.get(), "Handler should be called after tracker initializes");
+        assertNull(call.closedStatus, "Call should not be closed after tracker initializes");
+    }
+
+    @Test
+    void interceptCall_emptyEventStream_proceedsWithCall() throws InterruptedException, TimeoutException {
+        currentRevisionService.set(-1);
+        when(latestRevisionTracker.get(anyLong())).thenReturn(-1L);
+
+        RevisionConsistencyInterceptor interceptor = new RevisionConsistencyInterceptor(
+                1000, currentRevisionService, latestRevisionTracker
         );
 
         AtomicBoolean handlerCalled = new AtomicBoolean(false);
@@ -217,12 +229,12 @@ class RevisionConsistencyInterceptorTest {
     }
 
     @Test
-    void constructor_withoutExcludedMethods_createsEmptySet() throws Exception {
+    void constructor_withoutExcludedMethods_createsEmptySet() throws InterruptedException, TimeoutException {
         currentRevisionService.set(10);
-        mockLatestRevision(10);
+        when(latestRevisionTracker.get(anyLong())).thenReturn(10L);
 
         RevisionConsistencyInterceptor interceptor = new RevisionConsistencyInterceptor(
-                1000, config, currentRevisionService, connectionManager
+                1000, currentRevisionService, latestRevisionTracker
         );
 
         AtomicBoolean handlerCalled = new AtomicBoolean(false);
@@ -245,7 +257,7 @@ class RevisionConsistencyInterceptorTest {
         excluded.add("other.Service/method3");
 
         RevisionConsistencyInterceptor interceptor = new RevisionConsistencyInterceptor(
-                1000, excluded, config, currentRevisionService, connectionManager
+                1000, excluded, currentRevisionService, latestRevisionTracker
         );
 
         for (String methodName : excluded) {
@@ -260,17 +272,15 @@ class RevisionConsistencyInterceptorTest {
 
             assertTrue(handlerCalled.get(), "Handler should be called for excluded method: " + methodName);
         }
-
-        verifyNoInteractions(esClient);
     }
 
     @Test
-    void interceptCall_localRevisionExactlyMatchesLatest_proceedsWithCall() throws Exception {
+    void interceptCall_localRevisionExactlyMatchesLatest_proceedsWithCall() throws InterruptedException, TimeoutException {
         currentRevisionService.set(42);
-        mockLatestRevision(42);
+        when(latestRevisionTracker.get(anyLong())).thenReturn(42L);
 
         RevisionConsistencyInterceptor interceptor = new RevisionConsistencyInterceptor(
-                1000, config, currentRevisionService, connectionManager
+                1000, currentRevisionService, latestRevisionTracker
         );
 
         AtomicBoolean handlerCalled = new AtomicBoolean(false);
@@ -283,30 +293,6 @@ class RevisionConsistencyInterceptorTest {
         interceptor.interceptCall(call, new Metadata(), handler);
 
         assertTrue(handlerCalled.get(), "Handler should be called when revisions match exactly");
-    }
-
-    private void mockLatestRevision(long revision) throws Exception {
-        RecordedEvent recordedEvent = mock(RecordedEvent.class);
-        when(recordedEvent.getRevision()).thenReturn(revision);
-
-        ResolvedEvent resolvedEvent = mock(ResolvedEvent.class);
-        when(resolvedEvent.getEvent()).thenReturn(recordedEvent);
-
-        ReadResult readResult = mock(ReadResult.class);
-        when(readResult.getEvents()).thenReturn(List.of(resolvedEvent));
-
-        CompletableFuture<ReadResult> future = CompletableFuture.completedFuture(readResult);
-        when(esClient.readStream(eq("test-stream"), any(ReadStreamOptions.class)))
-                .thenReturn(future);
-    }
-
-    private void mockEmptyEventStream() throws Exception {
-        ReadResult readResult = mock(ReadResult.class);
-        when(readResult.getEvents()).thenReturn(Collections.emptyList());
-
-        CompletableFuture<ReadResult> future = CompletableFuture.completedFuture(readResult);
-        when(esClient.readStream(eq("test-stream"), any(ReadStreamOptions.class)))
-                .thenReturn(future);
     }
 
     private static class TestServerCall<ReqT, RespT> extends ServerCall<ReqT, RespT> {

@@ -18,11 +18,6 @@ public class ResourcePDPConfig {
     private int adminPort;
 
     /**
-     * The mode of the EPP client: ASYNC, SYNC, or DISABLED. Default is ASYNC.
-     */
-    private EPPMode eppMode;
-
-    /**
      * The amount of time, in milliseconds, that the service will wait to ensure revision consistency with event store.
      */
     private int revisionConsistencyTimeout;
@@ -30,10 +25,9 @@ public class ResourcePDPConfig {
     public ResourcePDPConfig() {
     }
 
-    public ResourcePDPConfig(String adminHostname, int adminPort, EPPMode eppMode, int revisionConsistencyTimeout) {
+    public ResourcePDPConfig(String adminHostname, int adminPort, int revisionConsistencyTimeout) {
         this.adminHostname = adminHostname;
         this.adminPort = adminPort;
-        this.eppMode = eppMode;
         this.revisionConsistencyTimeout = revisionConsistencyTimeout;
     }
 
@@ -45,10 +39,6 @@ public class ResourcePDPConfig {
 
         if (adminPort == 0) {
             throw new IllegalArgumentException("adminPort is 0");
-        }
-
-        if (eppMode == null) {
-            this.eppMode = EPPMode.ASYNC;
         }
 
         if (revisionConsistencyTimeout <= 0) {
@@ -70,14 +60,6 @@ public class ResourcePDPConfig {
 
     public void setAdminPort(int adminPort) {
         this.adminPort = adminPort;
-    }
-
-    public EPPMode getEppMode() {
-        return eppMode;
-    }
-
-    public void setEppMode(EPPMode eppMode) {
-        this.eppMode = eppMode;
     }
 
     public int getRevisionConsistencyTimeout() {
