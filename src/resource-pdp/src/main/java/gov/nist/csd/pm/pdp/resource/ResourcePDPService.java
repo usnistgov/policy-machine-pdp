@@ -39,8 +39,8 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
 
             // only allow resource operations to be adjudicated
             Operation<?> operation = pap.query().operations().getOperation(request.getOpName());
-            if (operation instanceof ResourceOperation<?>) {
-                throw new PMException("only subclasses of ResourceOperation are allowed to be invoked in the resource-pdp");
+            if (!(operation instanceof ResourceOperation<?>)) {
+                throw new OperationIsNotResourceOperationException();
             }
 
             Object result = pdp.adjudicateOperation(
@@ -57,12 +57,24 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
                                              .withDescription(e.getMessage())
                                              .withCause(e)
                                              .asRuntimeException());
+        } catch (OperationIsNotResourceOperationException e) {
+            logger.error("adjudication FAILED", e);
+            responseObserver.onError(Status.INVALID_ARGUMENT
+                                             .withDescription(e.getMessage())
+                                             .withCause(e)
+                                             .asRuntimeException());
         } catch (Exception e) {
             logger.error("adjudication FAILED", e);
             responseObserver.onError(Status.INTERNAL
                                              .withDescription(e.getMessage())
                                              .withCause(e)
                                              .asRuntimeException());
+        }
+    }
+
+    static class OperationIsNotResourceOperationException extends Exception {
+        public OperationIsNotResourceOperationException() {
+            super("only subclasses of ResourceOperation are allowed to be invoked in the resource-pdp");
         }
     }
 }

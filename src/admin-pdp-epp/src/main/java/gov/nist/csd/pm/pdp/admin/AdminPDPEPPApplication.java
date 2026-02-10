@@ -26,7 +26,7 @@ import java.util.List;
 
 import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAME;
 
-@SpringBootApplication(exclude = {Neo4jAutoConfiguration.class})
+@SpringBootApplication
 @EnableAspectJAutoProxy
 @ComponentScan(
     basePackages = {"gov.nist.csd.pm.pdp"}

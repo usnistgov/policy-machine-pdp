@@ -2,27 +2,32 @@ package gov.nist.csd.pm.pdp.resource;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.PAP;
+import gov.nist.csd.pm.core.pap.operation.AdminOperation;
+import gov.nist.csd.pm.core.pap.operation.Operation;
+import gov.nist.csd.pm.core.pap.operation.QueryOperation;
+import gov.nist.csd.pm.core.pap.operation.ResourceOperation;
+import gov.nist.csd.pm.core.pap.query.OperationsQuery;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextFromHeader;
 import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
-import gov.nist.csd.pm.proto.v1.pdp.adjudication.AdjudicateOperationResponse;
-import gov.nist.csd.pm.proto.v1.pdp.adjudication.OperationRequest;
 import gov.nist.csd.pm.proto.v1.model.Value;
 import gov.nist.csd.pm.proto.v1.model.ValueMap;
+import gov.nist.csd.pm.proto.v1.pdp.adjudication.AdjudicateOperationResponse;
+import gov.nist.csd.pm.proto.v1.pdp.adjudication.OperationRequest;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -34,7 +39,7 @@ import static org.mockito.Mockito.*;
 class ResourcePDPServiceTest {
 
 	@Mock private PDP pdp;
-	@Mock private PAP pap;
+	@Mock(answer = Answers.RETURNS_DEEP_STUBS) private PAP pap;
 
 	@Mock private StreamObserver<AdjudicateOperationResponse> responseObserver;
 
@@ -53,16 +58,22 @@ class ResourcePDPServiceTest {
 				.build();
 
 		UserContext userCtx = mock(UserContext.class);
+		ResourceOperation<?> resourceOp = mock(ResourceOperation.class);
 
 		Map<String, Object> argsObj = Map.of("a", "test");
 		Object pdpResult = "test";
-
 		Value resultValue = Value.newBuilder().setStringValue("test").build();
 
 		try (MockedStatic<UserContextFromHeader> header = mockStatic(UserContextFromHeader.class);
 		     MockedStatic<ProtoUtil> protoUtil = mockStatic(ProtoUtil.class)) {
 
 			header.when(() -> UserContextFromHeader.get(pap)).thenReturn(userCtx);
+
+			// IMPORTANT: do not inline pap.query().operations() inside when/doReturn
+			var ops = pap.query().operations();
+			doReturn(resourceOp)
+					.when(ops)
+					.getOperation("op1");
 
 			protoUtil.when(() -> ProtoUtil.valueMapToObjectMap(any(ValueMap.class)))
 					.thenReturn(argsObj);
@@ -75,7 +86,6 @@ class ResourcePDPServiceTest {
 
 			service.adjudicateResourceOperation(request, responseObserver);
 
-			// verify response
 			ArgumentCaptor<AdjudicateOperationResponse> respCaptor =
 					ArgumentCaptor.forClass(AdjudicateOperationResponse.class);
 
@@ -98,6 +108,7 @@ class ResourcePDPServiceTest {
 				.build();
 
 		UserContext userCtx = mock(UserContext.class);
+		ResourceOperation<?> resourceOp = mock(ResourceOperation.class);
 		Map<String, Object> argsObj = Map.of("a", "test");
 
 		UnauthorizedException unauth = mock(UnauthorizedException.class);
@@ -107,6 +118,11 @@ class ResourcePDPServiceTest {
 		     MockedStatic<ProtoUtil> protoUtil = mockStatic(ProtoUtil.class)) {
 
 			header.when(() -> UserContextFromHeader.get(pap)).thenReturn(userCtx);
+
+			var ops = pap.query().operations();
+			doReturn(resourceOp)
+					.when(ops)
+					.getOperation("op1");
 
 			protoUtil.when(() -> ProtoUtil.valueMapToObjectMap(any(ValueMap.class)))
 					.thenReturn(argsObj);
@@ -139,6 +155,7 @@ class ResourcePDPServiceTest {
 				.build();
 
 		UserContext userCtx = mock(UserContext.class);
+		ResourceOperation<?> resourceOp = mock(ResourceOperation.class);
 		Map<String, Object> argsObj = Map.of("a", "test");
 
 		RuntimeException failure = new RuntimeException("test exception");
@@ -147,6 +164,11 @@ class ResourcePDPServiceTest {
 		     MockedStatic<ProtoUtil> protoUtil = mockStatic(ProtoUtil.class)) {
 
 			header.when(() -> UserContextFromHeader.get(pap)).thenReturn(userCtx);
+
+			OperationsQuery ops = pap.query().operations();
+			doReturn(resourceOp)
+					.when(ops)
+					.getOperation("op1");
 
 			protoUtil.when(() -> ProtoUtil.valueMapToObjectMap(any(ValueMap.class)))
 					.thenReturn(argsObj);
@@ -162,6 +184,43 @@ class ResourcePDPServiceTest {
 			Status status = Status.fromThrowable(errCaptor.getValue());
 			assertEquals(Status.Code.INTERNAL, status.getCode());
 			assertEquals("test exception", status.getDescription());
+
+			verify(responseObserver, never()).onNext(any());
+			verify(responseObserver, never()).onCompleted();
+		}
+	}
+
+	@Test
+	void adjudicateResourceOperation_nonResourceOperation_returnsInternal() throws PMException {
+		OperationRequest request = OperationRequest.newBuilder()
+				.setOpName("op1")
+				.setArgs(ValueMap.newBuilder().build())
+				.build();
+
+		UserContext userCtx = mock(UserContext.class);
+
+		AdminOperation<?> nonResourceOp = mock(AdminOperation.class);
+
+		try (MockedStatic<UserContextFromHeader> header = mockStatic(UserContextFromHeader.class)) {
+
+			header.when(() -> UserContextFromHeader.get(pap)).thenReturn(userCtx);
+
+			OperationsQuery ops = pap.query().operations();
+			doReturn(nonResourceOp)
+					.when(ops)
+					.getOperation("op1");
+
+			service.adjudicateResourceOperation(request, responseObserver);
+
+			ArgumentCaptor<Throwable> errCaptor = ArgumentCaptor.forClass(Throwable.class);
+			verify(responseObserver).onError(errCaptor.capture());
+
+			Status status = Status.fromThrowable(errCaptor.getValue());
+			assertEquals(Status.Code.INVALID_ARGUMENT, status.getCode());
+			assertEquals(
+					"only subclasses of ResourceOperation are allowed to be invoked in the resource-pdp",
+					status.getDescription()
+			);
 
 			verify(responseObserver, never()).onNext(any());
 			verify(responseObserver, never()).onCompleted();
