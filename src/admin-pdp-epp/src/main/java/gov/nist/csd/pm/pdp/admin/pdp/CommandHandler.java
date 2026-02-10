@@ -1,26 +1,22 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
-import gov.nist.csd.pm.core.common.prohibition.ContainerCondition;
-import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
 import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
+import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
 import gov.nist.csd.pm.core.pap.serialization.json.JSONDeserializer;
-import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.PDPTx;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import gov.nist.csd.pm.proto.v1.cmd.*;
+import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
+import gov.nist.csd.pm.proto.v1.pdp.cmd.*;
 import gov.nist.csd.pm.proto.v1.model.SerializationFormat;
 import gov.nist.csd.pm.proto.v1.model.Value;
 import gov.nist.csd.pm.proto.v1.model.ValueList;
 import gov.nist.csd.pm.proto.v1.model.ValueMap;
 import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Handles the execution of administrative commands.
@@ -31,129 +27,33 @@ public class CommandHandler {
     /**
      * Handles an administrative command based on its type.
      *
-     * @param userCtx The user context.
      * @param ngacCtx The ngac transaction context.
      * @param pdpTx The pdp transaction context.
      * @param adminCommand The command to handle.
      * @throws PMException If an error occurs during command handling.
      */
-    public Value handleCommand(UserContext userCtx, NGACContext ngacCtx, PDPTx pdpTx, AdminCommand adminCommand) throws PMException {
+    public Value handleCommand(NGACContext ngacCtx, PDPTx pdpTx, AdminOperationCommand adminCommand) throws PMException {
         return switch (adminCommand.getCmdCase()) {
-            case CREATE_POLICY_CLASS_CMD     -> handleCreatePolicyClassCmd(pdpTx, adminCommand.getCreatePolicyClassCmd());
-            case CREATE_USER_ATTRIBUTE_CMD   -> handleCreateUserAttributeCmd(pdpTx, adminCommand.getCreateUserAttributeCmd());
-            case CREATE_USER_CMD             -> handleCreateUserCmd(pdpTx, adminCommand.getCreateUserCmd());
-            case CREATE_OBJECT_ATTRIBUTE_CMD -> handleCreateObjectAttributeCmd(pdpTx, adminCommand.getCreateObjectAttributeCmd());
-            case CREATE_OBJECT_CMD           -> handleCreateObjectCmd(pdpTx, adminCommand.getCreateObjectCmd());
-            case SET_NODE_PROPERTIES_CMD     -> handleSetNodePropertiesCmd(pdpTx, adminCommand.getSetNodePropertiesCmd());
-            case DELETE_NODE_CMD             -> handleDeleteNodeCmd(pdpTx, adminCommand.getDeleteNodeCmd());
-            case ASSIGN_CMD                  -> handleAssignCmd(pdpTx, adminCommand.getAssignCmd());
-            case DEASSIGN_CMD                -> handleDeassignCmd(pdpTx, adminCommand.getDeassignCmd());
-            case ASSOCIATE_CMD               -> handleAssociateCmd(pdpTx, adminCommand.getAssociateCmd());
-            case DISSOCIATE_CMD              -> handleDissociateCmd(pdpTx, adminCommand.getDissociateCmd());
-            case CREATE_PROHIBITION_CMD      -> handleCreateProhibitionCmd(pdpTx, adminCommand.getCreateProhibitionCmd());
-            case DELETE_PROHIBITION_CMD      -> handleDeleteProhibitionCmd(pdpTx, adminCommand.getDeleteProhibitionCmd());
-            case DELETE_OBLIGATION_CMD       -> handleDeleteObligationCmd(pdpTx, adminCommand.getDeleteObligationCmd());
-            case DELETE_ADMIN_OPERATION_CMD  -> handleDeleteAdminOperationCmd(pdpTx, adminCommand.getDeleteAdminOperationCmd());
-            case SET_RESOURCE_OPERATIONS_CMD -> handleSetResourceOperationsCmd(pdpTx, adminCommand.getSetResourceOperationsCmd());
-            case DELETE_ADMIN_ROUTINE_CMD    -> handleDeleteAdminRoutineCmd(pdpTx, adminCommand.getDeleteAdminRoutineCmd());
-            case EXECUTE_PML_CMD             -> handleExecutePmlCmd(pdpTx, adminCommand.getExecutePmlCmd());
-	        case DESERIALIZE_CMD             -> handleDeserializeCmd(pdpTx, adminCommand.getDeserializeCmd());
-	        case GENERIC_ADMIN_CMD           -> handleGenericCmd(userCtx, ngacCtx, adminCommand.getGenericAdminCmd());
-	        case CMD_NOT_SET                 -> throw new PMException("cmd not set");
-        };
-    }
-
-    private Value handleGenericCmd(UserContext userCtx, NGACContext ngacCtx, GenericAdminCmd genericAdminCmd) throws PMException {
-        PAP pap = ngacCtx.pap();
-        PDP pdp = ngacCtx.pdp();
-        String opName = genericAdminCmd.getOpName();
-        ValueMap args = genericAdminCmd.getArgs();
-        Map<String, Object> argsMap = toArgsMap(args);
-
-        Object o;
-        if (pap.query().operations().getAdminOperationNames().contains(opName)) {
-            o = pdp.adjudicateAdminOperation(userCtx, opName, argsMap);
-        } else if (pap.query().routines().getAdminRoutineNames().contains(opName)) {
-            o = pdp.adjudicateAdminRoutine(userCtx, opName, argsMap);
-        } else {
-            throw new PMException("unknown AdminFunction " + opName);
-        }
-
-        return objToValue(o);
-    }
-
-    private Value objToValue(Object o) {
-        Value.Builder builder = Value.newBuilder();
-        if (o instanceof Long l) {
-            return builder.setInt64Value(l).build();
-        } else if (o instanceof Boolean b) {
-            return builder.setBoolValue(b).build();
-        } else if (o instanceof List<?> list) {
-            List<Value> values = new ArrayList<>();
-            for (Object obj : list) {
-                values.add(objToValue(obj));
-            }
-
-            return builder.setListValue(ValueList.newBuilder().addAllValues(values)).build();
-        } else if (o instanceof Map<?, ?> map) {
-            Map<String, Value> values = new HashMap<>();
-            for (var e : map.entrySet()) {
-                Object key = e.getKey();
-                if (!(key instanceof String)) {
-                    // only supports string keys in maps
-                    key = key.toString();
-                }
-
-                Object value = e.getValue();
-
-                values.put((String) key, objToValue(value));
-            }
-
-            return builder.setMapValue(ValueMap.newBuilder().putAllValues(values)).build();
-        } else if (o instanceof String str) {
-            return builder.setStringValue(str).build();
-        }
-
-        return Value.newBuilder().build();
-    }
-
-    private Map<String, Object> toArgsMap(ValueMap args) throws PMException {
-        Map<String, Object> argMap = new HashMap<>();
-
-        for (var entry : args.getValuesMap().entrySet()) {
-            String key = entry.getKey();
-            Value value = entry.getValue();
-            Object o = valueToObject(value);
-
-            argMap.put(key, o);
-        }
-
-        return argMap;
-    }
-
-    private Object valueToObject(Value value) throws PMException {
-        return switch (value.getDataCase()) {
-            case INT64_VALUE -> value.getInt64Value();
-            case STRING_VALUE -> value.getStringValue();
-            case BOOL_VALUE -> value.getBoolValue();
-            case LIST_VALUE -> {
-                List<Object> list = new ArrayList<>();
-                for (Value v : value.getListValue().getValuesList()) {
-                    list.add(valueToObject(v));
-                }
-
-                yield list;
-            }
-            case MAP_VALUE -> {
-                Map<String, Object> map = new HashMap<>();
-
-                for (var entry : value.getMapValue().getValuesMap().entrySet()) {
-                    map.put(entry.getKey(), valueToObject(entry.getValue()));
-                }
-
-                yield  map;
-            }
-            case DATA_NOT_SET -> throw new PMException("value data not set");
+            case CREATE_POLICY_CLASS_CMD        -> handleCreatePolicyClassCmd(pdpTx, adminCommand.getCreatePolicyClassCmd());
+            case CREATE_USER_ATTRIBUTE_CMD      -> handleCreateUserAttributeCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateUserAttributeCmd());
+            case CREATE_USER_CMD                -> handleCreateUserCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateUserCmd());
+            case CREATE_OBJECT_ATTRIBUTE_CMD    -> handleCreateObjectAttributeCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateObjectAttributeCmd());
+            case CREATE_OBJECT_CMD              -> handleCreateObjectCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateObjectCmd());
+            case SET_NODE_PROPERTIES_CMD        -> handleSetNodePropertiesCmd(pdpTx, ngacCtx.pap(), adminCommand.getSetNodePropertiesCmd());
+            case DELETE_NODE_CMD                -> handleDeleteNodeCmd(pdpTx, ngacCtx.pap(), adminCommand.getDeleteNodeCmd());
+            case ASSIGN_CMD                     -> handleAssignCmd(pdpTx, ngacCtx.pap(), adminCommand.getAssignCmd());
+            case DEASSIGN_CMD                   -> handleDeassignCmd(pdpTx, ngacCtx.pap(), adminCommand.getDeassignCmd());
+            case ASSOCIATE_CMD                  -> handleAssociateCmd(pdpTx, ngacCtx.pap(), adminCommand.getAssociateCmd());
+            case DISSOCIATE_CMD                 -> handleDissociateCmd(pdpTx, ngacCtx.pap(), adminCommand.getDissociateCmd());
+	        case CREATE_NODE_PROHIBITION_CMD    -> handleCreateNodeProhibitionCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateNodeProhibitionCmd());
+	        case CREATE_PROCESS_PROHIBITION_CMD -> handleCreateProcessProhibitionCmd(pdpTx, ngacCtx.pap(), adminCommand.getCreateProcessProhibitionCmd());
+            case DELETE_PROHIBITION_CMD         -> handleDeleteProhibitionCmd(pdpTx, adminCommand.getDeleteProhibitionCmd());
+            case DELETE_OBLIGATION_CMD          -> handleDeleteObligationCmd(pdpTx, adminCommand.getDeleteObligationCmd());
+            case DELETE_ADMIN_OPERATION_CMD     -> handleDeleteOperationCmd(pdpTx, adminCommand.getDeleteAdminOperationCmd());
+            case SET_RESOURCE_OPERATIONS_CMD    -> handleSetResourceOperationsCmd(pdpTx, adminCommand.getSetResourceOperationsCmd());
+            case EXECUTE_PML_CMD                -> handleExecutePmlCmd(pdpTx, adminCommand.getExecutePmlCmd());
+	        case DESERIALIZE_CMD                -> handleDeserializeCmd(pdpTx, adminCommand.getDeserializeCmd());
+	        case CMD_NOT_SET                    -> throw new PMException("cmd not set");
         };
     }
 
@@ -173,96 +73,103 @@ public class CommandHandler {
         return Value.newBuilder().setInt64Value(id).build();
     }
 
-    private Value handleCreateUserAttributeCmd(PDPTx pdpTx, CreateUserAttributeCmd cmd) throws PMException {
+    private Value handleCreateUserAttributeCmd(PDPTx pdpTx, PAP pap, CreateUserAttributeCmd cmd) throws PMException {
         long id = pdpTx.modify().graph().createUserAttribute(
                 cmd.getName(),
-                cmd.getDescendantsList()
+                ProtoUtil.resolveNodeRefIdList(pap, cmd.getDescendantsList())
         );
         return Value.newBuilder().setInt64Value(id).build();
     }
 
-    private Value handleCreateUserCmd(PDPTx pdpTx, CreateUserCmd cmd) throws PMException {
+    private Value handleCreateUserCmd(PDPTx pdpTx, PAP pap, CreateUserCmd cmd) throws PMException {
         long id = pdpTx.modify().graph().createUser(
                 cmd.getName(),
-                cmd.getDescendantsList()
+                ProtoUtil.resolveNodeRefIdList(pap, cmd.getDescendantsList())
         );
         return Value.newBuilder().setInt64Value(id).build();
     }
 
-    private Value handleCreateObjectAttributeCmd(PDPTx pdpTx, CreateObjectAttributeCmd cmd) throws PMException {
+    private Value handleCreateObjectAttributeCmd(PDPTx pdpTx, PAP pap, CreateObjectAttributeCmd cmd) throws PMException {
         long id = pdpTx.modify().graph().createObjectAttribute(
                 cmd.getName(),
-                cmd.getDescendantsList()
+                ProtoUtil.resolveNodeRefIdList(pap, cmd.getDescendantsList())
         );
         return Value.newBuilder().setInt64Value(id).build();
     }
 
-    private Value handleCreateObjectCmd(PDPTx pdpTx, CreateObjectCmd cmd) throws PMException {
+    private Value handleCreateObjectCmd(PDPTx pdpTx, PAP pap, CreateObjectCmd cmd) throws PMException {
         long id = pdpTx.modify().graph().createObject(
                 cmd.getName(),
-                cmd.getDescendantsList()
+                ProtoUtil.resolveNodeRefIdList(pap, cmd.getDescendantsList())
         );
         return Value.newBuilder().setInt64Value(id).build();
     }
 
-    private Value handleSetNodePropertiesCmd(PDPTx pdpTx, SetNodePropertiesCmd cmd) throws PMException {
-        pdpTx.modify().graph().setNodeProperties(cmd.getId(), cmd.getPropertiesMap());
+    private Value handleSetNodePropertiesCmd(PDPTx pdpTx, PAP pap, SetNodePropertiesCmd cmd) throws PMException {
+        pdpTx.modify().graph().setNodeProperties(ProtoUtil.resolveNodeRefId(pap, cmd.getNode()), cmd.getPropertiesMap());
         return Value.newBuilder().build();
     }
 
-    private Value handleDeleteNodeCmd(PDPTx pdpTx, DeleteNodeCmd cmd) throws PMException {
-        pdpTx.modify().graph().deleteNode(cmd.getId());
+    private Value handleDeleteNodeCmd(PDPTx pdpTx, PAP pap, DeleteNodeCmd cmd) throws PMException {
+        pdpTx.modify().graph().deleteNode(ProtoUtil.resolveNodeRefId(pap, cmd.getNode()));
         return Value.newBuilder().build();
     }
 
-    private Value handleAssignCmd(PDPTx pdpTx, AssignCmd cmd) throws PMException {
-        pdpTx.modify().graph().assign(cmd.getAscendantId(), cmd.getDescendantIdsList());
+    private Value handleAssignCmd(PDPTx pdpTx, PAP pap, AssignCmd cmd) throws PMException {
+        pdpTx.modify().graph().assign(
+                ProtoUtil.resolveNodeRefId(pap, cmd.getAscendant()),
+                ProtoUtil.resolveNodeRefIdList(pap, cmd.getDescendantsList())
+        );
         return Value.newBuilder().build();
     }
 
-    private Value handleDeassignCmd(PDPTx pdpTx, DeassignCmd cmd) throws PMException {
-        pdpTx.modify().graph().deassign(cmd.getAscendantId(), cmd.getDescendantIdsList());
+    private Value handleDeassignCmd(PDPTx pdpTx, PAP pap, DeassignCmd cmd) throws PMException {
+        pdpTx.modify().graph().deassign(
+                ProtoUtil.resolveNodeRefId(pap, cmd.getAscendant()),
+                ProtoUtil.resolveNodeRefIdList(pap, cmd.getDescendantsList())
+        );
         return Value.newBuilder().build();
     }
 
-    private Value handleAssociateCmd(PDPTx pdpTx, AssociateCmd cmd) throws PMException {
+    private Value handleAssociateCmd(PDPTx pdpTx, PAP pap, AssociateCmd cmd) throws PMException {
         pdpTx.modify().graph().associate(
-                cmd.getUaId(),
-                cmd.getTargetId(),
+                ProtoUtil.resolveNodeRefId(pap, cmd.getUa()),
+                ProtoUtil.resolveNodeRefId(pap, cmd.getTarget()),
                 new AccessRightSet(cmd.getArsetList())
         );
         return Value.newBuilder().build();
     }
 
-    private Value handleDissociateCmd(PDPTx pdpTx, DissociateCmd cmd) throws PMException {
+    private Value handleDissociateCmd(PDPTx pdpTx, PAP pap, DissociateCmd cmd) throws PMException {
         pdpTx.modify().graph().dissociate(
-                cmd.getUaId(),
-                cmd.getTargetId()
+                ProtoUtil.resolveNodeRefId(pap, cmd.getUa()),
+                ProtoUtil.resolveNodeRefId(pap, cmd.getTarget())
         );
         return Value.newBuilder().build();
     }
 
-    private Value handleCreateProhibitionCmd(PDPTx pdpTx, CreateProhibitionCmd cmd) throws PMException {
-        ProhibitionSubject subject = switch (cmd.getSubjectCase()) {
-            case NODE_ID -> new ProhibitionSubject(cmd.getNodeId());
-            case PROCESS -> new ProhibitionSubject(cmd.getProcess());
-            case SUBJECT_NOT_SET -> throw new PMException("subject not set");
-        };
-
-        List<ContainerCondition> containerConditions = new ArrayList<>();
-        for (CreateProhibitionCmd.ContainerCondition ccProto : cmd.getContainerConditionsList()) {
-            containerConditions.add(new ContainerCondition(
-                    ccProto.getContainerId(),
-                    ccProto.getComplement()
-            ));
-        }
-
-        pdpTx.modify().prohibitions().createProhibition(
+    private Value handleCreateNodeProhibitionCmd(PDPTx pdpTx, PAP pap, CreateNodeProhibitionCmd cmd) throws PMException {
+        pdpTx.modify().prohibitions().createNodeProhibition(
                 cmd.getName(),
-                subject,
+                ProtoUtil.resolveNodeRefId(pap, cmd.getNode()),
                 new AccessRightSet(cmd.getArsetList()),
-                cmd.getIntersection(),
-                containerConditions
+                new HashSet<>(ProtoUtil.resolveNodeRefIdList(pap, cmd.getInclusionSet().getNodesList())),
+                new HashSet<>(ProtoUtil.resolveNodeRefIdList(pap, cmd.getExclusionSet().getNodesList())),
+                cmd.getIsConjunctive()
+        );
+
+        return Value.newBuilder().build();
+    }
+
+    private Value handleCreateProcessProhibitionCmd(PDPTx pdpTx, PAP pap, CreateProcessProhibitionCmd cmd) throws PMException {
+        pdpTx.modify().prohibitions().createProcessProhibition(
+                cmd.getName(),
+                ProtoUtil.resolveNodeRefId(pap, cmd.getNode()),
+				cmd.getProcess(),
+                new AccessRightSet(cmd.getArsetList()),
+                new HashSet<>(ProtoUtil.resolveNodeRefIdList(pap, cmd.getInclusionSet().getNodesList())),
+                new HashSet<>(ProtoUtil.resolveNodeRefIdList(pap, cmd.getExclusionSet().getNodesList())),
+                cmd.getIsConjunctive()
         );
 
         return Value.newBuilder().build();
@@ -278,25 +185,66 @@ public class CommandHandler {
         return Value.newBuilder().build();
     }
 
-    private Value handleDeleteAdminOperationCmd(PDPTx pdpTx, DeleteAdminOperationCmd cmd) throws PMException {
-        pdpTx.modify().operations().deleteAdminOperation(cmd.getName());
+    private Value handleDeleteOperationCmd(PDPTx pdpTx, DeleteOperationCmd cmd) throws PMException {
+        pdpTx.modify().operations().deleteOperation(cmd.getName());
         return Value.newBuilder().build();
     }
 
-    private Value handleSetResourceOperationsCmd(PDPTx pdpTx, SetResourceOperationsCmd cmd) throws PMException {
-        pdpTx.modify().operations().setResourceOperations(
-                new AccessRightSet(cmd.getOperationsList())
+    private Value handleSetResourceOperationsCmd(PDPTx pdpTx, SetResourceAccessRightsCmd cmd) throws PMException {
+        pdpTx.modify().operations().setResourceAccessRights(
+                new AccessRightSet(cmd.getAccessRightsList())
         );
         return Value.newBuilder().build();
     }
 
-    private Value handleDeleteAdminRoutineCmd(PDPTx pdpTx, DeleteAdminRoutineCmd cmd) throws PMException {
-        pdpTx.modify().routines().deleteAdminRoutine(cmd.getName());
-        return Value.newBuilder().build();
+    private Value handleExecutePmlCmd(PDPTx pdpTx, ExecutePMLCmd cmd) throws PMException {
+        Object ret = pdpTx.executePML(cmd.getPml());
+        return objectToValue(ret);
     }
 
-    private Value handleExecutePmlCmd(PDPTx pdpTx, ExecutePMLCmd cmd) throws PMException {
-        pdpTx.executePML(cmd.getPml());
-        return Value.newBuilder().build();
+    /**
+     * Converts a generic Java Object into a Protobuf Value message.
+     * Supported types: Integer, Long, Boolean, String, Iterable (List/Set), Map<String, Object>.
+     *
+     * @param o The object to convert.
+     * @return The constructed Protobuf Value.
+     * @throws IllegalArgumentException if the type is not supported.
+     */
+    public static Value objectToValue(Object o) {
+        Value.Builder builder = Value.newBuilder();
+
+	    switch (o) {
+		    case null -> {
+			    return builder.build();
+		    }
+		    case Boolean b -> {
+			    return builder.setBoolValue(b).build();
+		    }
+		    case Long l -> {
+			    return builder.setInt64Value(l).build();
+		    }
+		    case String s -> {
+			    return builder.setStringValue(s).build();
+		    }
+            case List<?> objects -> {
+			    ValueList.Builder listBuilder = ValueList.newBuilder();
+			    for (Object item : objects) {
+				    listBuilder.addValues(objectToValue(item));
+			    }
+			    return builder.setListValue(listBuilder).build();
+		    }
+		    case Map<?, ?> map -> {
+			    ValueMap.Builder mapBuilder = ValueMap.newBuilder();
+			    for (Map.Entry<?, ?> entry : map.entrySet()) {
+				    String key = String.valueOf(entry.getKey());
+				    mapBuilder.putValues(key, objectToValue(entry.getValue()));
+			    }
+			    return builder.setMapValue(mapBuilder).build();
+		    }
+		    default -> {
+		    }
+	    }
+
+	    throw new IllegalArgumentException("Unsupported type for Value conversion: " + o.getClass().getName());
     }
 }

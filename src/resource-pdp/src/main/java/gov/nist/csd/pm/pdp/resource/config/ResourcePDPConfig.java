@@ -1,7 +1,8 @@
 package gov.nist.csd.pm.pdp.resource.config;
 
-import javax.annotation.PostConstruct;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import javax.annotation.PostConstruct;
 
 @ConfigurationProperties(prefix = "pm.pdp.resource")
 public class ResourcePDPConfig {
@@ -22,19 +23,18 @@ public class ResourcePDPConfig {
     private EPPMode eppMode;
 
     /**
-     * The timeout that the EPPClient will use when waiting for the current revision to catch up
-     * to the side effect revision returned by the EPP. This value will be ignored if eppMode is ASYNC.
+     * The amount of time, in milliseconds, that the service will wait to ensure revision consistency with event store.
      */
-    private int eppSideEffectTimeout;
+    private int revisionConsistencyTimeout;
 
     public ResourcePDPConfig() {
     }
 
-    public ResourcePDPConfig(String adminHostname, int adminPort, EPPMode eppMode, int eppSideEffectTimeout) {
+    public ResourcePDPConfig(String adminHostname, int adminPort, EPPMode eppMode, int revisionConsistencyTimeout) {
         this.adminHostname = adminHostname;
         this.adminPort = adminPort;
         this.eppMode = eppMode;
-        this.eppSideEffectTimeout = eppSideEffectTimeout;
+        this.revisionConsistencyTimeout = revisionConsistencyTimeout;
     }
 
     @PostConstruct
@@ -49,6 +49,10 @@ public class ResourcePDPConfig {
 
         if (eppMode == null) {
             this.eppMode = EPPMode.ASYNC;
+        }
+
+        if (revisionConsistencyTimeout <= 0) {
+            setRevisionConsistencyTimeout(1000);
         }
     }
 
@@ -76,12 +80,11 @@ public class ResourcePDPConfig {
         this.eppMode = eppMode;
     }
 
-    public int getEppSideEffectTimeout() {
-        return eppSideEffectTimeout;
+    public int getRevisionConsistencyTimeout() {
+        return revisionConsistencyTimeout;
     }
 
-    public void setEppSideEffectTimeout(int eppSideEffectTimeout) {
-        this.eppSideEffectTimeout = eppSideEffectTimeout;
+    public void setRevisionConsistencyTimeout(int revisionConsistencyTimeout) {
+        this.revisionConsistencyTimeout = revisionConsistencyTimeout;
     }
-
 }

@@ -1,7 +1,8 @@
 package gov.nist.csd.pm.pdp.admin.config;
 
-import javax.annotation.PostConstruct;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import javax.annotation.PostConstruct;
 
 @ConfigurationProperties(prefix = "pm.pdp.admin")
 public class AdminPDPConfig {
@@ -10,11 +11,6 @@ public class AdminPDPConfig {
      * Path to store neo4j policy locally
      */
     private String neo4jDbPath;
-
-    /**
-     * The user bootstrapping the policy
-     */
-    private String bootstrapUser;
 
     /**
      * The file to the policy file to bootstrap the PDP with
@@ -27,7 +23,7 @@ public class AdminPDPConfig {
     private String esdbConsumerGroup;
 
     /**
-     * Name of the event store stream for snapshots
+     * Snapshot event revision interval (e.g. snapshot every 1000 events)
      */
     private int snapshotInterval;
 
@@ -40,6 +36,11 @@ public class AdminPDPConfig {
      * Directory path containing plugin JAR files for Operations and Routines
      */
     private String pluginsDir;
+
+    /**
+     * The amount of time, in milliseconds, that the service will wait to ensure revision consistency with event store.
+     */
+    private int revisionConsistencyTimeout;
 
     @PostConstruct
     public void validate() {
@@ -58,6 +59,10 @@ public class AdminPDPConfig {
         if (snapshotInterval <= 0) {
             setSnapshotInterval(1000);
         }
+
+        if (revisionConsistencyTimeout <= 0) {
+            setRevisionConsistencyTimeout(1000);
+        }
     }
 
     public String getNeo4jDbPath() {
@@ -66,14 +71,6 @@ public class AdminPDPConfig {
 
     public void setNeo4jDbPath(String neo4jDbPath) {
         this.neo4jDbPath = neo4jDbPath;
-    }
-
-    public String getBootstrapUser() {
-        return bootstrapUser;
-    }
-
-    public void setBootstrapUser(String bootstrapUser) {
-        this.bootstrapUser = bootstrapUser;
     }
 
     public String getBootstrapFilePath() {
@@ -114,5 +111,13 @@ public class AdminPDPConfig {
 
     public void setPluginsDir(String pluginsDir) {
         this.pluginsDir = pluginsDir;
+    }
+
+    public int getRevisionConsistencyTimeout() {
+        return revisionConsistencyTimeout;
+    }
+
+    public void setRevisionConsistencyTimeout(int revisionConsistencyTimeout) {
+        this.revisionConsistencyTimeout = revisionConsistencyTimeout;
     }
 }

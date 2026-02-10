@@ -52,8 +52,6 @@ pm:
     admin:
       # The file path to the policy file used to bootstrap the PDP.
       bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/policy.json"
-      # The user bootstrapping the policy.
-      bootstrap-user: "u1"
       # Path to store Neo4j policy locally.
       neo4j-db-path: "neo4j/data"
       # Name of the EventStoreDB consumer group.
@@ -75,13 +73,13 @@ pm:
       snapshot-stream: pm-snapshot-v1
 ```
 
-#### Operation and Routine Plugins
-Custom policy-machine-core Operations and Routines can be packaged into jar files and provided to the admin-pdp-epp. This 
+#### Operation Plugins
+Custom policy-machine-core Operations can be packaged into jar files and provided to the admin-pdp-epp. This 
 service uses [PF4J](https://pf4j.org/doc/getting-started.html) to load plugins from JAR files in a directory defined in 
-the configurations options above.
+the configurations option above.
 
 1. Plugin pom.xml
-Here is an example of what a pom.xml looks like for a plugin. The policy-machine-core and pf4j dependencies are required for
+Here is an example of what a pom.xml looks like for a plugin. The policy-machine-core and PF4J dependencies are required for
 the plugin to work.
 
 ```xml
@@ -172,33 +170,65 @@ the plugin to work.
 ```
 
 
-2. Plugin class
-To create a class that will be loaded as a plugin, annotate the class with @org.pf4j.Extension and implement the
-org.pf4j.ExtensionPoint interface.
+2. Plugin classes
+
+To create a class that will be loaded as a plugin, annotate the class with `@org.pf4j.Extension` and implement
+`org.pf4j.ExtensionPoint`. The plugin must extend one of the following operation types from the `gov.nist.csd.pm.core.pap.operation` package:
+
+| Type | Description | Authorization | Execution Context |
+|------|-------------|---------------|-------------------|
+| `AdminOperation<T>` | Modifies policy state | `canExecute()` required | `PAP` (read/write) |
+| `ResourceOperation<T>` | Resource access operations | `canExecute()` required | `PolicyQuery` (read-only) |
+| `QueryOperation<T>` | Policy query operations | `canExecute()` required | `PolicyQuery` (read-only) |
+| `Routine<T>` | Multi-step policy modifications | None | `PAP` (read/write) |
+| `Function<T>` | Pure functions (no policy access) | None | `Args` only |
+
+#### AdminOperation Example
+Use for operations that modify policy and require authorization.
 
 ```java
+import gov.nist.csd.pm.core.pap.PAP;
+import gov.nist.csd.pm.core.pap.operation.AdminOperation;
+import gov.nist.csd.pm.core.pap.operation.arg.Args;
+import gov.nist.csd.pm.core.pap.operation.arg.type.ListType;
+import gov.nist.csd.pm.core.pap.operation.param.FormalParameter;
+import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
+import gov.nist.csd.pm.core.common.exception.PMException;
 import org.pf4j.Extension;
 import org.pf4j.ExtensionPoint;
 
+import java.util.List;
+
+import static gov.nist.csd.pm.core.pap.operation.arg.type.BasicTypes.*;
+
 @Extension
-public class TestPluginOperation extends Operation<Void> implements ExtensionPoint {
+public class CustomAdminOperation extends AdminOperation<Void> implements ExtensionPoint {
 
-	public TestPluginOperation() {
-		super("testPlugin", List.of(NAME_PARAM));
-	}
+    // Define custom formal parameters
+    private static final FormalParameter<String> TARGET_PARAM =
+        new FormalParameter<>("target", STRING_TYPE);
 
-	@Override
-	public void canExecute(PAP pap, UserContext userCtx, Args args) throws PMException {
-        // check if user can execute
-	}
+    public CustomAdminOperation() {
+        super(
+            "customAdminOp",
+            VOID_TYPE,
+            List.of(TARGET_PARAM)
+        );
+    }
 
-	@Override
-	public Void execute(PAP pap, Args args) throws PMException {
-        // execute plugin
-	}
+    @Override
+    public void canExecute(PAP pap, UserContext userCtx, Args args) throws PMException {
+        // Check if user is authorized to execute this operation
+    }
+
+    @Override
+    public Void execute(PAP pap, Args args) throws PMException {
+        String target = args.get(TARGET_PARAM);
+        // Modify policy using PAP
+        return null;
+    }
 }
 ```
-
 
 3. JAR and set plugin path
 To make the plugins available to the admin-pdp-epp, package the plugin project into a JAR. *Note:* This has only been tested
@@ -207,8 +237,6 @@ option and ensure the packaged JAR is located in that directory.
 
 To verify the server loaded the plugins successfully look in the application startup logs for a line similar to:
 `g.n.c.p.p.admin.plugin.PluginLoader - Loaded 4 Operation plugins via PF4J extensions`
-
-
 
 ### resource-pdp
 The `resource-pdp` is a read only API with a method to adjudicate resource operations. Since resource operations
@@ -226,9 +254,9 @@ pm:
       admin-port: 50052
       # The mode of the EPP client: ASYNC, SYNC, or DISABLED. Default is ASYNC.
       epp-mode: sync
-      # The timeout that the EPPClient will use when waiting for the current revision to catch up
-      # to the side effect revision returned by the EPP. This value will be ignored if epp-mode is ASYNC.
-      epp-side-effect-timeout: 10
+      # How long to wait for the events generated by the EPP to be processed locally by the event store subscription.
+      # Time is in milliseconds. This value is ignored if the EPP mode is ASYNC.
+      epp-sync-catch-up-timeout: 10000
     esdb:
       # Event store hostname.
       hostname: localhost

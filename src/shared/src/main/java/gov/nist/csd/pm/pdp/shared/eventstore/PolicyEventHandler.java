@@ -2,22 +2,15 @@ package gov.nist.csd.pm.pdp.shared.eventstore;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.NodeType;
-import gov.nist.csd.pm.core.common.graph.relationship.AccessRightSet;
-import gov.nist.csd.pm.core.common.prohibition.ContainerCondition;
-import gov.nist.csd.pm.core.common.prohibition.ProhibitionSubject;
 import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.id.RandomIdGenerator;
+import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pap.store.PolicyStore;
-
-import java.util.*;
-
-import gov.nist.csd.pm.core.pdp.bootstrap.JSONBootstrapper;
-import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapper;
-import gov.nist.csd.pm.core.pdp.bootstrap.PolicyBootstrapper;
 import gov.nist.csd.pm.pdp.proto.event.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.*;
 
 public class PolicyEventHandler {
 
@@ -52,26 +45,24 @@ public class PolicyEventHandler {
     private void handleEvent(PMEvent pmEvent, PolicyStore policyStore) throws PMException {
         logger.info("Handling event {}", pmEvent);
         switch (pmEvent.getEventCase()) {
-            case ASSIGNMENTCREATED -> handleAssignmentCreated(pmEvent.getAssignmentCreated(), policyStore);
-            case ASSOCIATIONCREATED -> handleAssociationCreated(pmEvent.getAssociationCreated(), policyStore);
-            case POLICYCLASSCREATED -> handlePolicyClassCreated(pmEvent.getPolicyClassCreated(), policyStore);
-            case USERATTRIBUTECREATED -> handleUserAttributeCreated(pmEvent.getUserAttributeCreated(), policyStore);
-            case OBJECTATTRIBUTECREATED -> handleObjectAttributeCreated(pmEvent.getObjectAttributeCreated(), policyStore);
-            case USERCREATED -> handleUserCreated(pmEvent.getUserCreated(), policyStore);
-            case OBJECTCREATED -> handleObjectCreated(pmEvent.getObjectCreated(), policyStore);
-            case ASSIGNMENTDELETED -> handleAssignmentDeleted(pmEvent.getAssignmentDeleted(), policyStore);
-            case ASSOCIATIONDELETED -> handleAssociationDeleted(pmEvent.getAssociationDeleted(), policyStore);
-            case NODEDELETED -> handleNodeDeleted(pmEvent.getNodeDeleted(), policyStore);
-            case NODEPROPERTIESSET -> handleNodePropertiesSet(pmEvent.getNodePropertiesSet(), policyStore);
-            case PROHIBITIONCREATED -> handleProhibitionCreated(pmEvent.getProhibitionCreated(), policyStore);
-            case PROHIBITIONDELETED -> handleProhibitionDeleted(pmEvent.getProhibitionDeleted(), policyStore);
-            case OBLIGATIONCREATED -> handleObligationCreated(pmEvent.getObligationCreated());
-            case OBLIGATIONDELETED -> handleObligationDeleted(pmEvent.getObligationDeleted(), policyStore);
-            case ADMINOPERATIONCREATED -> handleAdminOperationCreated(pmEvent.getAdminOperationCreated());
-            case ADMINOPERATIONDELETED -> handleAdminOperationDeleted(pmEvent.getAdminOperationDeleted());
-            case RESOURCEOPERATIONSSET -> handleResourceOperationsSet(pmEvent.getResourceOperationsSet(), policyStore);
-            case ADMINROUTINECREATED -> handleAdminRoutineCreated(pmEvent.getAdminRoutineCreated());
-            case ADMINROUTINEDELETED -> handleAdminRoutineDeleted(pmEvent.getAdminRoutineDeleted());
+            case ASSIGNMENT_CREATED -> handleAssignmentCreated(pmEvent.getAssignmentCreated(), policyStore);
+            case ASSOCIATION_CREATED -> handleAssociationCreated(pmEvent.getAssociationCreated(), policyStore);
+            case POLICY_CLASS_CREATED -> handlePolicyClassCreated(pmEvent.getPolicyClassCreated(), policyStore);
+            case USER_ATTRIBUTE_CREATED -> handleUserAttributeCreated(pmEvent.getUserAttributeCreated(), policyStore);
+            case OBJECT_ATTRIBUTE_CREATED -> handleObjectAttributeCreated(pmEvent.getObjectAttributeCreated(), policyStore);
+            case USER_CREATED -> handleUserCreated(pmEvent.getUserCreated(), policyStore);
+            case OBJECT_CREATED -> handleObjectCreated(pmEvent.getObjectCreated(), policyStore);
+            case ASSIGNMENT_DELETED -> handleAssignmentDeleted(pmEvent.getAssignmentDeleted(), policyStore);
+            case ASSOCIATION_DELETED -> handleAssociationDeleted(pmEvent.getAssociationDeleted(), policyStore);
+            case NODE_DELETED -> handleNodeDeleted(pmEvent.getNodeDeleted(), policyStore);
+            case NODE_PROPERTIES_SET -> handleNodePropertiesSet(pmEvent.getNodePropertiesSet(), policyStore);
+            case PROHIBITION_CREATED -> handleProhibitionCreated(pmEvent.getProhibitionCreated(), policyStore);
+            case PROHIBITION_DELETED -> handleProhibitionDeleted(pmEvent.getProhibitionDeleted(), policyStore);
+            case OBLIGATION_CREATED -> handleObligationCreated(pmEvent.getObligationCreated());
+            case OBLIGATION_DELETED -> handleObligationDeleted(pmEvent.getObligationDeleted(), policyStore);
+            case OPERATION_CREATED -> handleOperationCreated(pmEvent.getOperationCreated());
+            case OPERATION_DELETED -> handleOperationDeleted(pmEvent.getOperationDeleted(), policyStore);
+            case RESOURCE_ACCESS_RIGHTS_SET -> handleResourceAccessRightsSet(pmEvent.getResourceAccessRightsSet(), policyStore);
             case EVENT_NOT_SET -> logger.debug("event not set for {}", pmEvent);
         }
     }
@@ -142,64 +133,49 @@ public class PolicyEventHandler {
     }
 
     private void handleProhibitionCreated(ProhibitionCreated prohibitionCreated, PolicyStore policyStore) throws PMException {
-        Map<Long, Boolean> containerConditionsMap = prohibitionCreated.getContainerConditionsMap();
-        List<ContainerCondition> containerConditions = new ArrayList<>();
-        for (Map.Entry<Long, Boolean> entry : containerConditionsMap.entrySet()) {
-            containerConditions.add(new ContainerCondition(entry.getKey(), entry.getValue()));
+        String name = prohibitionCreated.getName();
+        long node = prohibitionCreated.getNode();
+        String process = prohibitionCreated.hasProcess() ? prohibitionCreated.getProcess() : null;
+        AccessRightSet accessRightSet = new AccessRightSet(prohibitionCreated.getArsetList());
+        List<Long> inclusionSetList = prohibitionCreated.getInclusionSetList();
+        List<Long> exclusionSetList = prohibitionCreated.getExclusionSetList();
+        boolean isConjunctive = prohibitionCreated.getIsConjunctive();
+
+        if (process == null) {
+            policyStore.prohibitions().createNodeProhibition(
+                    name,
+                    node,
+                    accessRightSet,
+                    new HashSet<>(inclusionSetList),
+                    new HashSet<>(exclusionSetList),
+                    isConjunctive
+            );
+        } else {
+            policyStore.prohibitions().createProcessProhibition(
+                    name,
+                    node,
+                    process,
+                    accessRightSet,
+                    new HashSet<>(inclusionSetList),
+                    new HashSet<>(exclusionSetList),
+                    isConjunctive
+            );
         }
-
-        ProhibitionSubject prohibitionSubject = (prohibitionCreated.getSubjectCase() == ProhibitionCreated.SubjectCase.NODE)
-                ? new ProhibitionSubject(prohibitionCreated.getNode())
-                : new ProhibitionSubject(prohibitionCreated.getProcess());
-
-        policyStore.prohibitions().createProhibition(
-                prohibitionCreated.getName(),
-                prohibitionSubject,
-                new AccessRightSet(prohibitionCreated.getArsetList()),
-                prohibitionCreated.getIntersection(),
-                containerConditions
-        );
     }
 
     private void handleProhibitionDeleted(ProhibitionDeleted prohibitionDeleted, PolicyStore policyStore) throws PMException {
         policyStore.prohibitions().deleteProhibition(prohibitionDeleted.getName());
     }
 
-    private void handleResourceOperationsSet(ResourceOperationsSet resourceOperationsSet, PolicyStore policyStore) throws PMException {
-        policyStore.operations().setResourceOperations(new AccessRightSet(resourceOperationsSet.getOperationsList()));
+    private void handleResourceAccessRightsSet(ResourceAccessRightsSet resourceAccessRightsSet, PolicyStore policyStore) throws PMException {
+        policyStore.operations().setResourceAccessRights(new AccessRightSet(resourceAccessRightsSet.getOperationsList()));
     }
 
-    private void handleAdminOperationCreated(AdminOperationCreated adminOperationCreated) throws PMException {
-        pap.executePML(new UserContext(0), adminOperationCreated.getPml());
+    private void handleOperationCreated(OperationCreated operationCreated) throws PMException {
+        pap.executePML(new UserContext(0), operationCreated.getPml());
     }
 
-    private void handleAdminOperationDeleted(AdminOperationDeleted adminOperationDeleted) throws PMException {
-        pap.modify().operations().deleteAdminOperation(adminOperationDeleted.getName());
-    }
-
-    private void handleAdminRoutineCreated(AdminRoutineCreated adminRoutineCreated) throws PMException {
-        pap.executePML(new UserContext(0), adminRoutineCreated.getPml());
-    }
-
-    private void handleAdminRoutineDeleted(AdminRoutineDeleted adminRoutineDeleted) throws PMException {
-        pap.modify().routines().deleteAdminRoutine(adminRoutineDeleted.getName());
-    }
-
-    static class BootstrappedRandomIdGenerator extends RandomIdGenerator {
-
-        private final Map<String, Long> createdNodes;
-
-        public BootstrappedRandomIdGenerator(Map<String, Long> createdNodes) {
-            this.createdNodes = createdNodes;
-        }
-
-        @Override
-        public long generateId(String name, NodeType type) {
-            if (createdNodes.containsKey(name)) {
-                return createdNodes.get(name);
-            }
-
-            return super.generateId(name, type);
-        }
+    private void handleOperationDeleted(OperationDeleted operationDeleted, PolicyStore policyStore) throws PMException {
+        policyStore.operations().deleteOperation(operationDeleted.getName());
     }
 }

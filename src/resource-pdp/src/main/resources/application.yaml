@@ -10,8 +10,8 @@ pm:
     esdb:
       hostname: localhost
       port: 2113
-      event-stream: pm-events-v1
-      snapshot-stream: pm-snapshot-v1
+      event-stream: pm-events-v2
+      snapshot-stream: pm-snapshot-v2
     plugins:
       dir: "./plugins"
 logging:

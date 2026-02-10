@@ -1,26 +1,29 @@
 package gov.nist.csd.pm.pdp.admin.pap;
 
-import com.eventstore.dbclient.*;
+import com.eventstore.dbclient.ReadResult;
+import com.eventstore.dbclient.ReadStreamOptions;
+import com.eventstore.dbclient.ResolvedEvent;
+import com.eventstore.dbclient.StreamNotFoundException;
 import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.pap.function.PluginRegistry;
-import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
+import gov.nist.csd.pm.core.pap.operation.Operation;
 import gov.nist.csd.pm.core.pdp.bootstrap.JSONBootstrapper;
-import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapper;
+import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapperWithSuper;
 import gov.nist.csd.pm.core.pdp.bootstrap.PolicyBootstrapper;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.concurrent.ExecutionException;
-import javax.annotation.PostConstruct;
-
+import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 @Component(value = "Neo4jBootstrapper")
 public class Neo4jBootstrapper {
@@ -31,18 +34,18 @@ public class Neo4jBootstrapper {
     private final EventStoreDBConfig eventStoreDBConfig;
     private final EventStoreConnectionManager eventStoreConnectionManager;
     private final GraphDatabaseService graphDb;
-    private final PluginRegistry pluginRegistry;
+    private final List<Operation<?>> pluginOps;
 
     public Neo4jBootstrapper(AdminPDPConfig adminPDPConfig,
                              EventStoreDBConfig eventStoreDBConfig,
                              EventStoreConnectionManager eventStoreConnectionManager,
                              GraphDatabaseService graphDb,
-                             PluginRegistry pluginRegistry) {
+                             List<Operation<?>> pluginOps) {
         this.adminPDPConfig = adminPDPConfig;
         this.eventStoreDBConfig = eventStoreDBConfig;
         this.eventStoreConnectionManager = eventStoreConnectionManager;
         this.graphDb = graphDb;
-        this.pluginRegistry = pluginRegistry;
+        this.pluginOps = pluginOps;
     }
 
     @PostConstruct
@@ -80,18 +83,12 @@ public class Neo4jBootstrapper {
 
         // need to start a transaction so the initial policy admin verification succeeds
         noCommitNeo4jPolicyStore.beginTx();
-        EventTrackingPAP eventTrackingPAP = new EventTrackingPAP(noCommitNeo4jPolicyStore, pluginRegistry);
+        EventTrackingPAP eventTrackingPAP = new EventTrackingPAP(noCommitNeo4jPolicyStore, pluginOps);
         noCommitNeo4jPolicyStore.commit();
 
         PolicyBootstrapper policyBootstrapper;
-        String bootstrapUser;
         if (bootstrapFilePath.endsWith(".pml")) {
-            bootstrapUser = adminPDPConfig.getBootstrapUser();
-            if (bootstrapUser == null) {
-                throw new PMException("bootstrap user is null but expected for PML bootstrapping");
-            }
-
-            policyBootstrapper = new PMLBootstrapper(bootstrapUser, data);
+            policyBootstrapper = new PMLBootstrapperWithSuper(data);
         } else if (bootstrapFilePath.endsWith(".json")) {
             policyBootstrapper = new JSONBootstrapper(data);
         } else {

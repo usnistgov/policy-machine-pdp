@@ -1,17 +1,15 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
-import gov.nist.csd.pm.proto.v1.adjudication.AdminAdjudicationServiceGrpc;
-import gov.nist.csd.pm.proto.v1.adjudication.AdminCmdRequest;
-import gov.nist.csd.pm.proto.v1.adjudication.AdminCmdResponse;
-import gov.nist.csd.pm.proto.v1.model.Value;
+import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
+import gov.nist.csd.pm.proto.v1.pdp.adjudication.*;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
+import java.util.Map;
 
 @GrpcService
 public class AdjudicationService extends AdminAdjudicationServiceGrpc.AdminAdjudicationServiceImplBase {
@@ -25,10 +23,40 @@ public class AdjudicationService extends AdminAdjudicationServiceGrpc.AdminAdjud
 	}
 
 	@Override
-	public void adjudicateAdminCmd(AdminCmdRequest request, StreamObserver<AdminCmdResponse> responseObserver) {
+	public void adjudicateOperation(OperationRequest request,
+	                                StreamObserver<AdjudicateOperationResponse> responseObserver) {
 		try {
-			List<Value> values = adjudicator.adjudicateAdminCommands(request.getCommandsList());
-			responseObserver.onNext(AdminCmdResponse.newBuilder().addAllResults(values).build());
+			String opName = request.getOpName();
+			Map<String, Object> args = ProtoUtil.valueMapToObjectMap(request.getArgs());
+			logger.info("adjudicating operation {} with args {}", opName, args);
+
+			Object result = adjudicator.adjudicateOperation(opName, args);
+
+			AdjudicateOperationResponse.Builder builder = AdjudicateOperationResponse.newBuilder();
+			if (result != null) {
+				builder.setValue(ProtoUtil.objectToValue(result));
+			}
+			responseObserver.onNext(builder.build());
+			responseObserver.onCompleted();
+		} catch (UnauthorizedException e) {
+			responseObserver.onError(Status.PERMISSION_DENIED
+					                         .withDescription(e.getMessage())
+					                         .withCause(e)
+					                         .asRuntimeException());
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
+			responseObserver.onError(Status.INTERNAL
+					                         .withDescription(e.getMessage())
+					                         .withCause(e)
+					                         .asRuntimeException());
+		}
+	}
+
+	@Override
+	public void adjudicateRoutine(RoutineRequest request, StreamObserver<AdjudicateRoutineResponse> responseObserver) {
+		try {
+			adjudicator.adjudicateRoutine(request.getCommandsList());
+			responseObserver.onNext(AdjudicateRoutineResponse.newBuilder().build());
 			responseObserver.onCompleted();
 		} catch (UnauthorizedException e) {
 			responseObserver.onError(Status.PERMISSION_DENIED

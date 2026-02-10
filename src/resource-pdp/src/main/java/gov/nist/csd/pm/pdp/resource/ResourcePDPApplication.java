@@ -18,7 +18,7 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 @ComponentScan(
     basePackages = {"gov.nist.csd.pm.pdp"}
 )
-@EnableConfigurationProperties({EventStoreDBConfig.class, ResourcePDPConfig.class})
+@EnableConfigurationProperties({EventStoreDBConfig.class, ResourcePDPConfig.class,})
 public class ResourcePDPApplication {
 
     public static void main(String[] args) {

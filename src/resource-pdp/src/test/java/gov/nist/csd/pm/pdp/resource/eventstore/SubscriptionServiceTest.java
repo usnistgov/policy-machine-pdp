@@ -1,8 +1,6 @@
 package gov.nist.csd.pm.pdp.resource.eventstore;
 
-import static org.mockito.Mockito.*;
-
-import com.eventstore.dbclient.*;
+import com.eventstore.dbclient.EventData;
 import com.google.protobuf.InvalidProtocolBufferException;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
@@ -25,6 +23,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SubscriptionServiceTest {
@@ -62,7 +62,6 @@ class SubscriptionServiceTest {
 			subscriptionService = new SubscriptionService(
 					eventStoreConnectionManager,
 					mockListener,
-					//new PolicyEventSubscriptionListener(pap, currentRevisionService),
 					config,
 					snapshotService,
 					currentRevisionService

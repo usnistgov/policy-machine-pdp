@@ -1,6 +1,9 @@
 package gov.nist.csd.pm.pdp.resource.eventstore;
 
-import com.eventstore.dbclient.*;
+import com.eventstore.dbclient.RecordedEvent;
+import com.eventstore.dbclient.ResolvedEvent;
+import com.eventstore.dbclient.Subscription;
+import com.eventstore.dbclient.SubscriptionListener;
 import com.google.protobuf.InvalidProtocolBufferException;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.PAP;

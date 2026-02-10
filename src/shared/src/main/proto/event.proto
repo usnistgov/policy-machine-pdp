@@ -7,30 +7,27 @@ package gov.nist.csd.pm.pdp.proto.event;
 
 message PMEvent {
   oneof event {
-    AssignmentCreated assignmentCreated = 1;
-    AssociationCreated associationCreated = 2;
-    PolicyClassCreated policyClassCreated = 3;
-    UserAttributeCreated userAttributeCreated = 4;
-    ObjectAttributeCreated objectAttributeCreated = 5;
-    UserCreated userCreated = 6;
-    ObjectCreated objectCreated = 7;
-    AssignmentDeleted assignmentDeleted = 8;
-    NodeDeleted nodeDeleted = 9;
-    AssociationDeleted associationDeleted = 10;
-    NodePropertiesSet nodePropertiesSet = 11;
+    AssignmentCreated assignment_created = 1;
+    AssociationCreated association_created = 2;
+    PolicyClassCreated policy_class_created = 3;
+    UserAttributeCreated user_attribute_created = 4;
+    ObjectAttributeCreated object_attribute_created = 5;
+    UserCreated user_created = 6;
+    ObjectCreated object_created = 7;
+    AssignmentDeleted assignment_deleted = 8;
+    NodeDeleted node_deleted = 9;
+    AssociationDeleted association_deleted = 10;
+    NodePropertiesSet node_properties_set = 11;
 
-    ProhibitionCreated prohibitionCreated = 12;
-    ProhibitionDeleted prohibitionDeleted = 13;
+    ProhibitionCreated prohibition_created = 12;
+    ProhibitionDeleted prohibition_deleted = 13;
 
-    ObligationCreated obligationCreated = 14;
-    ObligationDeleted obligationDeleted = 15;
+    ObligationCreated obligation_created = 14;
+    ObligationDeleted obligation_deleted = 15;
 
-    AdminOperationCreated adminOperationCreated = 16;
-    AdminOperationDeleted adminOperationDeleted = 17;
-    ResourceOperationsSet resourceOperationsSet = 18;
-
-    AdminRoutineCreated adminRoutineCreated = 19;
-    AdminRoutineDeleted adminRoutineDeleted = 20;
+    OperationCreated operation_created = 16;
+    OperationDeleted operation_deleted = 17;
+    ResourceAccessRightsSet resource_access_rights_set = 18;
   }
 }
 
@@ -102,15 +99,12 @@ message NodePropertiesSet {
 // prohibitions
 message ProhibitionCreated {
   string name = 1;
-
-  oneof subject {
-    int64 node = 2;
-    string process = 3;
-  }
-
+  int64 node = 2;
+  optional string process = 3;
   repeated string arset = 4;
-  bool intersection = 5;
-  map<int64, bool> container_conditions = 6;
+  bool is_conjunctive = 5;
+  repeated int64 inclusion_set = 6;
+  repeated int64 exclusion_set = 7;
 }
 
 message ProhibitionDeleted {
@@ -128,23 +122,14 @@ message ObligationDeleted {
 }
 
 // operations
-message AdminOperationCreated {
+message OperationCreated {
   string pml = 1;
 }
 
-message AdminOperationDeleted {
+message OperationDeleted {
   string name = 1;
 }
 
-message ResourceOperationsSet {
+message ResourceAccessRightsSet {
   repeated string operations = 1;
-}
-
-// routines
-message AdminRoutineCreated {
-  string pml = 1;
-}
-
-message AdminRoutineDeleted {
-  string name = 1;
 }
