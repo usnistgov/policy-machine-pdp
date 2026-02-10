@@ -22,7 +22,6 @@ services:
     environment:
       - GRPC_SERVER_PORT=50052
       - PM_PDP_ADMIN_BOOTSTRAP_FILE_PATH=/config/bootstrap.json
-      - PM_PDP_ADMIN_BOOTSTRAP_USER=u1
       - PM_PDP_ADMIN_NEO4J_DB_PATH=/tmp/neo4j
       - PM_PDP_ADMIN_ESDB_CONSUMER_GROUP=admin-pdp-epp-cg
       - PM_PDP_ADMIN_SNAPSHOT_INTERVAL=1000
@@ -49,7 +48,6 @@ services:
       - PM_PDP_ESDB_PORT=2113
       - PM_PDP_ESDB_EVENT_STREAM=pm-events-v1
       - PM_PDP_ESDB_SNAPSHOT_STREAM=pm-snapshot-v1
-      - PM_PDP_RESOURCE_EPP_MODE=SYNC
     ports:
       - "50051:50051"
     restart: unless-stopped

@@ -6,17 +6,16 @@ pm:
   pdp:
     admin:
       bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/bootstrap.pml"
-      bootstrap-user: "u1"
       neo4j-db-path: "neo4j/data"
-      esdb-consumer-group: admin-pdp-epp-cg1
+      esdb-consumer-group: admin-pdp-epp-cg
       snapshot-interval: 1000
       shutdown-after-bootstrap: false
       plugins-dir: "./plugins/plugins"
     esdb:
       hostname: localhost
       port: 2113
-      event-stream: pm-events-v2
-      snapshot-stream: pm-snapshot-v2
+      event-stream: pm-events-v1
+      snapshot-stream: pm-snapshot-v1
 management:
   health:
     neo4j:

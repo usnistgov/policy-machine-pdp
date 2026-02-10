@@ -51,7 +51,7 @@ pm:
   pdp:
     admin:
       # The file path to the policy file used to bootstrap the PDP.
-      bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/policy.json"
+      bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/bootstrap.pml"
       # Path to store Neo4j policy locally.
       neo4j-db-path: "neo4j/data"
       # Name of the EventStoreDB consumer group.
@@ -112,7 +112,7 @@ the plugin to work.
         <dependency>
             <groupId>com.github.usnistgov</groupId>
             <artifactId>policy-machine-core</artifactId>
-            <version>c6a071b</version>
+            <version>707e66d</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -242,7 +242,7 @@ To verify the server loaded the plugins successfully look in the application sta
 
 ### resource-pdp
 The `resource-pdp` is a read only API with a method to adjudicate resource operations. Since resource operations
-can be subject to obligations, the `resource-pdp` can be configured to send event contexts to the `admin-pdp-epp` for
+can be subject to obligations, the `resource-pdp` sends event contexts to the `admin-pdp-epp` for
 processing in the `epp` service.
 
 #### Spring Boot Configuration Options
@@ -254,8 +254,6 @@ pm:
       admin-hostname: localhost
       # Admin PDP port.
       admin-port: 50052
-      # The mode of the EPP client: ASYNC, SYNC, or DISABLED. Default is ASYNC.
-      epp-mode: sync
       # Time in milliseconds to wait to ensure revision consistency with event store. Default is 1000.
       revision-consistency-timeout: 1000
     esdb:
