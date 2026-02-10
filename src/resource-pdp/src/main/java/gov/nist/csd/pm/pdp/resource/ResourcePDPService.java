@@ -1,6 +1,9 @@
 package gov.nist.csd.pm.pdp.resource;
 
+import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.PAP;
+import gov.nist.csd.pm.core.pap.operation.Operation;
+import gov.nist.csd.pm.core.pap.operation.ResourceOperation;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
@@ -33,6 +36,12 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
                                             StreamObserver<AdjudicateOperationResponse> responseObserver) {
         try {
             UserContext userCtx = UserContextFromHeader.get(pap);
+
+            // only allow resource operations to be adjudicated
+            Operation<?> operation = pap.query().operations().getOperation(request.getOpName());
+            if (operation instanceof ResourceOperation<?>) {
+                throw new PMException("only subclasses of ResourceOperation are allowed to be invoked in the resource-pdp");
+            }
 
             Object result = pdp.adjudicateOperation(
                     userCtx,

@@ -37,42 +37,12 @@ class EPPClientTest {
 	@Mock private ResourcePDPConfig resourcePDPConfig;
 
 	@Mock private EPPServiceGrpc.EPPServiceBlockingStub blockingStub;
-	@Mock private EPPServiceGrpc.EPPServiceStub asyncStub;
 
 	private EPPClient client;
 
 	@BeforeEach
 	void setUp() {
 		client = new EPPClient(pdp, pap, resourcePDPConfig);
-	}
-
-	@Test
-	void subscribeToPDP_whenAsync_setsAsyncStub_andRegistersSubscriber() throws Exception {
-		when(resourcePDPConfig.getAdminHostname()).thenReturn("localhost");
-		when(resourcePDPConfig.getAdminPort()).thenReturn(50051);
-
-		ManagedChannelBuilder builder = mock(ManagedChannelBuilder.class);
-		ManagedChannel channel = mock(ManagedChannel.class);
-
-		when(builder.defaultServiceConfig(anyMap())).thenReturn(builder);
-		when(builder.enableRetry()).thenReturn(builder);
-		when(builder.usePlaintext()).thenReturn(builder);
-		when(builder.build()).thenReturn(channel);
-
-		try (MockedStatic<ManagedChannelBuilder> mcb = mockStatic(ManagedChannelBuilder.class);
-		     MockedStatic<EPPServiceGrpc> grpc = mockStatic(EPPServiceGrpc.class)) {
-
-			mcb.when(() -> ManagedChannelBuilder.forAddress("localhost", 50051)).thenReturn((ManagedChannelBuilder) builder);
-			grpc.when(() -> EPPServiceGrpc.newStub(channel)).thenReturn(asyncStub);
-
-			client.subscribeToPDP();
-
-			verify(pdp).addEventSubscriber(client);
-			grpc.verify(() -> EPPServiceGrpc.newStub(channel));
-
-			assertNotNull(readField(client, "stub"));
-			assertNull(readField(client, "blockingStub"));
-		}
 	}
 
 	@Test
@@ -99,41 +69,12 @@ class EPPClientTest {
 			verify(pdp).addEventSubscriber(client);
 			grpc.verify(() -> EPPServiceGrpc.newBlockingStub(channel));
 
-			assertNull(readField(client, "stub"));
 			assertNotNull(readField(client, "blockingStub"));
 		}
 	}
 
 	@Test
-	void processEvent_whenDisabled_shortCircuits() throws Exception {
-		writeField(client, "stub", asyncStub);
-		writeField(client, "blockingStub", blockingStub);
-
-		client.processEvent(mock(EventContext.class));
-
-		verifyNoInteractions(asyncStub, blockingStub);
-	}
-
-	@Test
-	void processEvent_whenAsync_forwardsEventToAsyncStub() throws Exception {
-		writeField(client, "stub", asyncStub);
-		writeField(client, "blockingStub", null);
-
-		EventContext eventCtx = mock(EventContext.class);
-		gov.nist.csd.pm.proto.v1.epp.EventContext protoCtx = mock(gov.nist.csd.pm.proto.v1.epp.EventContext.class);
-
-		try (MockedStatic<ProtoUtil> protoUtil = mockStatic(ProtoUtil.class)) {
-			protoUtil.when(() -> ProtoUtil.toEventContextProto(eventCtx)).thenReturn(protoCtx);
-
-			client.processEvent(eventCtx);
-
-			verify(asyncStub).processEvent(eq(protoCtx), any(StreamObserver.class));
-		}
-	}
-
-	@Test
 	void processEvent_whenSync_andNoResult_doesNothingExtra() throws Exception {
-		writeField(client, "stub", null);
 		writeField(client, "blockingStub", blockingStub);
 
 		EventContext eventCtx = mock(EventContext.class);
@@ -153,7 +94,6 @@ class EPPClientTest {
 
 	@Test
 	void processEvent_whenSync_andResultContainsLastRevision_waitsForCatchUp() throws Exception {
-		writeField(client, "stub", null);
 		writeField(client, "blockingStub", blockingStub);
 
 		EventContext eventCtx = mock(EventContext.class);
