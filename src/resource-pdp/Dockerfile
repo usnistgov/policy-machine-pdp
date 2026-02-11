@@ -1,7 +1,7 @@
-FROM eclipse-temurin:21-jdk-alpine
+FROM eclipse-temurin:21-jre-alpine
 
 # create volume plugins
-CMD mkdir /plugins
+RUN mkdir -p /plugins
 VOLUME /plugins
 
 WORKDIR /app
