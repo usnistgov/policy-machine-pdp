@@ -3,12 +3,13 @@ package gov.nist.csd.pm.pdp.admin.pdp;
 import com.eventstore.dbclient.WrongExpectedVersionException;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.exception.PMRuntimeException;
+import gov.nist.csd.pm.core.impl.grpc.util.FromProtoUtil;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.pdp.admin.pap.EventTrackingPAP;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
-import gov.nist.csd.pm.proto.v1.pdp.cmd.AdminOperationCommand;
+import gov.nist.csd.pm.proto.v1.pdp.adjudication.OperationRequest;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import org.slf4j.Logger;
@@ -25,19 +26,16 @@ public class Adjudicator {
 
     private static final Logger logger = LoggerFactory.getLogger(Adjudicator.class);
 
-    private final CommandHandler commandHandler;
     private final CurrentRevisionService currentRevision;
     private final Retry retry;
     private final EventStoreDBConfig eventStoreDBConfig;
     private final EventStoreConnectionManager eventStoreConnectionManager;
     private final ContextFactory contextFactory;
 
-    public Adjudicator(CommandHandler commandHandler,
-                       EventStoreDBConfig eventStoreDBConfig,
+    public Adjudicator(EventStoreDBConfig eventStoreDBConfig,
                        EventStoreConnectionManager eventStoreConnectionManager,
                        CurrentRevisionService currentRevision,
                        ContextFactory contextFactory) {
-        this.commandHandler = commandHandler;
         this.eventStoreDBConfig = eventStoreDBConfig;
         this.eventStoreConnectionManager = eventStoreConnectionManager;
         this.currentRevision = currentRevision;
@@ -47,38 +45,6 @@ public class Adjudicator {
                 .maxAttempts(3)
                 .waitDuration(Duration.ofSeconds(2))
                 .build());
-    }
-
-    /**
-     * Adjudicates a transaction function and returns the result.
-     *
-     * @param <R> The return type
-     * @param consumer The transaction function to execute
-     * @return The result of the transaction
-     */
-    public <R> R adjudicateQuery(PDPTxFunction<R> consumer) throws PMException {
-        NGACContext ctx = contextFactory.createContext();
-
-        return ctx.pdp().runTx(contextFactory.createUserContext(ctx.pap()), pdpTx -> consumer.apply(ctx.pap(), pdpTx));
-    }
-
-    /**
-     * Adjudicates a list of administrative commands.
-     *
-     * @param adminCommands The commands to adjudicate
-     */
-    public void adjudicateRoutine(List<AdminOperationCommand> adminCommands) throws PMException {
-        adjudicateTransaction(ctx -> {
-            UserContext userContext = contextFactory.createUserContext(ctx.pap());
-
-            ctx.pdp().runTx(userContext, pdpTx -> {
-                for (AdminOperationCommand adminCommand : adminCommands) {
-                    commandHandler.handleCommand(ctx, pdpTx, adminCommand);
-                }
-
-                return null;
-            });
-        });
     }
 
     public Object adjudicateOperation(String operation, Map<String, Object> args) throws PMException {
@@ -91,12 +57,47 @@ public class Adjudicator {
                 publishEvents(ctx.pap());
 
                 return result;
-            } catch (PMException e) {
+            } catch (Exception e) {
                 throw new PMRuntimeException(e);
             }
         };
 
         return executeWithRetry(supplier);
+    }
+
+    public void adjudicateRoutine(List<OperationRequest> adminCommands) throws PMException {
+        adjudicateTransaction(ctx -> {
+            UserContext userContext = contextFactory.createUserContext(ctx.pap());
+
+            ctx.pdp().runTx(userContext, pdpTx -> {
+                for (OperationRequest operationRequest : adminCommands) {
+                    try {
+                        Object result = ctx.pdp().adjudicateOperation(userContext,
+                                                                      operationRequest.getName(),
+                                                                      FromProtoUtil.fromValueMap(operationRequest.getArgs()));
+                        publishEvents(ctx.pap());
+
+                        return result;
+                    } catch (Exception e) {
+                        throw new PMRuntimeException(e);
+                    }
+                }
+
+                return null;
+            });
+        });
+    }
+
+    public <R> R adjudicateQuery(PDPTxFunction<R> consumer) throws PMException {
+        NGACContext ctx = contextFactory.createContext();
+
+        return ctx.pdp().runTx(contextFactory.createUserContext(ctx.pap()), pdpTx -> consumer.apply(ctx.pap(), pdpTx));
+    }
+
+    public Object executePML(String pml) throws PMException {
+        NGACContext ctx = contextFactory.createContext();
+
+        return ctx.pdp().runTx(contextFactory.createUserContext(ctx.pap()), pdpTx -> pdpTx.executePML(pml));
     }
 
     /**

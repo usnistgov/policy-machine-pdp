@@ -1,5 +1,7 @@
 package gov.nist.csd.pm.pdp.resource;
 
+import gov.nist.csd.pm.core.impl.grpc.util.FromProtoUtil;
+import gov.nist.csd.pm.core.impl.grpc.util.ToProtoUtil;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.operation.Operation;
 import gov.nist.csd.pm.core.pap.operation.ResourceOperation;
@@ -7,7 +9,6 @@ import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextFromHeader;
-import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
 import gov.nist.csd.pm.proto.v1.pdp.adjudication.AdjudicateOperationResponse;
 import gov.nist.csd.pm.proto.v1.pdp.adjudication.OperationRequest;
 import gov.nist.csd.pm.proto.v1.pdp.adjudication.ResourceAdjudicationServiceGrpc;
@@ -37,18 +38,18 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
             UserContext userCtx = UserContextFromHeader.get(pap);
 
             // only allow resource operations to be adjudicated
-            Operation<?> operation = pap.query().operations().getOperation(request.getOpName());
+            Operation<?> operation = pap.query().operations().getOperation(request.getName());
             if (!(operation instanceof ResourceOperation<?>)) {
                 throw new OperationIsNotResourceOperationException();
             }
 
             Object result = pdp.adjudicateOperation(
                     userCtx,
-                    request.getOpName(),
-                    ProtoUtil.valueMapToObjectMap(request.getArgs())
+                    request.getName(),
+                    FromProtoUtil.fromValueMap(request.getArgs())
             );
 
-            responseObserver.onNext(AdjudicateOperationResponse.newBuilder().setValue(ProtoUtil.objectToValue(result)).build());
+            responseObserver.onNext(AdjudicateOperationResponse.newBuilder().setValue(ToProtoUtil.toValueProto(result)).build());
             responseObserver.onCompleted();
         } catch (UnauthorizedException e) {
             logger.error("adjudication UNAUTHORIZED: {}", e.getMessage());

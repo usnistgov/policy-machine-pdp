@@ -1,6 +1,8 @@
 package gov.nist.csd.pm.pdp.resource;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
+import gov.nist.csd.pm.core.impl.grpc.util.FromProtoUtil;
+import gov.nist.csd.pm.core.impl.grpc.util.ToProtoUtil;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.operation.AdminOperation;
 import gov.nist.csd.pm.core.pap.operation.ResourceOperation;
@@ -9,7 +11,6 @@ import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextFromHeader;
-import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
 import gov.nist.csd.pm.proto.v1.model.Value;
 import gov.nist.csd.pm.proto.v1.model.ValueMap;
 import gov.nist.csd.pm.proto.v1.pdp.adjudication.AdjudicateOperationResponse;
@@ -52,7 +53,7 @@ class ResourcePDPServiceTest {
 	@Test
 	void adjudicateResourceOperation_success_callsPdp_andReturnsResponse() throws PMException {
 		OperationRequest request = OperationRequest.newBuilder()
-				.setOpName("op1")
+				.setName("op1")
 				.setArgs(ValueMap.newBuilder().build())
 				.build();
 
@@ -64,23 +65,23 @@ class ResourcePDPServiceTest {
 		Value resultValue = Value.newBuilder().setStringValue("test").build();
 
 		try (MockedStatic<UserContextFromHeader> header = mockStatic(UserContextFromHeader.class);
-		     MockedStatic<ProtoUtil> protoUtil = mockStatic(ProtoUtil.class)) {
+		     MockedStatic<FromProtoUtil> fromUtil = mockStatic(FromProtoUtil.class);
+		     MockedStatic<ToProtoUtil> toUtil = mockStatic(ToProtoUtil.class)) {
 
 			header.when(() -> UserContextFromHeader.get(pap)).thenReturn(userCtx);
 
-			// IMPORTANT: do not inline pap.query().operations() inside when/doReturn
 			var ops = pap.query().operations();
 			doReturn(resourceOp)
 					.when(ops)
 					.getOperation("op1");
 
-			protoUtil.when(() -> ProtoUtil.valueMapToObjectMap(any(ValueMap.class)))
+			fromUtil.when(() -> FromProtoUtil.fromValueMap(any(ValueMap.class)))
 					.thenReturn(argsObj);
 
 			when(pdp.adjudicateOperation(eq(userCtx), eq("op1"), eq(argsObj)))
 					.thenReturn(pdpResult);
 
-			protoUtil.when(() -> ProtoUtil.objectToValue(pdpResult))
+			toUtil.when(() -> ToProtoUtil.toValueProto(pdpResult))
 					.thenReturn(resultValue);
 
 			service.adjudicateResourceOperation(request, responseObserver);
@@ -102,7 +103,7 @@ class ResourcePDPServiceTest {
 	@Test
 	void adjudicateResourceOperation_unauthorized_returnsPermissionDenied() throws PMException {
 		OperationRequest request = OperationRequest.newBuilder()
-				.setOpName("op1")
+				.setName("op1")
 				.setArgs(ValueMap.newBuilder().build())
 				.build();
 
@@ -114,7 +115,7 @@ class ResourcePDPServiceTest {
 		when(unauth.getMessage()).thenReturn("test exception");
 
 		try (MockedStatic<UserContextFromHeader> header = mockStatic(UserContextFromHeader.class);
-		     MockedStatic<ProtoUtil> protoUtil = mockStatic(ProtoUtil.class)) {
+		     MockedStatic<FromProtoUtil> protoUtil = mockStatic(FromProtoUtil.class)) {
 
 			header.when(() -> UserContextFromHeader.get(pap)).thenReturn(userCtx);
 
@@ -123,7 +124,7 @@ class ResourcePDPServiceTest {
 					.when(ops)
 					.getOperation("op1");
 
-			protoUtil.when(() -> ProtoUtil.valueMapToObjectMap(any(ValueMap.class)))
+			protoUtil.when(() -> FromProtoUtil.fromValueMap(any(ValueMap.class)))
 					.thenReturn(argsObj);
 
 			when(pdp.adjudicateOperation(eq(userCtx), eq("op1"), eq(argsObj)))
@@ -149,7 +150,7 @@ class ResourcePDPServiceTest {
 	@Test
 	void adjudicateResourceOperation_genericException_returnsInternal() throws PMException {
 		OperationRequest request = OperationRequest.newBuilder()
-				.setOpName("op1")
+				.setName("op1")
 				.setArgs(ValueMap.newBuilder().build())
 				.build();
 
@@ -160,7 +161,7 @@ class ResourcePDPServiceTest {
 		RuntimeException failure = new RuntimeException("test exception");
 
 		try (MockedStatic<UserContextFromHeader> header = mockStatic(UserContextFromHeader.class);
-		     MockedStatic<ProtoUtil> protoUtil = mockStatic(ProtoUtil.class)) {
+		     MockedStatic<FromProtoUtil> protoUtil = mockStatic(FromProtoUtil.class)) {
 
 			header.when(() -> UserContextFromHeader.get(pap)).thenReturn(userCtx);
 
@@ -169,7 +170,7 @@ class ResourcePDPServiceTest {
 					.when(ops)
 					.getOperation("op1");
 
-			protoUtil.when(() -> ProtoUtil.valueMapToObjectMap(any(ValueMap.class)))
+			protoUtil.when(() -> FromProtoUtil.fromValueMap(any(ValueMap.class)))
 					.thenReturn(argsObj);
 
 			when(pdp.adjudicateOperation(eq(userCtx), eq("op1"), eq(argsObj)))
@@ -192,7 +193,7 @@ class ResourcePDPServiceTest {
 	@Test
 	void adjudicateResourceOperation_nonResourceOperation_returnsInternal() throws PMException {
 		OperationRequest request = OperationRequest.newBuilder()
-				.setOpName("op1")
+				.setName("op1")
 				.setArgs(ValueMap.newBuilder().build())
 				.build();
 

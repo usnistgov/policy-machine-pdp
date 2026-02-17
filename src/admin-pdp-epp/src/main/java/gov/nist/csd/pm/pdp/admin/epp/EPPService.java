@@ -1,8 +1,8 @@
 package gov.nist.csd.pm.pdp.admin.epp;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
+import gov.nist.csd.pm.core.impl.grpc.util.FromProtoUtil;
 import gov.nist.csd.pm.pdp.admin.pdp.Adjudicator;
-import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
 import gov.nist.csd.pm.proto.v1.epp.EPPServiceGrpc;
 import gov.nist.csd.pm.proto.v1.epp.EventContext;
 import gov.nist.csd.pm.proto.v1.epp.ProcessEventResponse;
@@ -30,7 +30,7 @@ public class EPPService extends EPPServiceGrpc.EPPServiceImplBase {
 		try {
 			long lastRevision = adjudicator.adjudicateTransaction(ctx -> {
 				try {
-					ctx.epp().processEvent(ProtoUtil.fromEventContextProto(request));
+					ctx.epp().processEvent(FromProtoUtil.fromEventContextProto(request));
 				} catch (PMException e) {
 					throw new RuntimeException(e);
 				}

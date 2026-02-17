@@ -1,10 +1,10 @@
 package gov.nist.csd.pm.pdp.resource.epp;
 
-import gov.nist.csd.pm.core.common.event.EventContext;
+import gov.nist.csd.pm.core.epp.EventContext;
+import gov.nist.csd.pm.core.impl.grpc.util.ToProtoUtil;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.pdp.resource.config.ResourcePDPConfig;
-import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
 import gov.nist.csd.pm.proto.v1.epp.EPPServiceGrpc;
 import gov.nist.csd.pm.proto.v1.epp.ProcessEventResponse;
 import gov.nist.csd.pm.proto.v1.model.Value;
@@ -81,8 +81,8 @@ class EPPClientTest {
 		ProcessEventResponse response = ProcessEventResponse.newBuilder().build();
 		when(blockingStub.processEvent(protoCtx)).thenReturn(response);
 
-		try (MockedStatic<ProtoUtil> protoUtil = mockStatic(ProtoUtil.class)) {
-			protoUtil.when(() -> ProtoUtil.toEventContextProto(eventCtx)).thenReturn(protoCtx);
+		try (MockedStatic<ToProtoUtil> protoUtil = mockStatic(ToProtoUtil.class)) {
+			protoUtil.when(() -> ToProtoUtil.toEventContextProto(eventCtx)).thenReturn(protoCtx);
 
 			client.processEvent(eventCtx);
 
@@ -99,8 +99,8 @@ class EPPClientTest {
 
 		when(blockingStub.processEvent(protoCtx)).thenReturn(responseWithLastRevision(5));
 
-		try (MockedStatic<ProtoUtil> protoUtil = mockStatic(ProtoUtil.class)) {
-			protoUtil.when(() -> ProtoUtil.toEventContextProto(eventCtx)).thenReturn(protoCtx);
+		try (MockedStatic<ToProtoUtil> protoUtil = mockStatic(ToProtoUtil.class)) {
+			protoUtil.when(() -> ToProtoUtil.toEventContextProto(eventCtx)).thenReturn(protoCtx);
 
 			client.processEvent(eventCtx);
 

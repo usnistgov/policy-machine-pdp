@@ -1,11 +1,11 @@
 package gov.nist.csd.pm.pdp.resource.epp;
 
-import gov.nist.csd.pm.core.common.event.EventContext;
 import gov.nist.csd.pm.core.epp.EPP;
+import gov.nist.csd.pm.core.epp.EventContext;
+import gov.nist.csd.pm.core.impl.grpc.util.ToProtoUtil;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.pdp.resource.config.ResourcePDPConfig;
-import gov.nist.csd.pm.pdp.shared.protobuf.ProtoUtil;
 import gov.nist.csd.pm.proto.v1.epp.EPPServiceGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -55,7 +55,7 @@ public class EPPClient extends EPP {
     public void processEvent(EventContext eventCtx) {
         logger.info("sending to EPP {}", eventCtx);
 
-        gov.nist.csd.pm.proto.v1.epp.EventContext eventCtxProto = ProtoUtil.toEventContextProto(eventCtx);
+        gov.nist.csd.pm.proto.v1.epp.EventContext eventCtxProto = ToProtoUtil.toEventContextProto(eventCtx);
 
         blockingStub.processEvent(eventCtxProto);
     }
