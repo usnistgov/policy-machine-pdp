@@ -18,9 +18,11 @@ public class PolicyEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(PolicyEventHandler.class);
 
     private final PAP pap;
+    private final boolean handleObligations;
 
-    public PolicyEventHandler(PAP pap) {
+    public PolicyEventHandler(PAP pap, boolean handleObligations) {
         this.pap = pap;
+        this.handleObligations = handleObligations;
     }
 
     public synchronized void handleEvents(Iterable<PMEvent> events) throws PMException {
@@ -126,10 +128,18 @@ public class PolicyEventHandler {
     }
 
     private void handleObligationCreated(ObligationCreated obligationCreated) throws PMException {
+        if (!handleObligations) {
+            return;
+        }
+
         pap.executePML(new UserContext(obligationCreated.getAuthor()), obligationCreated.getPml());
     }
 
     private void handleObligationDeleted(ObligationDeleted obligationDeleted, PolicyStore policyStore) throws PMException {
+        if (!handleObligations) {
+            return;
+        }
+
         policyStore.obligations().deleteObligation(obligationDeleted.getName());
     }
 

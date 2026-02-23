@@ -31,7 +31,7 @@ public class PolicyEventPersistentSubscriptionListener extends PersistentSubscri
                                                      CurrentRevisionService currentRevision,
                                                      SnapshotService snapshotService,
                                                      AdminPDPConfig adminPDPConfig) {
-        this.policyEventHandler = new PolicyEventHandler(pap);
+        this.policyEventHandler = new PolicyEventHandler(pap, true);
         this.currentRevision = currentRevision;
         this.snapshotService = snapshotService;
         this.adminPDPConfig = adminPDPConfig;

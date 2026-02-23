@@ -44,7 +44,7 @@ class PolicyEventHandlerTest {
 
 	@BeforeEach
 	void setUp() {
-		handler = new PolicyEventHandler(pap);
+		handler = new PolicyEventHandler(pap, true);
 
 		when(pap.policyStore()).thenReturn(policyStore);
 

@@ -24,7 +24,7 @@ public class PolicyEventSubscriptionListener extends SubscriptionListener {
 
 	public PolicyEventSubscriptionListener(PAP pap,
 	                                       CurrentRevisionService currentRevision) {
-		this.policyEventHandler = new PolicyEventHandler(pap);
+		this.policyEventHandler = new PolicyEventHandler(pap, false);
 		this.currentRevision = currentRevision;
 	}
 
