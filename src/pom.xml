@@ -84,7 +84,7 @@
             <dependency>
                 <groupId>com.github.usnistgov</groupId>
                 <artifactId>policy-machine-core</artifactId>
-                <version>9185785</version><!--3.3-->
+                <version>d07f58e</version><!--3.3-->
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
