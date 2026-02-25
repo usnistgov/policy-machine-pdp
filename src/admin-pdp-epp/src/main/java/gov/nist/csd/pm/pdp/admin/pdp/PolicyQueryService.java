@@ -15,6 +15,8 @@ import gov.nist.csd.pm.core.pap.operation.arg.type.Type;
 import gov.nist.csd.pm.core.pap.operation.param.*;
 import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredCapability;
 import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilege;
+import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilegeOnNode;
+import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilegeOnParameter;
 import gov.nist.csd.pm.core.pap.query.model.explain.Explain;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.Subgraph;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.SubgraphPrivileges;
@@ -1109,9 +1111,20 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	private Signature buildSignature(Operation<?> op) {
 		return Signature.newBuilder()
 				.setName(op.getName())
+				.setOperationType(getOperationType(op))
 				.addAllParams(convertParamsToProtoParams(op.getFormalParameters()))
 				.addAllRequiredCapabilities(convertReqCapsToProto(op.getRequiredCapabilities()))
 				.build();
+	}
+
+	private OperationType getOperationType(Operation<?> op) {
+		return switch (op) {
+			case AdminOperation<?> v -> OperationType.ADMIN;
+			case Function<?> v -> OperationType.RESOURCE;
+			case QueryOperation<?> v -> OperationType.QUERY;
+			case ResourceOperation<?> v -> OperationType.RESOURCE;
+			case Routine<?> v -> OperationType.ROUTINE;
+		};
 	}
 
 	private List<gov.nist.csd.pm.proto.v1.pdp.query.RequiredCapability> convertReqCapsToProto(List<RequiredCapability> requiredCapabilities) {
@@ -1122,12 +1135,12 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 			List<gov.nist.csd.pm.proto.v1.pdp.query.RequiredPrivilege> reqPrivProtos = new ArrayList<>();
 			for (RequiredPrivilege reqpriv : requiredPrivileges) {
 				switch (reqpriv) {
-					case gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilegeOnNode requiredPrivilegeOnNode ->
+					case RequiredPrivilegeOnNode requiredPrivilegeOnNode ->
 							reqPrivProtos.add(gov.nist.csd.pm.proto.v1.pdp.query.RequiredPrivilege.newBuilder()
 									                  .setNode(requiredPrivilegeOnNode.getName())
 									                  .addAllRequired(requiredPrivilegeOnNode.getRequired())
 									                  .build());
-					case gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilegeOnParameter requiredPrivilegeOnParameter ->
+					case RequiredPrivilegeOnParameter requiredPrivilegeOnParameter ->
 							reqPrivProtos.add(gov.nist.csd.pm.proto.v1.pdp.query.RequiredPrivilege.newBuilder()
 									                  .setParam(requiredPrivilegeOnParameter.param().getName())
 									                  .addAllRequired(requiredPrivilegeOnParameter.getRequired())
