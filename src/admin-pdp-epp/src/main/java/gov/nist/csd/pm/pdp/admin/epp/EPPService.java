@@ -32,25 +32,26 @@ public class EPPService extends EPPServiceGrpc.EPPServiceImplBase {
 				try {
 					ctx.epp().processEvent(FromProtoUtil.fromEventContextProto(request));
 				} catch (PMException e) {
+					// Can't throw checked from the lambda; wrap it.
 					throw new RuntimeException(e);
 				}
 			});
 
+			ProcessEventResponse.Builder resp = ProcessEventResponse.newBuilder();
 			if (lastRevision > 0) {
-				responseObserver.onNext(
-						ProcessEventResponse.newBuilder()
-								.setResult(
-										ValueMap.newBuilder()
-												.putValues(
-														"last_event_revision",
-														Value.newBuilder().setInt64Value(lastRevision).build()
-												)
-								).build()
+				resp.setResult(
+						ValueMap.newBuilder()
+								.putValues(
+										"last_event_revision",
+										Value.newBuilder().setInt64Value(lastRevision).build()
+								)
+								.build()
 				);
-			} else {
-				responseObserver.onNext(ProcessEventResponse.newBuilder().build());
 			}
-		} catch (PMException e) {
+
+			responseObserver.onNext(resp.build());
+			responseObserver.onCompleted();
+		} catch (RuntimeException | PMException e) {
 			responseObserver.onError(Status.INTERNAL
 					                         .withDescription(e.getMessage())
 					                         .withCause(e)
