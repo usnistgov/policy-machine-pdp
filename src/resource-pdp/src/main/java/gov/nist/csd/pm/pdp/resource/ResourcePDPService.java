@@ -49,7 +49,11 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
                     FromProtoUtil.fromValueMap(request.getArgs())
             );
 
-            responseObserver.onNext(AdjudicateOperationResponse.newBuilder().setValue(ToProtoUtil.toValueProto(result)).build());
+            AdjudicateOperationResponse.Builder b = AdjudicateOperationResponse.newBuilder();
+            if (result != null) {
+                b.setValue(ToProtoUtil.toValueProto(result));
+            }
+            responseObserver.onNext(b.build());
             responseObserver.onCompleted();
         } catch (UnauthorizedException e) {
             logger.error("adjudication UNAUTHORIZED: {}", e.getMessage());
