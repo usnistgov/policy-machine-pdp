@@ -18,6 +18,9 @@ import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @GrpcService
 public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.ResourceAdjudicationServiceImplBase {
 
@@ -43,10 +46,15 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
                 throw new OperationIsNotResourceOperationException();
             }
 
+            Map<String, Object> args = new HashMap<>();
+            if (request.hasArgs()) {
+                args = FromProtoUtil.fromValueMap(request.getArgs());
+            }
+
             Object result = pdp.adjudicateOperation(
                     userCtx,
                     request.getName(),
-                    FromProtoUtil.fromValueMap(request.getArgs())
+                    args
             );
 
             AdjudicateOperationResponse.Builder b = AdjudicateOperationResponse.newBuilder();
