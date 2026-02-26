@@ -114,7 +114,7 @@ message ProhibitionDeleted {
 // obligations
 message ObligationCreated {
   int64 author = 1;
-  string pml = 2;
+  bytes data = 2;
 }
 
 message ObligationDeleted {
