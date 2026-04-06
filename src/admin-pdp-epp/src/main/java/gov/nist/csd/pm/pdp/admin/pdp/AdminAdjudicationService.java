@@ -41,6 +41,7 @@ public class AdminAdjudicationService extends AdminAdjudicationServiceGrpc.Admin
 			responseObserver.onNext(builder.build());
 			responseObserver.onCompleted();
 		} catch (UnauthorizedException e) {
+			logger.error("authorization check failed",  e);
 			responseObserver.onError(Status.PERMISSION_DENIED
 					                         .withDescription(e.getMessage())
 					                         .withCause(e)

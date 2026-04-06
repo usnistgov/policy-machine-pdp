@@ -52,6 +52,7 @@ public class EPPService extends EPPServiceGrpc.EPPServiceImplBase {
 			responseObserver.onNext(resp.build());
 			responseObserver.onCompleted();
 		} catch (RuntimeException | PMException e) {
+			logger.error(e.getMessage(), e);
 			responseObserver.onError(Status.INTERNAL
 					                         .withDescription(e.getMessage())
 					                         .withCause(e)

@@ -52,6 +52,10 @@ public class PolicyEventPersistentSubscriptionListener extends PersistentSubscri
         } catch (PMException | InvalidProtocolBufferException e) {
             logger.error("unexpected error handling event", e);
             subscription.nack(NackAction.Park, e.getMessage(), event);
+            // we have parked the event that has an error
+            // we need to still advance the revision or else the server will be stuck until the next
+            // successful event is handled
+            currentRevision.set(revision);
         }
     }
 
