@@ -95,9 +95,22 @@ public class Adjudicator {
     }
 
     public Object executePML(String pml) throws PMException {
-        NGACContext ctx = contextFactory.createContext();
+        Supplier<Object> supplier = () -> {
+            try {
+                NGACContext ctx = contextFactory.createContext();
+                UserContext userContext = contextFactory.createUserContext(ctx.pap());
 
-        return ctx.pdp().runTx(contextFactory.createUserContext(ctx.pap()), pdpTx -> pdpTx.executePML(pml));
+                ctx.pdp().executePML(userContext, pml);
+
+                publishEvents(ctx.pap());
+
+                return null;
+            } catch (Exception e) {
+                throw new PMRuntimeException(e);
+            }
+        };
+
+        return executeWithRetry(supplier);
     }
 
     /**
