@@ -40,7 +40,7 @@ class AdminAdjudicationServiceTest {
 			args.put("key", Value.newBuilder().setStringValue("value").build());
 			OperationRequest request = OperationRequest.newBuilder()
 					.setName("op")
-					.setArgs(ValueMap.newBuilder().putAllValues(args).build())
+					.putAllArgs(args)
 					.build();
 
 			when(adjudicator.adjudicateOperation(anyString(), anyMap())).thenReturn("result");

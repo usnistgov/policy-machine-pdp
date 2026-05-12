@@ -28,6 +28,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -55,7 +56,7 @@ class ResourcePDPServiceTest {
 	void adjudicateResourceOperation_success_callsPdp_andReturnsResponse() throws PMException {
 		OperationRequest request = OperationRequest.newBuilder()
 				.setName("op1")
-				.setArgs(ValueMap.newBuilder().build())
+				.putAllArgs(new HashMap<>())
 				.build();
 
 		UserContext userCtx = mock(UserContext.class);
@@ -105,7 +106,7 @@ class ResourcePDPServiceTest {
 	void adjudicateResourceOperation_unauthorized_returnsPermissionDenied() throws PMException {
 		OperationRequest request = OperationRequest.newBuilder()
 				.setName("op1")
-				.setArgs(ValueMap.newBuilder().build())
+                .putAllArgs(new HashMap<>())
 				.build();
 
 		UserContext userCtx = mock(UserContext.class);
@@ -152,7 +153,7 @@ class ResourcePDPServiceTest {
 	void adjudicateResourceOperation_genericException_returnsInternal() throws PMException {
 		OperationRequest request = OperationRequest.newBuilder()
 				.setName("op1")
-				.setArgs(ValueMap.newBuilder().build())
+                .putAllArgs(new HashMap<>())
 				.build();
 
 		UserContext userCtx = mock(UserContext.class);
@@ -195,7 +196,7 @@ class ResourcePDPServiceTest {
 	void adjudicateResourceOperation_nonResourceOperation_returnsInternal() throws PMException {
 		OperationRequest request = OperationRequest.newBuilder()
 				.setName("op1")
-				.setArgs(ValueMap.newBuilder().build())
+                .putAllArgs(new HashMap<>())
 				.build();
 
 		UserContext userCtx = mock(UserContext.class);

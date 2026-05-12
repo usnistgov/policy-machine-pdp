@@ -7,6 +7,7 @@ import gov.nist.csd.pm.core.pap.obligation.Obligation;
 import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
 import gov.nist.csd.pm.core.pap.query.model.context.IdUserContext;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
+import gov.nist.csd.pm.core.pap.serialization.json.JSONDeserializer;
 import gov.nist.csd.pm.core.pap.store.PolicyStore;
 import gov.nist.csd.pm.pdp.proto.event.*;
 import org.slf4j.Logger;
@@ -71,6 +72,7 @@ public class PolicyEventHandler {
             case OPERATION_CREATED -> handleOperationCreated(pmEvent.getOperationCreated());
             case OPERATION_DELETED -> handleOperationDeleted(pmEvent.getOperationDeleted(), policyStore);
             case RESOURCE_ACCESS_RIGHTS_SET -> handleResourceAccessRightsSet(pmEvent.getResourceAccessRightsSet(), policyStore);
+            case JSON_DESERIALIZED_EVENT -> handleJsonDeserializedEvent(pmEvent.getJsonDeserializedEvent());
             case EVENT_NOT_SET -> logger.debug("event not set for {}", pmEvent);
         }
     }
@@ -199,5 +201,9 @@ public class PolicyEventHandler {
 
     private void handleOperationDeleted(OperationDeleted operationDeleted, PolicyStore policyStore) throws PMException {
         policyStore.operations().deleteOperation(operationDeleted.getName());
+    }
+
+    private void handleJsonDeserializedEvent(JsonDeserializedEvent jsonDeserializedEvent) throws PMException {
+        pap.deserialize(jsonDeserializedEvent.getJson(), new JSONDeserializer());
     }
 }

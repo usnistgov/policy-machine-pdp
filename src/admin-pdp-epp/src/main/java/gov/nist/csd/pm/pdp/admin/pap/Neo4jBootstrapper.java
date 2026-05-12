@@ -1,15 +1,14 @@
 package gov.nist.csd.pm.pdp.admin.pap;
 
-import com.eventstore.dbclient.ReadResult;
-import com.eventstore.dbclient.ReadStreamOptions;
-import com.eventstore.dbclient.ResolvedEvent;
-import com.eventstore.dbclient.StreamNotFoundException;
+import com.eventstore.dbclient.*;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.operation.Operation;
 import gov.nist.csd.pm.core.pdp.bootstrap.JSONBootstrapper;
 import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapperWithSuper;
 import gov.nist.csd.pm.core.pdp.bootstrap.PolicyBootstrapper;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
+import gov.nist.csd.pm.pdp.proto.event.JsonDeserializedEvent;
+import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -22,6 +21,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -89,16 +89,48 @@ public class Neo4jBootstrapper {
         PolicyBootstrapper policyBootstrapper;
         if (bootstrapFilePath.endsWith(".pml")) {
             policyBootstrapper = new PMLBootstrapperWithSuper(data);
+
+            eventTrackingPAP.beginTx();
+            eventTrackingPAP.bootstrap(policyBootstrapper);
+            eventTrackingPAP.publishToEventStore(eventStoreConnectionManager.getOrInitClient(), eventStoreDBConfig.getEventStream(), 0);
+            eventTrackingPAP.commit();
         } else if (bootstrapFilePath.endsWith(".json")) {
-            policyBootstrapper = new JSONBootstrapper(data);
+            logger.info("publishing JsonDeserializedEvent to event store at revision 0");
+
+            AppendToStreamOptions options = AppendToStreamOptions.get();
+            options.expectedRevision(ExpectedRevision.noStream());
+
+            PMEvent pmEvent = PMEvent.newBuilder()
+                    .setJsonDeserializedEvent(JsonDeserializedEvent.newBuilder()
+                            .setJson(data)
+                            .build())
+                    .build();
+            EventData eventData = EventData.builderAsBinary(
+                    pmEvent.getDescriptorForType().getName(),
+                    pmEvent.toByteArray()
+            ).build();
+
+            try {
+                eventStoreConnectionManager.getOrInitClient()
+                        .appendToStream(eventStoreDBConfig.getEventStream(), options, eventData)
+                        .get();
+            } catch (ExecutionException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof WrongExpectedVersionException we) {
+                    logger.error(we.getMessage());
+                    throw we;
+                } else if (cause != null) {
+                    throw new RuntimeException("Unexpected error bootstrapping json", cause);
+                }
+
+                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Appending JsonDeserializedEvent to event store was interrupted", e);
+            }
         } else {
             throw new PMException("unsupported bootstrap file type, expected .json or .pml");
         }
-
-        eventTrackingPAP.beginTx();
-        eventTrackingPAP.bootstrap(policyBootstrapper);
-        eventTrackingPAP.publishToEventStore(eventStoreConnectionManager.getOrInitClient(), eventStoreDBConfig.getEventStream(), 0);
-        eventTrackingPAP.commit();
     }
 
     protected boolean eventsInStream() throws ExecutionException, InterruptedException {
