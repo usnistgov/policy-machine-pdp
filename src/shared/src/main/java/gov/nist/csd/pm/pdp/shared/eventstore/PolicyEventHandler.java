@@ -5,6 +5,7 @@ import gov.nist.csd.pm.core.common.graph.node.NodeType;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.obligation.Obligation;
 import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
+import gov.nist.csd.pm.core.pap.query.model.context.IdUserContext;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pap.store.PolicyStore;
 import gov.nist.csd.pm.pdp.proto.event.*;
@@ -139,7 +140,7 @@ public class PolicyEventHandler {
         try (ObjectInputStream ois = new ObjectInputStream(
                 new ByteArrayInputStream(obligationCreated.getData().toByteArray()))) {
             Obligation o = (Obligation) ois.readObject();
-            pap.policyStore().obligations().createObligation(o.getAuthorId(), o.getName(), o.getEventPattern(), o.getResponse());
+            pap.policyStore().obligations().createObligation(o.getAuthor(), o.getName(), o.getEventPattern(), o.getResponse());
         } catch (IOException | ClassNotFoundException e) {
             throw new PMException("failed to deserialize obligation: " + e.getMessage(), e);
         }
@@ -193,7 +194,7 @@ public class PolicyEventHandler {
     }
 
     private void handleOperationCreated(OperationCreated operationCreated) throws PMException {
-        pap.executePML(new UserContext(0), operationCreated.getPml());
+        pap.executePML(new IdUserContext(0), operationCreated.getPml());
     }
 
     private void handleOperationDeleted(OperationDeleted operationDeleted, PolicyStore policyStore) throws PMException {

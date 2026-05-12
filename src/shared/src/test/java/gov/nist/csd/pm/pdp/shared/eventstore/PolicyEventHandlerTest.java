@@ -11,6 +11,8 @@ import gov.nist.csd.pm.core.pap.obligation.event.subject.SubjectPattern;
 import gov.nist.csd.pm.core.pap.obligation.response.ObligationResponse;
 import gov.nist.csd.pm.core.pap.pml.expression.literal.StringLiteralExpression;
 import gov.nist.csd.pm.core.pap.pml.statement.operation.CreatePolicyClassStatement;
+import gov.nist.csd.pm.core.pap.query.model.context.IdUserContext;
+import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
 import gov.nist.csd.pm.core.pap.store.*;
 import gov.nist.csd.pm.pdp.proto.event.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -338,7 +340,7 @@ class PolicyEventHandlerTest {
 	@Test
 	void obligationCreated_deserializesAndCreatesObligation() throws Exception {
 		Obligation expected = new Obligation(
-				1, "test", new EventPattern(new SubjectPattern(), new AnyOperationPattern()),
+				new IdUserContext(1), "test", new EventPattern(new SubjectPattern(), new AnyOperationPattern()),
 				new ObligationResponse(
 						"ctx",
 						List.of(new CreatePolicyClassStatement(new StringLiteralExpression("pc1")))
@@ -354,7 +356,7 @@ class PolicyEventHandlerTest {
 		PMEvent event = PMEvent.newBuilder()
 				.setObligationCreated(
 						ObligationCreated.newBuilder()
-								.setAuthor(1)
+								.setAuthorId(1)
 								.setData(bytes)
 								.build()
 				).build();
@@ -362,7 +364,7 @@ class PolicyEventHandlerTest {
 		handler.handleEvent(event);
 
 		verify(obligations).createObligation(
-				eq(1L), eq("test"), eq(expected.getEventPattern()), eq(expected.getResponse())
+				eq(new IdUserContext(1)), eq("test"), eq(expected.getEventPattern()), eq(expected.getResponse())
 		);
 	}
 
@@ -403,7 +405,7 @@ class PolicyEventHandlerTest {
 		handler.handleEvent(event);
 
 		verify(pap).executePML(
-				argThat(uc -> uc != null && uc.getUser() == 0L),
+				argThat(uc -> uc instanceof NodeUserContext),
 				eq("test")
 		);
 	}

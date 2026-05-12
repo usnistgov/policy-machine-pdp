@@ -29,12 +29,7 @@ public class EPPService extends EPPServiceGrpc.EPPServiceImplBase {
 	public void processEvent(EventContext request, StreamObserver<ProcessEventResponse> responseObserver) {
 		try {
 			long lastRevision = adjudicator.adjudicateTransaction(ctx -> {
-				try {
-					ctx.epp().processEvent(FromProtoUtil.fromEventContextProto(request));
-				} catch (PMException e) {
-					// Can't throw checked from the lambda; wrap it.
-					throw new RuntimeException(e);
-				}
+				ctx.epp().processEvent(FromProtoUtil.fromEventContextProto(request));
 			});
 
 			ProcessEventResponse.Builder resp = ProcessEventResponse.newBuilder();

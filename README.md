@@ -15,25 +15,68 @@ This will create the following services:
 
 See client examples for the `resource-pdp` and `admin-pdp-epp` in the [client examples project](./examples/client)
 
-## gRPC Headers
+## gRPC Headers / Authentication
 
-There is no authentication mechanism implemented in this server. The gRPC services accept the following headers:
+The server supports two authentication modes, configured via `pm.pdp.auth.mode`.
 
-- `x-pm-user`: The username as it is in the NGAC graph.
-- `x-pm-user-attrs` A json array of attribute names that the user is assigned to. The user itself does not need to exist in the graph.
-- `x-pm-process` An ID representing the process a user is operating.
+### Mode: `none` (default)
 
-One of `x-pm-user` and `x-pm-user-attrs` is required. `x-pm-process` is optional.
+User identity is passed directly in gRPC metadata headers:
 
-To set the headers in the client side gRPC:
-```Java
+- `x-pm-user` — the username as it appears in the NGAC graph.
+- `x-pm-user-attrs` — a JSON array of user-attribute names; the user node does not need to exist in the graph.
+- `x-pm-process` — (optional) a process identifier.
+
+One of `x-pm-user` or `x-pm-user-attrs` is required.
+
+```java
 String[] attributes = new String[]{"ua1", "ua2"};
 Metadata metadata = new io.grpc.Metadata();
 Metadata.Key<String> userKey = Metadata.Key.of("x-pm-user-attrs", Metadata.ASCII_STRING_MARSHALLER);
 metadata.put(userKey, new ObjectMapper().writeValueAsString(attributes));
 
-ResourceAdjudicationServiceGrpc.ResourceAdjudicationServiceBlockingStub blockingStub = ResourceAdjudicationServiceGrpc.newBlockingStub(channel)
-		.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
+ResourceAdjudicationServiceGrpc.ResourceAdjudicationServiceBlockingStub blockingStub =
+    ResourceAdjudicationServiceGrpc.newBlockingStub(channel)
+        .withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
+```
+
+### Mode: `jwt`
+
+User identity is derived from a JWT passed in the `x-pm-token` gRPC metadata header. The token is decoded (signature verification is not yet enforced) and the actor's identity is read from configurable claim names.
+
+Two claim names are configurable — the first match found in an actor's token wins:
+
+| Property | Default | Description |
+|---|---|---|
+| `pm.pdp.auth.username-claim` | `username` | Claim whose **string** value is the actor's username → `NameUserContext` |
+| `pm.pdp.auth.user-attrs-claim` | `user_attrs` | Claim whose **string or list** value is the actor's user-attribute names → `AttributeNamesUserContext` |
+
+`username-claim` is tried first. If not present, `user-attrs-claim` is used. Each actor in the token must have at least one of the two configured claims or the request is rejected with `UNAUTHENTICATED`.
+
+#### Delegation chains (RFC 8693)
+
+JWT delegation chains are supported via the `act` claim (RFC 8693 token exchange). The outermost token represents the active subject; each nested `act` object represents a delegating actor. The server extracts a `UserContext` for every actor in the chain and requires **all** of them to be authorized for the request to succeed (`ConjunctiveUserContext`).
+
+```
+{
+  "username": "alice",          ← active user → NameUserContext("alice")
+  "act": {
+    "username": "service-a"    ← delegating actor → NameUserContext("service-a")
+  }
+}
+```
+
+The `x-pm-process` header is still accepted alongside a JWT token.
+
+#### Auth configuration
+
+```yaml
+pm:
+  pdp:
+    auth:
+      mode: jwt                      # "none" (default) or "jwt"
+      username-claim: username       # default
+      user-attrs-claim: user_attrs   # default
 ```
 
 ## Services

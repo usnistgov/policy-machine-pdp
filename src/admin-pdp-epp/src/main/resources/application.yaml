@@ -5,9 +5,9 @@ grpc:
 pm:
   pdp:
     admin:
-      bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/bootstrap.pml"
+      bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/ic_aces-policy+testcases-ngac.pm3.json"
       neo4j-db-path: "neo4j/data"
-      esdb-consumer-group: admin-pdp-epp-cg
+      esdb-consumer-group: admin-pdp-epp-cg3
       snapshot-interval: 1000
       shutdown-after-bootstrap: false
       plugins-dir: "./plugins/plugins"

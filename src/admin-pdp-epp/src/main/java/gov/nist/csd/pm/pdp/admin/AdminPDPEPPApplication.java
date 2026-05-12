@@ -6,6 +6,7 @@ import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.store.Neo4jEmbeddedPolicySto
 import gov.nist.csd.pm.core.pap.operation.Operation;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.pdp.admin.plugin.PluginLoader;
+import gov.nist.csd.pm.pdp.shared.auth.AuthConfig;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -30,7 +31,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 @ComponentScan(
     basePackages = {"gov.nist.csd.pm.pdp"}
 )
-@EnableConfigurationProperties({EventStoreDBConfig.class, AdminPDPConfig.class})
+@EnableConfigurationProperties({EventStoreDBConfig.class, AdminPDPConfig.class, AuthConfig.class})
 public class AdminPDPEPPApplication {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminPDPEPPApplication.class);

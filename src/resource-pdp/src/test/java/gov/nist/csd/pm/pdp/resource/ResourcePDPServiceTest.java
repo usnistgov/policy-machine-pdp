@@ -10,6 +10,7 @@ import gov.nist.csd.pm.core.pap.query.OperationsQuery;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
+import gov.nist.csd.pm.pdp.shared.auth.BasicUserContextResolver;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextFromHeader;
 import gov.nist.csd.pm.proto.v1.model.Value;
 import gov.nist.csd.pm.proto.v1.model.ValueMap;
@@ -47,7 +48,7 @@ class ResourcePDPServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new ResourcePDPService(pdp, pap);
+		service = new ResourcePDPService(pdp, pap, new BasicUserContextResolver());
 	}
 
 	@Test

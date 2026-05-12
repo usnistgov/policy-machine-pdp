@@ -17,6 +17,7 @@ import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredCapability;
 import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilege;
 import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilegeOnNode;
 import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilegeOnParameter;
+import gov.nist.csd.pm.core.pap.query.model.context.IdUserContext;
 import gov.nist.csd.pm.core.pap.query.model.explain.Explain;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.Subgraph;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.SubgraphPrivileges;
@@ -488,7 +489,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 		try {
 			Collection<gov.nist.csd.pm.proto.v1.model.Obligation> obligations = adjudicator.adjudicateQuery((pap, pdpTx) -> {
 				Collection<Obligation> obligationsWithAuthor = pdpTx.query().obligations().getObligationsWithAuthor(
-						FromProtoUtil.resolveNodeRefId(pap, request.getAuthor())
+						new IdUserContext(FromProtoUtil.resolveNodeRefId(pap, request.getAuthor()))
 				);
 				return toObligationProtoList(pap, obligationsWithAuthor);
 			});

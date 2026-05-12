@@ -5,6 +5,7 @@ import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.pdp.resource.config.ResourcePDPConfig;
+import gov.nist.csd.pm.pdp.shared.auth.AuthConfig;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -18,7 +19,7 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 @ComponentScan(
     basePackages = {"gov.nist.csd.pm.pdp"}
 )
-@EnableConfigurationProperties({EventStoreDBConfig.class, ResourcePDPConfig.class,})
+@EnableConfigurationProperties({EventStoreDBConfig.class, ResourcePDPConfig.class, AuthConfig.class})
 public class ResourcePDPApplication {
 
     public static void main(String[] args) {

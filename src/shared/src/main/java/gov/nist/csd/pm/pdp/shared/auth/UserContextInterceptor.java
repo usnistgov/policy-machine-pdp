@@ -7,25 +7,30 @@ import io.grpc.*;
 import net.devh.boot.grpc.server.interceptor.GrpcGlobalServerInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
 @GrpcGlobalServerInterceptor
+@ConditionalOnProperty(name = "pm.pdp.auth-mode", havingValue = "none", matchIfMissing = true)
 public class UserContextInterceptor implements ServerInterceptor {
 
     public static final String PM_USER_KEY = "x-pm-user";
     public static final String PM_USER_ATTRS_KEY = "x-pm-user-attrs";
     public static final String PM_PROCESS_KEY = "x-pm-process";
+    public static final String PM_USER_CHAIN_KEY = "x-pm-user-chain";
 
     public static final Metadata.Key<String> PM_USER_METADATA_KEY = Metadata.Key.of(PM_USER_KEY, Metadata.ASCII_STRING_MARSHALLER);
     public static final Metadata.Key<String> PM_USER_ATTRS_METADATA_KEY = Metadata.Key.of(PM_USER_ATTRS_KEY, Metadata.ASCII_STRING_MARSHALLER);
     public static final Metadata.Key<String> PM_PROCESS_METADATA_KEY = Metadata.Key.of(PM_PROCESS_KEY, Metadata.ASCII_STRING_MARSHALLER);
+    public static final Metadata.Key<String> PM_USER_CHAIN_METADATA_KEY = Metadata.Key.of(PM_USER_CHAIN_KEY, Metadata.ASCII_STRING_MARSHALLER);
 
     public static final Context.Key<String> PM_USER_CONTEXT_KEY = Context.key(PM_USER_KEY);
     public static final Context.Key<List<String>> PM_USER_ATTRS_CONTEXT_KEY = Context.key(PM_USER_ATTRS_KEY);
     public static final Context.Key<String> PM_PROCESS_CONTEXT_KEY = Context.key(PM_PROCESS_KEY);
+    public static final Context.Key<String> PM_USER_CHAIN_CONTEXT_KEY = Context.key(PM_USER_CHAIN_KEY);
 
     private Logger logger = LoggerFactory.getLogger(UserContextInterceptor.class);
     private static ObjectMapper userAttrsMapper = new ObjectMapper();
@@ -38,6 +43,7 @@ public class UserContextInterceptor implements ServerInterceptor {
 
         String pmUserHeaderValue = headers.get(PM_USER_METADATA_KEY);
         String pmProcessHeaderValue = headers.get(PM_PROCESS_METADATA_KEY);
+        String pmUserChainHeaderValue = headers.get(PM_USER_CHAIN_METADATA_KEY);
         String attrsStr = headers.get(PM_USER_ATTRS_METADATA_KEY);
         List<String> pmUserAttrsHeaderValue = null;
         if (attrsStr != null) {
@@ -49,7 +55,8 @@ public class UserContextInterceptor implements ServerInterceptor {
             }
         }
 
-        logger.debug("user header values user={} attributes={} process={}", pmUserHeaderValue, pmUserAttrsHeaderValue, pmProcessHeaderValue);
+        logger.debug("user header values user={} attributes={} chain={} process={}",
+                pmUserHeaderValue, pmUserAttrsHeaderValue, pmUserChainHeaderValue, pmProcessHeaderValue);
 
         Context context = Context.current();
         if (pmUserHeaderValue != null) {
@@ -62,6 +69,10 @@ public class UserContextInterceptor implements ServerInterceptor {
 
         if (pmProcessHeaderValue != null) {
             context = context.withValue(PM_PROCESS_CONTEXT_KEY, pmProcessHeaderValue);
+        }
+
+        if (pmUserChainHeaderValue != null) {
+            context = context.withValue(PM_USER_CHAIN_CONTEXT_KEY, pmUserChainHeaderValue);
         }
 
         return Contexts.interceptCall(context, call, headers, next);
@@ -77,5 +88,9 @@ public class UserContextInterceptor implements ServerInterceptor {
 
     public static String getPmProcessHeaderValue() {
         return PM_PROCESS_CONTEXT_KEY.get();
+    }
+
+    public static String getPmUserChainHeaderValue() {
+        return PM_USER_CHAIN_CONTEXT_KEY.get();
     }
 }

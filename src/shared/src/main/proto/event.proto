@@ -113,8 +113,11 @@ message ProhibitionDeleted {
 
 // obligations
 message ObligationCreated {
-  int64 author = 1;
-  bytes data = 2;
+  oneof author {
+    int64 author_id = 1;
+    string author_name = 2;
+  }
+  bytes data = 3;
 }
 
 message ObligationDeleted {
