@@ -1,4 +1,4 @@
-package gov.nist.csd.pm.pdp.admin.plugin.wrapper;
+package gov.nist.csd.pm.pdp.shared.plugin.wrapper;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.PAP;

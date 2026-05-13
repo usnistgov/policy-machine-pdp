@@ -5,8 +5,8 @@ import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.store.Neo4jEmbeddedPolicyStore;
 import gov.nist.csd.pm.core.pap.operation.Operation;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
-import gov.nist.csd.pm.pdp.admin.plugin.PluginLoader;
 import gov.nist.csd.pm.pdp.shared.auth.AuthConfig;
+import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -57,6 +57,11 @@ public class AdminPDPEPPApplication {
         Neo4jEmbeddedPolicyStore.createIndexes(graphDb);
 
         return new Neo4jEmbeddedPolicyStore(graphDb, getClass().getClassLoader());
+    }
+
+    @Bean
+    public PluginLoader pluginLoader(AdminPDPConfig config) {
+        return new PluginLoader(config.getPluginsDir());
     }
 
     @Bean

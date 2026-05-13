@@ -22,6 +22,11 @@ public class ResourcePDPConfig {
      */
     private int revisionConsistencyTimeout;
 
+    /**
+     * Directory path containing plugin JAR files for Operations and Routines
+     */
+    private String pluginsDir;
+
     public ResourcePDPConfig() {
     }
 
@@ -68,5 +73,13 @@ public class ResourcePDPConfig {
 
     public void setRevisionConsistencyTimeout(int revisionConsistencyTimeout) {
         this.revisionConsistencyTimeout = revisionConsistencyTimeout;
+    }
+
+    public String getPluginsDir() {
+        return pluginsDir;
+    }
+
+    public void setPluginsDir(String pluginsDir) {
+        this.pluginsDir = pluginsDir;
     }
 }
