@@ -11,7 +11,6 @@ import gov.nist.csd.pm.core.pap.obligation.event.subject.SubjectPattern;
 import gov.nist.csd.pm.core.pap.obligation.response.ObligationResponse;
 import gov.nist.csd.pm.core.pap.pml.expression.literal.StringLiteralExpression;
 import gov.nist.csd.pm.core.pap.pml.statement.operation.CreatePolicyClassStatement;
-import gov.nist.csd.pm.core.pap.query.model.context.IdUserContext;
 import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
 import gov.nist.csd.pm.core.pap.store.*;
 import gov.nist.csd.pm.pdp.proto.event.*;
@@ -340,7 +339,7 @@ class PolicyEventHandlerTest {
 	@Test
 	void obligationCreated_deserializesAndCreatesObligation() throws Exception {
 		Obligation expected = new Obligation(
-				new IdUserContext(1), "test", new EventPattern(new SubjectPattern(), new AnyOperationPattern()),
+                NodeUserContext.of(1), "test", new EventPattern(new SubjectPattern(), new AnyOperationPattern()),
 				new ObligationResponse(
 						"ctx",
 						List.of(new CreatePolicyClassStatement(new StringLiteralExpression("pc1")))
@@ -364,7 +363,7 @@ class PolicyEventHandlerTest {
 		handler.handleEvent(event);
 
 		verify(obligations).createObligation(
-				eq(new IdUserContext(1)), eq("test"), eq(expected.getEventPattern()), eq(expected.getResponse())
+				eq(NodeUserContext.of(1)), eq("test"), eq(expected.getEventPattern()), eq(expected.getResponse())
 		);
 	}
 

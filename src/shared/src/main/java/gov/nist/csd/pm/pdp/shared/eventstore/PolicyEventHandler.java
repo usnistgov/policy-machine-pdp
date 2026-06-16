@@ -5,7 +5,7 @@ import gov.nist.csd.pm.core.common.graph.node.NodeType;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.obligation.Obligation;
 import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
-import gov.nist.csd.pm.core.pap.query.model.context.IdUserContext;
+import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pap.serialization.json.JSONDeserializer;
 import gov.nist.csd.pm.core.pap.store.PolicyStore;
@@ -196,7 +196,7 @@ public class PolicyEventHandler {
     }
 
     private void handleOperationCreated(OperationCreated operationCreated) throws PMException {
-        pap.executePML(new IdUserContext(0), operationCreated.getPml());
+        pap.executePML(NodeUserContext.of(0), operationCreated.getPml());
     }
 
     private void handleOperationDeleted(OperationDeleted operationDeleted, PolicyStore policyStore) throws PMException {

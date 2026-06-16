@@ -17,7 +17,7 @@ import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredCapability;
 import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilege;
 import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilegeOnNode;
 import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilegeOnParameter;
-import gov.nist.csd.pm.core.pap.query.model.context.IdUserContext;
+import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
 import gov.nist.csd.pm.core.pap.query.model.explain.Explain;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.Subgraph;
 import gov.nist.csd.pm.core.pap.query.model.subgraph.SubgraphPrivileges;
@@ -51,7 +51,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void nodeExists(NodeExistsRequest request, StreamObserver<NodeExistsResponse> responseObserver) {
 		try {
-			boolean exists = adjudicator.adjudicateQuery((pap, pdpTx) -> pdpTx.query().graph().nodeExists(FromProtoUtil.resolveNodeRefId(pap, request.getNode())));
+			boolean exists = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> pdpTx.query().graph().nodeExists(FromProtoUtil.resolveNodeRefId(pap, request.getNode())));
 
 			responseObserver.onNext(NodeExistsResponse.newBuilder().setExists(exists).build());
 			responseObserver.onCompleted();
@@ -66,7 +66,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getNode(GetNodeRequest request, StreamObserver<GetNodeResponse> responseObserver) {
 		try {
-			Node node =  adjudicator.adjudicateQuery((pap, pdpTx) -> pdpTx.query().graph().getNodeById(FromProtoUtil.resolveNodeRefId(pap, request.getNode())));
+			Node node =  adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> pdpTx.query().graph().getNodeById(FromProtoUtil.resolveNodeRefId(pap, request.getNode())));
 
 			responseObserver.onNext(GetNodeResponse.newBuilder().setNode(ToProtoUtil.toNodeProto(node)).build());
 			responseObserver.onCompleted();
@@ -81,7 +81,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getNodeId(GetNodeIdRequest request, StreamObserver<GetNodeIdResponse> responseObserver) {
 		try {
-			long id = adjudicator.adjudicateQuery((pap, pdpTx) -> pdpTx.query().graph().getNodeId(request.getName()));
+			long id = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> pdpTx.query().graph().getNodeId(request.getName()));
 
 			responseObserver.onNext(GetNodeIdResponse.newBuilder().setId(id).build());
 			responseObserver.onCompleted();
@@ -96,7 +96,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void searchNodes(SearchNodesRequest request, StreamObserver<SearchNodesResponse> responseObserver) {
 		try {
-			Collection<Node> nodes = adjudicator.adjudicateQuery((pap, pdpTx) -> pdpTx.query().graph().search(
+			Collection<Node> nodes = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> pdpTx.query().graph().search(
 					NodeType.toNodeType(request.getType().name()),
 					request.getPropertiesMap()
 			));
@@ -119,7 +119,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getPolicyClasses(GetPolicyClassesRequest request, StreamObserver<GetPolicyClassesResponse> responseObserver) {
 		try {
-			List<gov.nist.csd.pm.proto.v1.model.Node> nodeProtos = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			List<gov.nist.csd.pm.proto.v1.model.Node> nodeProtos = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Collection<Long> policyClasses = pdpTx.query().graph().getPolicyClasses();
 				return nodeIdsToNodeProtoList(pap, policyClasses);
 			});
@@ -138,7 +138,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getAdjacentDescendants(GetAdjacentDescendantsRequest request,
 	                                   StreamObserver<GetAdjacentDescendantsResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Node> descs = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Collection<gov.nist.csd.pm.proto.v1.model.Node> descs = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Collection<Long> adjacentDescendants = pdpTx.query().graph().getAdjacentDescendants(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
 				return nodeIdsToNodeProtoList(pap, adjacentDescendants);
 			});
@@ -157,7 +157,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getAdjacentAscendants(GetAdjacentAscendantsRequest request,
 	                                  StreamObserver<GetAdjacentAscendantsResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Node> ascs = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Collection<gov.nist.csd.pm.proto.v1.model.Node> ascs = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Collection<Long> adjacentAscendants = pdpTx.query().graph().getAdjacentAscendants(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
 				return nodeIdsToNodeProtoList(pap, adjacentAscendants);
 			});
@@ -176,7 +176,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getAssociationsWithSource(GetAssociationsWithSourceRequest request,
 	                                      StreamObserver<GetAssociationsWithSourceResponse> responseObserver) {
 		try {
-			List<gov.nist.csd.pm.proto.v1.model.Association> associations = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			List<gov.nist.csd.pm.proto.v1.model.Association> associations = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Collection<Association> associationsWithSource = pdpTx.query().graph().getAssociationsWithSource(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
 				return toAssociationProtoList(pap, associationsWithSource);
 			});
@@ -195,7 +195,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getAssociationsWithTarget(GetAssociationsWithTargetRequest request,
 	                                      StreamObserver<GetAssociationsWithTargetResponse> responseObserver) {
 		try {
-			List<gov.nist.csd.pm.proto.v1.model.Association> associations = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			List<gov.nist.csd.pm.proto.v1.model.Association> associations = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Collection<Association> associationsWithTarget = pdpTx.query().graph().getAssociationsWithTarget(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
 				return toAssociationProtoList(pap, associationsWithTarget);
 			});
@@ -213,7 +213,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getAscendantSubgraph(GetAscendantSubgraphRequest request, StreamObserver<GetAscendantSubgraphResponse> responseObserver) {
 		try {
-			Subgraph subgraph = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Subgraph subgraph = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				return pdpTx.query().graph().getAscendantSubgraph(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
 			});
 
@@ -230,7 +230,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getDescendantSubgraph(GetDescendantSubgraphRequest request, StreamObserver<GetDescendantSubgraphResponse> responseObserver) {
 		try {
-			Subgraph subgraph = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Subgraph subgraph = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				return pdpTx.query().graph().getDescendantSubgraph(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
 			});
 
@@ -248,7 +248,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getAttributeDescendants(GetAttributeDescendantsRequest request,
 	                                    StreamObserver<GetAttributeDescendantsResponse> responseObserver) {
 		try {
-			List<gov.nist.csd.pm.proto.v1.model.Node> nodes = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			List<gov.nist.csd.pm.proto.v1.model.Node> nodes = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Collection<Long> descs = pdpTx.query().graph().getAttributeDescendants(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
 				return nodeIdsToNodeProtoList(pap, descs);
 			});
@@ -267,7 +267,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getPolicyClassDescendants(GetPolicyClassDescendantsRequest request,
 	                                      StreamObserver<GetPolicyClassDescendantsResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Node> descs = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Collection<gov.nist.csd.pm.proto.v1.model.Node> descs = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Collection<Long> policyClassDescendants = pdpTx.query().graph().getPolicyClassDescendants(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
 				return nodeIdsToNodeProtoList(pap, policyClassDescendants);
 			});
@@ -285,7 +285,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void isAscendant(IsAscendantRequest request, StreamObserver<IsAscendantResponse> responseObserver) {
 		try {
-			boolean isAscendant = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			boolean isAscendant = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				return pdpTx.query().graph().isAscendant(
 						FromProtoUtil.resolveNodeRefId(pap, request.getAscendant()),
 						FromProtoUtil.resolveNodeRefId(pap, request.getDescendant())
@@ -305,7 +305,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void isDescendant(IsDescendantRequest request, StreamObserver<IsDescendantResponse> responseObserver) {
 		try {
-			boolean isDescendant = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			boolean isDescendant = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				return pdpTx.query().graph().isDescendant(
 						FromProtoUtil.resolveNodeRefId(pap, request.getAscendant()),
 						FromProtoUtil.resolveNodeRefId(pap, request.getDescendant())
@@ -325,7 +325,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getProhibitions(GetProhibitionsRequest request, StreamObserver<GetProhibitionsResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitions = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Collection<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitions = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				List<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = new ArrayList<>();
 				for (Prohibition prohibition : pdpTx.query().prohibitions().getProhibitions()) {
 					prohibitionProtos.add(ToProtoUtil.toProhibitionProto(prohibition, pap.query()));
@@ -348,7 +348,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getProhibitionsBySubject(GetProhibitionsBySubjectRequest request,
 	                                     StreamObserver<GetProhibitionsBySubjectResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitions = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Collection<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitions = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Collection<Prohibition> prohibitionsWithSubject = pdpTx.query().prohibitions().getNodeProhibitions(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
 				List<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = new ArrayList<>();
 				for (Prohibition prohibition : prohibitionsWithSubject) {
@@ -378,7 +378,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getProhibition(GetProhibitionRequest request, StreamObserver<GetProhibitionResponse> responseObserver) {
 		try {
-			gov.nist.csd.pm.proto.v1.model.Prohibition prohibition = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			gov.nist.csd.pm.proto.v1.model.Prohibition prohibition = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Prohibition p = pdpTx.query().prohibitions().getProhibition(request.getName());
 				return ToProtoUtil.toProhibitionProto(p, pap.query());
 			});
@@ -397,7 +397,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getInheritedProhibitions(GetInheritedProhibitionsRequest request,
 	                                     StreamObserver<GetInheritedProhibitionsResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Collection<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Collection<Prohibition> inheritedProhibitionsFor = pdpTx.query().prohibitions().getInheritedProhibitionsFor(
 						FromProtoUtil.resolveNodeRefId(pap, request.getSubject())
 				);
@@ -424,7 +424,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getProhibitionsWithContainer(GetProhibitionsWithContainerRequest request,
 	                                         StreamObserver<GetProhibitionsWithContainerResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Collection<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Collection<Prohibition> prohibitionsWithContainer = pdpTx.query().prohibitions().getProhibitionsWithContainer(
 						FromProtoUtil.resolveNodeRefId(pap, request.getContainer())
 				);
@@ -450,7 +450,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getObligations(GetObligationsRequest request, StreamObserver<GetObligationsResponse> responseObserver) {
 		try {
-			List<gov.nist.csd.pm.proto.v1.model.Obligation> obligationProtos = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			List<gov.nist.csd.pm.proto.v1.model.Obligation> obligationProtos = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Collection<Obligation> obligations = pdpTx.query().obligations().getObligations();
 				return toObligationProtoList(pap, obligations);
 			});
@@ -468,7 +468,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getObligation(GetObligationRequest request, StreamObserver<GetObligationResponse> responseObserver) {
 		try {
-			gov.nist.csd.pm.proto.v1.model.Obligation obligation = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			gov.nist.csd.pm.proto.v1.model.Obligation obligation = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Obligation o = pdpTx.query().obligations().getObligation(request.getName());
 				return ToProtoUtil.toObligationProto(o, pap);
 			});
@@ -487,9 +487,9 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getObligationsByAuthor(GetObligationsByAuthorRequest request,
 	                                   StreamObserver<GetObligationsByAuthorResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Obligation> obligations = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Collection<gov.nist.csd.pm.proto.v1.model.Obligation> obligations = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Collection<Obligation> obligationsWithAuthor = pdpTx.query().obligations().getObligationsWithAuthor(
-						new IdUserContext(FromProtoUtil.resolveNodeRefId(pap, request.getAuthor()))
+                        NodeUserContext.of(FromProtoUtil.resolveNodeRefId(pap, request.getAuthor()))
 				);
 				return toObligationProtoList(pap, obligationsWithAuthor);
 			});
@@ -507,7 +507,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getResourceAccessRights(GetResourceAccessRightsRequest request, StreamObserver<GetResourceAccessRightsResponse> responseObserver) {
 		try {
-			AccessRightSet resourceOps = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			AccessRightSet resourceOps = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				return pdpTx.query().operations().getResourceAccessRights();
 			});
 
@@ -525,7 +525,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getOperationSignature(GetOperationSignatureRequest request,
 	                                  StreamObserver<GetOperationSignatureResponse> responseObserver) {
 		try {
-			Operation<?> operation = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Operation<?> operation = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				return pdpTx.query().operations().getOperation(request.getName());
 			});
 
@@ -547,7 +547,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getAllOperationSignatures(GetAllOperationSignaturesRequest request,
 	                                      StreamObserver<GetAllOperationSignaturesResponse> responseObserver) {
 		try {
-			Collection<Operation<?>> operations = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Collection<Operation<?>> operations = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				return pdpTx.query().operations().getOperations();
 			});
 
@@ -574,7 +574,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void computePrivileges(ComputePrivilegesRequest request,
 	                              StreamObserver<ComputePrivilegesResponse> responseObserver) {
 		try {
-			AccessRightSet privs = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			AccessRightSet privs = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				return pdpTx.query().access().computePrivileges(
 						FromProtoUtil.fromUserContextProto(pap, request.getUserCtx()),
 						FromProtoUtil.fromTargetContextProto(pap, request.getTargetCtx())
@@ -595,7 +595,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void computeDeniedPrivileges(ComputeDeniedPrivilegesRequest request,
 	                                    StreamObserver<ComputeDeniedPrivilegesResponse> responseObserver) {
 		try {
-			AccessRightSet denied = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			AccessRightSet denied = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				return pdpTx.query().access().computeDeniedPrivileges(
 						FromProtoUtil.fromUserContextProto(pap, request.getUserCtx()),
 						FromProtoUtil.fromTargetContextProto(pap, request.getTargetCtx())
@@ -616,7 +616,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void computeCapabilityList(ComputeCapabilityListRequest request,
 	                                  StreamObserver<ComputeCapabilityListResponse> responseObserver) {
 		try {
-			List<NodePrivileges> nodePrivilegesList = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			List<NodePrivileges> nodePrivilegesList = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Map<Long, AccessRightSet> map = pdpTx.query().access().computeCapabilityList(
 						FromProtoUtil.fromUserContextProto(pap, request.getUserCtx())
 				);
@@ -637,7 +637,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void computeACL(ComputeACLRequest request, StreamObserver<ComputeACLResponse> responseObserver) {
 		try {
-			List<NodePrivileges> nodePrivileges = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			List<NodePrivileges> nodePrivileges = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Map<Long, AccessRightSet> acl = pdpTx.query().access().computeACL(
 						FromProtoUtil.fromTargetContextProto(pap, request.getTargetCtx())
 				);
@@ -659,7 +659,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void computeDestinationAttributes(ComputeDestinationAttributesRequest request,
 	                                         StreamObserver<ComputeDestinationAttributesResponse> responseObserver) {
 		try {
-			List<NodePrivileges> nodePrivilegesList = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			List<NodePrivileges> nodePrivilegesList = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Map<Long, AccessRightSet> destAttrs = pdpTx.query().access().computeDestinationAttributes(
 						FromProtoUtil.fromUserContextProto(pap, request.getUserCtx())
 				);
@@ -681,7 +681,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void computeSubgraphPrivileges(ComputeSubgraphPrivilegesRequest request,
 	                                      StreamObserver<ComputeSubgraphPrivilegesResponse> responseObserver) {
 		try {
-			SubgraphPrivileges subgraphPrivileges = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			SubgraphPrivileges subgraphPrivileges = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				return pdpTx.query().access().computeSubgraphPrivileges(
 						FromProtoUtil.fromUserContextProto(pap, request.getUserCtx()),
 						FromProtoUtil.resolveNodeRefId(pap, request.getRoot())
@@ -702,7 +702,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void computeAdjacentAscendantPrivileges(ComputeAdjacentAscendantPrivilegesRequest request,
 	                                               StreamObserver<ComputeAdjacentAscendantPrivilegesResponse> responseObserver) {
 		try {
-			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				return pdpTx.query().access().computeAdjacentAscendantPrivileges(
 						FromProtoUtil.fromUserContextProto(pap, request.getUserCtx()),
 						FromProtoUtil.resolveNodeRefId(pap, request.getRoot())
@@ -723,7 +723,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void computeAdjacentDescendantPrivileges(ComputeAdjacentDescendantPrivilegesRequest request,
 	                                                StreamObserver<ComputeAdjacentDescendantPrivilegesResponse> responseObserver) {
 		try {
-			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				return pdpTx.query().access().computeAdjacentDescendantPrivileges(
 						FromProtoUtil.fromUserContextProto(pap, request.getUserCtx()),
 						FromProtoUtil.resolveNodeRefId(pap, request.getRoot())
@@ -743,7 +743,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void explain(ExplainRequest request, StreamObserver<ExplainResponse> responseObserver) {
 		try {
-			ExplainResponse explainProto = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			ExplainResponse explainProto = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				Explain explain = pdpTx.query().access().explain(
 						FromProtoUtil.fromUserContextProto(pap, request.getUserCtx()),
 						FromProtoUtil.fromTargetContextProto(pap, request.getTargetCtx())
@@ -766,7 +766,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void computePersonalObjectSystem(ComputePersonalObjectSystemRequest request,
 	                                        StreamObserver<ComputePersonalObjectSystemResponse> responseObserver) {
 		try {
-			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				return pdpTx.query().access().computePersonalObjectSystem(
 						FromProtoUtil.fromUserContextProto(pap, request.getUserCtx())
 				);
@@ -786,8 +786,8 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void selfComputePrivileges(SelfComputePrivilegesRequest request,
 	                                  StreamObserver<SelfComputePrivilegesResponse> responseObserver) {
 		try {
-			AccessRightSet privs = adjudicator.adjudicateQuery((pap, pdpTx) -> {
-				return pdpTx.query().selfAccess().computePrivileges(
+			AccessRightSet privs = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
+				return pdpTx.query().access().self(userCtx).computePrivileges(
 						FromProtoUtil.fromTargetContextProto(pap, request.getTargetCtx())
 				);
 			});
@@ -806,8 +806,8 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void selfComputeSubgraphPrivileges(SelfComputeSubgraphPrivilegesRequest request,
 	                                          StreamObserver<SelfComputeSubgraphPrivilegesResponse> responseObserver) {
 		try {
-			SubgraphPrivileges subgraphPrivileges = adjudicator.adjudicateQuery((pap, pdpTx) -> {
-				return pdpTx.query().selfAccess().computeSubgraphPrivileges(FromProtoUtil.resolveNodeRefId(pap, request.getRoot()));
+			SubgraphPrivileges subgraphPrivileges = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
+				return pdpTx.query().access().self(userCtx).computeSubgraphPrivileges(FromProtoUtil.resolveNodeRefId(pap, request.getRoot()));
 			});
 
 			responseObserver.onNext(SelfComputeSubgraphPrivilegesResponse.newBuilder().setSubgraphPrivileges(toSubgraphPrivilegesProto(subgraphPrivileges)).build());
@@ -824,8 +824,8 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void selfComputeAdjacentAscendantPrivileges(SelfComputeAdjacentAscendantPrivilegesRequest request,
 	                                                   StreamObserver<SelfComputeAdjacentAscendantPrivilegesResponse> responseObserver) {
 		try {
-			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery((pap, pdpTx) -> {
-				return pdpTx.query().selfAccess().computeAdjacentAscendantPrivileges(FromProtoUtil.resolveNodeRefId(pap, request.getRoot()));
+			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
+				return pdpTx.query().access().self(userCtx).computeAdjacentAscendantPrivileges(FromProtoUtil.resolveNodeRefId(pap, request.getRoot()));
 			});
 
 			List<NodePrivileges> nodePrivileges = nodePrivilegesResponse(map);
@@ -843,8 +843,8 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void selfComputeAdjacentDescendantPrivileges(SelfComputeAdjacentDescendantPrivilegesRequest request,
 	                                                    StreamObserver<SelfComputeAdjacentDescendantPrivilegesResponse> responseObserver) {
 		try {
-			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery((pap, pdpTx) -> {
-				return pdpTx.query().selfAccess().computeAdjacentDescendantPrivileges(FromProtoUtil.resolveNodeRefId(pap, request.getRoot()));
+			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
+				return pdpTx.query().access().self(userCtx).computeAdjacentDescendantPrivileges(FromProtoUtil.resolveNodeRefId(pap, request.getRoot()));
 			});
 
 			List<NodePrivileges> nodePrivileges = nodePrivilegesResponse(map);
@@ -861,8 +861,8 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void selfComputePersonalObjectSystem(SelfComputePersonalObjectSystemRequest request, StreamObserver<SelfComputePersonalObjectSystemResponse> responseObserver) {
 		try {
-			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery((pap, pdpTx) -> {
-				return pdpTx.query().selfAccess().computePersonalObjectSystem();
+			Map<Node, AccessRightSet> map = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
+				return pdpTx.query().access().self(userCtx).computePersonalObjectSystem();
 			});
 
 			List<NodePrivileges> nodePrivileges = nodePrivilegesResponse(map);
@@ -886,7 +886,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 		}
 
 		try {
-			String serialized = adjudicator.adjudicateQuery((pap, pdpTx) -> {
+			String serialized = adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> {
 				return pdpTx.serialize(serializer);
 			});
 
@@ -1099,7 +1099,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 	private List<Signature> getSignatures() throws PMException {
 		Collection<Operation<?>> ops =
-				adjudicator.adjudicateQuery((pap, pdpTx) -> new ArrayList<>(pdpTx.query().operations().getOperations()));
+				adjudicator.adjudicateQuery((pap, userCtx, pdpTx) -> new ArrayList<>(pdpTx.query().operations().getOperations()));
 
 		List<Signature> signatures = new ArrayList<>();
 		for (Operation<?> op : ops) {

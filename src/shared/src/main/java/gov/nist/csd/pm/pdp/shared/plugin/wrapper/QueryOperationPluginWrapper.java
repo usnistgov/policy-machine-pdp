@@ -27,7 +27,7 @@ public class QueryOperationPluginWrapper<T> extends QueryOperation<T> implements
 	}
 
 	@Override
-	public T execute(PolicyQuery query, Args args) throws PMException {
-		return executeWithContext(classLoader, () -> operation.execute(query, args));
+	public T execute(PolicyQuery query, UserContext userContext, Args args) throws PMException {
+		return executeWithContext(classLoader, () -> operation.execute(query, userContext, args));
 	}
 }

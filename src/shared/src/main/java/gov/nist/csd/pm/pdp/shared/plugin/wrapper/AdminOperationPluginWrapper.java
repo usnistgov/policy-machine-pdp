@@ -26,7 +26,7 @@ public class AdminOperationPluginWrapper<T> extends AdminOperation<T> implements
 	}
 
 	@Override
-	public T execute(PAP pap, Args args) throws PMException {
-		return executeWithContext(classLoader, () -> operation.execute(pap, args));
+	public T execute(PAP pap, UserContext userCtx, Args args) throws PMException {
+		return executeWithContext(classLoader, () -> operation.execute(pap, userCtx, args));
 	}
 }

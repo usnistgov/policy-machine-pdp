@@ -27,7 +27,7 @@ public class ResourceOperationPluginWrapper<T> extends ResourceOperation<T> impl
 	}
 
 	@Override
-	public T execute(PolicyQuery query, Args args) throws PMException {
-		return executeWithContext(classLoader, () -> operation.execute(query, args));
+	public T execute(PolicyQuery query, UserContext userContext, Args args) throws PMException {
+		return executeWithContext(classLoader, () -> operation.execute(query, userContext, args));
 	}
 }

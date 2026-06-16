@@ -2,8 +2,7 @@ package gov.nist.csd.pm.pdp.resource.eventstore;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
-import gov.nist.csd.pm.core.pap.query.model.context.IdUserContext;
-import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
+import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
 import gov.nist.csd.pm.pdp.proto.event.ObjectCreated;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
@@ -21,7 +20,8 @@ class PolicyEventSubscriptionListenerTest {
 	void onEvent_SingleEventIsHandled() throws PMException {
 		MemoryPAP pap = new MemoryPAP();
 		pap.withIdGenerator((node, type) -> node.hashCode());
-		pap.executePML(new IdUserContext(0), """
+		pap.executePML(
+                NodeUserContext.of(0), """
 					create pc "pc1"
 					create ua "ua1" in ["pc1"]
 					create oa "oa1" in ["pc1"]

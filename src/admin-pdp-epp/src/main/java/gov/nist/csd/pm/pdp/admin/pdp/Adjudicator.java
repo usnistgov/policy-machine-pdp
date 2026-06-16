@@ -90,8 +90,8 @@ public class Adjudicator {
 
     public <R> R adjudicateQuery(PDPTxFunction<R> consumer) throws PMException {
         NGACContext ctx = contextFactory.createContext();
-
-        return ctx.pdp().runTx(contextFactory.createUserContext(ctx.pap()), pdpTx -> consumer.apply(ctx.pap(), pdpTx));
+        UserContext userCtx = contextFactory.createUserContext(ctx.pap());
+        return ctx.pdp().runTx(userCtx, pdpTx -> consumer.apply(ctx.pap(), userCtx, pdpTx));
     }
 
     public Object executePML(String pml) throws PMException {
