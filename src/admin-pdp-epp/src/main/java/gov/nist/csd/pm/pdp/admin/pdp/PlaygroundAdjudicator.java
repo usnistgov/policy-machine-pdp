@@ -35,6 +35,9 @@ public class PlaygroundAdjudicator implements AdminAdjudicator {
         this.pap = pap;
         this.userContextResolver = userContextResolver;
 
+        // The PDP and EPP form a cycle: the PDP fires events to the EPP, and the EPP runs obligation
+        // responses back through the PDP. Construct the PDP first, then the EPP, then wire the EPP into
+        // the PDP. All three share the single injected PAP.
         this.pdp = new PlaygroundPDP(pap);
         this.epp = new EPP(pdp, pap);
         pdp.setEpp(epp);
@@ -92,6 +95,8 @@ public class PlaygroundAdjudicator implements AdminAdjudicator {
      */
     private static final class PlaygroundPDP extends PDP {
 
+        // PlaygroundPAP wraps the same underlying policy store as the PDP's base PAP (super(pap)); it only
+        // overrides executeOperation to bypass the privilege gate while still firing admin events to the EPP.
         private final PAP playgroundPAP;
         private EPP epp;
 

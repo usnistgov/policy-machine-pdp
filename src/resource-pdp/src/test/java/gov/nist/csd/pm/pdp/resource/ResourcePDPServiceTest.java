@@ -13,7 +13,6 @@ import gov.nist.csd.pm.core.pdp.UnauthorizedException;
 import gov.nist.csd.pm.pdp.shared.auth.BasicUserContextResolver;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextFromHeader;
 import gov.nist.csd.pm.proto.v1.model.Value;
-import gov.nist.csd.pm.proto.v1.model.ValueMap;
 import gov.nist.csd.pm.proto.v1.pdp.adjudication.AdjudicateOperationResponse;
 import gov.nist.csd.pm.proto.v1.pdp.adjudication.OperationRequest;
 import io.grpc.Status;
@@ -34,198 +33,199 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ResourcePDPServiceTest {
 
-	@Mock private PDP pdp;
-	@Mock(answer = Answers.RETURNS_DEEP_STUBS) private PAP pap;
+    @Mock private PDP pdp;
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS) private PAP pap;
 
-	@Mock private StreamObserver<AdjudicateOperationResponse> responseObserver;
+    @Mock private StreamObserver<AdjudicateOperationResponse> responseObserver;
 
-	private ResourcePDPService service;
+    private ResourcePDPService service;
 
-	@BeforeEach
-	void setUp() {
-		service = new ResourcePDPService(pdp, pap, new BasicUserContextResolver());
-	}
+    @BeforeEach
+    void setUp() {
+        service = new ResourcePDPService(pdp, pap, new BasicUserContextResolver());
+    }
 
-	@Test
-	void adjudicateResourceOperation_success_callsPdp_andReturnsResponse() throws PMException {
-		OperationRequest request = OperationRequest.newBuilder()
-				.setName("op1")
-				.putAllArgs(new HashMap<>())
-				.build();
-
-		UserContext userCtx = mock(UserContext.class);
-		ResourceOperation<?> resourceOp = mock(ResourceOperation.class);
-
-		Map<String, Object> argsObj = Map.of("a", "test");
-		Object pdpResult = "test";
-		Value resultValue = Value.newBuilder().setStringValue("test").build();
-
-		try (MockedStatic<UserContextFromHeader> header = mockStatic(UserContextFromHeader.class);
-		     MockedStatic<FromProtoUtil> fromUtil = mockStatic(FromProtoUtil.class);
-		     MockedStatic<ToProtoUtil> toUtil = mockStatic(ToProtoUtil.class)) {
-
-			header.when(() -> UserContextFromHeader.get(pap)).thenReturn(userCtx);
-
-			var ops = pap.query().operations();
-			doReturn(resourceOp)
-					.when(ops)
-					.getOperation("op1");
-
-			fromUtil.when(() -> FromProtoUtil.fromValueMap(any(ValueMap.class)))
-					.thenReturn(argsObj);
-
-			when(pdp.adjudicateOperation(eq(userCtx), eq("op1"), eq(argsObj)))
-					.thenReturn(pdpResult);
-
-			toUtil.when(() -> ToProtoUtil.toValueProto(pdpResult))
-					.thenReturn(resultValue);
-
-			service.adjudicateResourceOperation(request, responseObserver);
-
-			ArgumentCaptor<AdjudicateOperationResponse> respCaptor =
-					ArgumentCaptor.forClass(AdjudicateOperationResponse.class);
-
-			verify(responseObserver).onNext(respCaptor.capture());
-			verify(responseObserver).onCompleted();
-			verify(responseObserver, never()).onError(any());
-
-			AdjudicateOperationResponse resp = respCaptor.getValue();
-			assertEquals(resultValue, resp.getValue());
-
-			verify(pdp).adjudicateOperation(userCtx, "op1", argsObj);
-		}
-	}
-
-	@Test
-	void adjudicateResourceOperation_unauthorized_returnsPermissionDenied() throws PMException {
-		OperationRequest request = OperationRequest.newBuilder()
-				.setName("op1")
+    @Test
+    void adjudicateResourceOperation_success_callsPdp_andReturnsResponse() throws PMException {
+        OperationRequest request = OperationRequest.newBuilder()
+                .setName("op1")
                 .putAllArgs(new HashMap<>())
-				.build();
+                .build();
 
-		UserContext userCtx = mock(UserContext.class);
-		ResourceOperation<?> resourceOp = mock(ResourceOperation.class);
-		Map<String, Object> argsObj = Map.of("a", "test");
+        UserContext userCtx = mock(UserContext.class);
+        ResourceOperation<?> resourceOp = mock(ResourceOperation.class);
 
-		UnauthorizedException unauth = mock(UnauthorizedException.class);
-		when(unauth.getMessage()).thenReturn("test exception");
+        Map<String, Object> argsObj = Map.of("a", "test");
+        Object pdpResult = "test";
+        Value resultValue = Value.newBuilder().setStringValue("test").build();
 
-		try (MockedStatic<UserContextFromHeader> header = mockStatic(UserContextFromHeader.class);
-		     MockedStatic<FromProtoUtil> protoUtil = mockStatic(FromProtoUtil.class)) {
+        try (MockedStatic<UserContextFromHeader> header = mockStatic(UserContextFromHeader.class);
+             MockedStatic<FromProtoUtil> fromUtil = mockStatic(FromProtoUtil.class);
+             MockedStatic<ToProtoUtil> toUtil = mockStatic(ToProtoUtil.class)) {
 
-			header.when(() -> UserContextFromHeader.get(pap)).thenReturn(userCtx);
+            header.when(() -> UserContextFromHeader.get(pap)).thenReturn(userCtx);
 
-			var ops = pap.query().operations();
-			doReturn(resourceOp)
-					.when(ops)
-					.getOperation("op1");
+            var ops = pap.query().operations();
+            doReturn(resourceOp)
+                    .when(ops)
+                    .getOperation("op1");
 
-			protoUtil.when(() -> FromProtoUtil.fromValueMap(any(ValueMap.class)))
-					.thenReturn(argsObj);
+            fromUtil.when(() -> FromProtoUtil.fromValueMap(anyMap()))
+                    .thenReturn(argsObj);
 
-			when(pdp.adjudicateOperation(eq(userCtx), eq("op1"), eq(argsObj)))
-					.thenThrow(unauth);
+            when(pdp.adjudicateOperation(eq(userCtx), eq("op1"), eq(argsObj)))
+                    .thenReturn(pdpResult);
 
-			service.adjudicateResourceOperation(request, responseObserver);
+            toUtil.when(() -> ToProtoUtil.toValueProto(pdpResult))
+                    .thenReturn(resultValue);
 
-			ArgumentCaptor<Throwable> errCaptor = ArgumentCaptor.forClass(Throwable.class);
-			verify(responseObserver).onError(errCaptor.capture());
+            service.adjudicateResourceOperation(request, responseObserver);
 
-			Throwable t = errCaptor.getValue();
-			assertTrue(t instanceof StatusRuntimeException);
+            ArgumentCaptor<AdjudicateOperationResponse> respCaptor =
+                    ArgumentCaptor.forClass(AdjudicateOperationResponse.class);
 
-			Status status = Status.fromThrowable(t);
-			assertEquals(Status.Code.PERMISSION_DENIED, status.getCode());
-			assertEquals("test exception", status.getDescription());
+            verify(responseObserver).onNext(respCaptor.capture());
+            verify(responseObserver).onCompleted();
+            verify(responseObserver, never()).onError(any());
 
-			verify(responseObserver, never()).onNext(any());
-			verify(responseObserver, never()).onCompleted();
-		}
-	}
+            AdjudicateOperationResponse resp = respCaptor.getValue();
+            assertEquals(resultValue, resp.getValue());
 
-	@Test
-	void adjudicateResourceOperation_genericException_returnsInternal() throws PMException {
-		OperationRequest request = OperationRequest.newBuilder()
-				.setName("op1")
+            verify(pdp).adjudicateOperation(userCtx, "op1", argsObj);
+        }
+    }
+
+    @Test
+    void adjudicateResourceOperation_unauthorized_returnsPermissionDenied() throws PMException {
+        OperationRequest request = OperationRequest.newBuilder()
+                .setName("op1")
                 .putAllArgs(new HashMap<>())
-				.build();
+                .build();
 
-		UserContext userCtx = mock(UserContext.class);
-		ResourceOperation<?> resourceOp = mock(ResourceOperation.class);
-		Map<String, Object> argsObj = Map.of("a", "test");
+        UserContext userCtx = mock(UserContext.class);
+        ResourceOperation<?> resourceOp = mock(ResourceOperation.class);
+        Map<String, Object> argsObj = Map.of("a", "test");
 
-		RuntimeException failure = new RuntimeException("test exception");
+        UnauthorizedException unauth = mock(UnauthorizedException.class);
+        when(unauth.getMessage()).thenReturn("test exception");
 
-		try (MockedStatic<UserContextFromHeader> header = mockStatic(UserContextFromHeader.class);
-		     MockedStatic<FromProtoUtil> protoUtil = mockStatic(FromProtoUtil.class)) {
+        try (MockedStatic<UserContextFromHeader> header = mockStatic(UserContextFromHeader.class);
+             MockedStatic<FromProtoUtil> protoUtil = mockStatic(FromProtoUtil.class)) {
 
-			header.when(() -> UserContextFromHeader.get(pap)).thenReturn(userCtx);
+            header.when(() -> UserContextFromHeader.get(pap)).thenReturn(userCtx);
 
-			OperationsQuery ops = pap.query().operations();
-			doReturn(resourceOp)
-					.when(ops)
-					.getOperation("op1");
+            var ops = pap.query().operations();
+            doReturn(resourceOp)
+                    .when(ops)
+                    .getOperation("op1");
 
-			protoUtil.when(() -> FromProtoUtil.fromValueMap(any(ValueMap.class)))
-					.thenReturn(argsObj);
+            protoUtil.when(() -> FromProtoUtil.fromValueMap(anyMap()))
+                    .thenReturn(argsObj);
 
-			when(pdp.adjudicateOperation(eq(userCtx), eq("op1"), eq(argsObj)))
-					.thenThrow(failure);
+            when(pdp.adjudicateOperation(eq(userCtx), eq("op1"), eq(argsObj)))
+                    .thenThrow(unauth);
 
-			service.adjudicateResourceOperation(request, responseObserver);
+            service.adjudicateResourceOperation(request, responseObserver);
 
-			ArgumentCaptor<Throwable> errCaptor = ArgumentCaptor.forClass(Throwable.class);
-			verify(responseObserver).onError(errCaptor.capture());
+            ArgumentCaptor<Throwable> errCaptor = ArgumentCaptor.forClass(Throwable.class);
+            verify(responseObserver).onError(errCaptor.capture());
 
-			Status status = Status.fromThrowable(errCaptor.getValue());
-			assertEquals(Status.Code.INTERNAL, status.getCode());
-			assertEquals("test exception", status.getDescription());
+            Throwable t = errCaptor.getValue();
+            assertTrue(t instanceof StatusRuntimeException);
 
-			verify(responseObserver, never()).onNext(any());
-			verify(responseObserver, never()).onCompleted();
-		}
-	}
+            Status status = Status.fromThrowable(t);
+            assertEquals(Status.Code.PERMISSION_DENIED, status.getCode());
+            assertEquals("test exception", status.getDescription());
 
-	@Test
-	void adjudicateResourceOperation_nonResourceOperation_returnsInternal() throws PMException {
-		OperationRequest request = OperationRequest.newBuilder()
-				.setName("op1")
+            verify(responseObserver, never()).onNext(any());
+            verify(responseObserver, never()).onCompleted();
+        }
+    }
+
+    @Test
+    void adjudicateResourceOperation_genericException_returnsInternal() throws PMException {
+        OperationRequest request = OperationRequest.newBuilder()
+                .setName("op1")
                 .putAllArgs(new HashMap<>())
-				.build();
+                .build();
 
-		UserContext userCtx = mock(UserContext.class);
+        UserContext userCtx = mock(UserContext.class);
+        ResourceOperation<?> resourceOp = mock(ResourceOperation.class);
+        Map<String, Object> argsObj = Map.of("a", "test");
 
-		AdminOperation<?> nonResourceOp = mock(AdminOperation.class);
+        RuntimeException failure = new RuntimeException("test exception");
 
-		try (MockedStatic<UserContextFromHeader> header = mockStatic(UserContextFromHeader.class)) {
+        try (MockedStatic<UserContextFromHeader> header = mockStatic(UserContextFromHeader.class);
+             MockedStatic<FromProtoUtil> protoUtil = mockStatic(FromProtoUtil.class)) {
 
-			header.when(() -> UserContextFromHeader.get(pap)).thenReturn(userCtx);
+            header.when(() -> UserContextFromHeader.get(pap)).thenReturn(userCtx);
 
-			OperationsQuery ops = pap.query().operations();
-			doReturn(nonResourceOp)
-					.when(ops)
-					.getOperation("op1");
+            OperationsQuery ops = pap.query().operations();
+            doReturn(resourceOp)
+                    .when(ops)
+                    .getOperation("op1");
 
-			service.adjudicateResourceOperation(request, responseObserver);
+            protoUtil.when(() -> FromProtoUtil.fromValueMap(anyMap()))
+                    .thenReturn(argsObj);
 
-			ArgumentCaptor<Throwable> errCaptor = ArgumentCaptor.forClass(Throwable.class);
-			verify(responseObserver).onError(errCaptor.capture());
+            when(pdp.adjudicateOperation(eq(userCtx), eq("op1"), eq(argsObj)))
+                    .thenThrow(failure);
 
-			Status status = Status.fromThrowable(errCaptor.getValue());
-			assertEquals(Status.Code.INVALID_ARGUMENT, status.getCode());
-			assertEquals(
-					"only subclasses of ResourceOperation are allowed to be invoked in the resource-pdp",
-					status.getDescription()
-			);
+            service.adjudicateResourceOperation(request, responseObserver);
 
-			verify(responseObserver, never()).onNext(any());
-			verify(responseObserver, never()).onCompleted();
-		}
-	}
+            ArgumentCaptor<Throwable> errCaptor = ArgumentCaptor.forClass(Throwable.class);
+            verify(responseObserver).onError(errCaptor.capture());
+
+            Status status = Status.fromThrowable(errCaptor.getValue());
+            assertEquals(Status.Code.INTERNAL, status.getCode());
+            assertEquals("test exception", status.getDescription());
+
+            verify(responseObserver, never()).onNext(any());
+            verify(responseObserver, never()).onCompleted();
+        }
+    }
+
+    @Test
+    void adjudicateResourceOperation_nonResourceOperation_returnsInternal() throws PMException {
+        OperationRequest request = OperationRequest.newBuilder()
+                .setName("op1")
+                .putAllArgs(new HashMap<>())
+                .build();
+
+        UserContext userCtx = mock(UserContext.class);
+
+        AdminOperation<?> nonResourceOp = mock(AdminOperation.class);
+
+        try (MockedStatic<UserContextFromHeader> header = mockStatic(UserContextFromHeader.class)) {
+
+            header.when(() -> UserContextFromHeader.get(pap)).thenReturn(userCtx);
+
+            OperationsQuery ops = pap.query().operations();
+            doReturn(nonResourceOp)
+                    .when(ops)
+                    .getOperation("op1");
+
+            service.adjudicateResourceOperation(request, responseObserver);
+
+            ArgumentCaptor<Throwable> errCaptor = ArgumentCaptor.forClass(Throwable.class);
+            verify(responseObserver).onError(errCaptor.capture());
+
+            Status status = Status.fromThrowable(errCaptor.getValue());
+            assertEquals(Status.Code.INVALID_ARGUMENT, status.getCode());
+            assertEquals(
+                    "only subclasses of ResourceOperation are allowed to be invoked in the resource-pdp",
+                    status.getDescription()
+            );
+
+            verify(responseObserver, never()).onNext(any());
+            verify(responseObserver, never()).onCompleted();
+        }
+    }
 }

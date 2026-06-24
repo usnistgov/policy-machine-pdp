@@ -93,7 +93,9 @@ events. **The policy is persisted in an embedded Neo4j instance.**
 pm:
   pdp:
     admin:
-      # The file path to the policy file used to bootstrap the PDP.
+      # PDP mode: "default" or "playground" (see Admin Modes below).
+      mode: default
+      # The file path to the policy file used to bootstrap the PDP. Supports .pml and .json formats.
       bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/bootstrap.pml"
       # Path to store Neo4j policy locally.
       neo4j-db-path: "neo4j/data"
@@ -117,6 +119,14 @@ pm:
       # Name of the event store stream for snapshots.
       snapshot-stream: pm-snapshot-v1
 ```
+
+#### Admin Modes
+The `admin-pdp-epp` runs in one of two modes, set via `pm.pdp.admin.mode`:
+
+- **`default`** (default) — Policy is persisted in embedded Neo4j and changes are event-sourced through EventStoreDB. Admin operations are access-controlled: the requesting user must hold the required privileges.
+- **`playground`** — A single in-memory policy with no Neo4j and no EventStoreDB. The NGAC privilege check is skipped, so any request-header user can execute any operation (obligations/EPP still fire). Intended for demos and testing only — not for production.
+
+Both modes bootstrap from `bootstrap-file-path` and support `.pml` and `.json` files.
 
 #### Operation Plugins
 Custom policy-machine-core Operations can be packaged into jar files and provided to the admin-pdp-epp. This 

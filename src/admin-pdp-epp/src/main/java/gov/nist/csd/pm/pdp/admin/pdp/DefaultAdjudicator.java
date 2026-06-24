@@ -74,18 +74,13 @@ public class DefaultAdjudicator implements AdminAdjudicator {
         adjudicateTransaction(ctx -> {
             UserContext userContext = contextFactory.createUserContext(ctx.pap());
 
+            // Execute every command in a single transaction. adjudicateTransaction publishes the
+            // accumulated events to the event store once, after the transaction completes.
             ctx.pdp().runTx(userContext, pdpTx -> {
                 for (OperationRequest operationRequest : adminCommands) {
-                    try {
-                        Object result = ctx.pdp().adjudicateOperation(userContext,
-                                                                      operationRequest.getName(),
-                                                                      FromProtoUtil.fromValueMap(operationRequest.getArgs()));
-                        publishEvents(ctx.pap());
-
-                        return result;
-                    } catch (Exception e) {
-                        throw new PMRuntimeException(e);
-                    }
+                    ctx.pdp().adjudicateOperation(userContext,
+                                                  operationRequest.getName(),
+                                                  FromProtoUtil.fromValueMap(operationRequest.getArgs()));
                 }
 
                 return null;
