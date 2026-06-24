@@ -17,9 +17,9 @@ public class AdminAdjudicationService extends AdminAdjudicationServiceGrpc.Admin
 
 	private static final Logger logger = LoggerFactory.getLogger(AdminAdjudicationService.class);
 
-	private final Adjudicator adjudicator;
+	private final AdminAdjudicator adjudicator;
 
-	public AdminAdjudicationService(Adjudicator adjudicator) {
+	public AdminAdjudicationService(AdminAdjudicator adjudicator) {
 		this.adjudicator = adjudicator;
 	}
 
@@ -28,8 +28,9 @@ public class AdminAdjudicationService extends AdminAdjudicationServiceGrpc.Admin
 	                                StreamObserver<AdjudicateOperationResponse> responseObserver) {
 		try {
 			String opName = request.getName();
-			Map<String, Object> args = FromProtoUtil.fromValueMap(request.getArgs());
-			logger.info("adjudicating operation {} with args {}", opName, args);
+			Map<String, Object> args = FromProtoUtil.fromValueMap(request.getArgsMap());
+			logger.info("adjudicating operation {}", opName);
+			logger.debug("operation {} args {}", opName, args);
 
 			Object result = adjudicator.adjudicateOperation(opName, args);
 

@@ -8,6 +8,12 @@ import javax.annotation.PostConstruct;
 public class AdminPDPConfig {
 
     /**
+     * Server mode: "default" (Neo4j + EventStoreDB) or "playground" (in-memory PAP, no Neo4j/EventStoreDB and
+     * no access checks on admin operations).
+     */
+    private String mode = "default";
+
+    /**
      * Path to store neo4j policy locally
      */
     private String neo4jDbPath;
@@ -44,12 +50,16 @@ public class AdminPDPConfig {
 
     @PostConstruct
     public void validate() {
-        if (neo4jDbPath == null || neo4jDbPath.isEmpty() || neo4jDbPath.equals("null")) {
-            setNeo4jDbPath("/neo4j");
-        }
-
         if (bootstrapFilePath == null || bootstrapFilePath.isEmpty() || bootstrapFilePath.equals("null")) {
             throw new IllegalArgumentException("bootstrapFilePath is null or empty");
+        }
+
+        if ("playground".equals(mode)) {
+            return;
+        }
+
+        if (neo4jDbPath == null || neo4jDbPath.isEmpty() || neo4jDbPath.equals("null")) {
+            setNeo4jDbPath("/neo4j");
         }
 
         if (esdbConsumerGroup == null || esdbConsumerGroup.isEmpty() || esdbConsumerGroup.equals("null")) {
@@ -63,6 +73,14 @@ public class AdminPDPConfig {
         if (revisionConsistencyTimeout <= 0) {
             setRevisionConsistencyTimeout(1000);
         }
+    }
+
+    public String getMode() {
+        return mode;
+    }
+
+    public void setMode(String mode) {
+        this.mode = mode;
     }
 
     public String getNeo4jDbPath() {

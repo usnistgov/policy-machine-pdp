@@ -10,6 +10,7 @@ import gov.nist.csd.pm.pdp.admin.pap.EventTrackingPAP;
 import gov.nist.csd.pm.pdp.admin.pap.NoCommitNeo4jPolicyStore;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextResolver;
 import org.neo4j.graphdb.GraphDatabaseService;
+import gov.nist.csd.pm.pdp.shared.config.DefaultMode;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.List;
  * Factory for creating NGACContext instances.
  */
 @Component
+@DefaultMode
 public class ContextFactory {
 
     private final GraphDatabaseService graphDb;

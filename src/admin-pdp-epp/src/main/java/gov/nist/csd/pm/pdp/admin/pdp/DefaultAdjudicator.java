@@ -4,6 +4,7 @@ import com.eventstore.dbclient.WrongExpectedVersionException;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.exception.PMRuntimeException;
 import gov.nist.csd.pm.core.impl.grpc.util.FromProtoUtil;
+import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.pdp.admin.pap.EventTrackingPAP;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
@@ -14,6 +15,7 @@ import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import gov.nist.csd.pm.pdp.shared.config.DefaultMode;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -22,9 +24,10 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 @Component
-public class Adjudicator {
+@DefaultMode
+public class DefaultAdjudicator implements AdminAdjudicator {
 
-    private static final Logger logger = LoggerFactory.getLogger(Adjudicator.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultAdjudicator.class);
 
     private final CurrentRevisionService currentRevision;
     private final Retry retry;
@@ -32,21 +35,22 @@ public class Adjudicator {
     private final EventStoreConnectionManager eventStoreConnectionManager;
     private final ContextFactory contextFactory;
 
-    public Adjudicator(EventStoreDBConfig eventStoreDBConfig,
-                       EventStoreConnectionManager eventStoreConnectionManager,
-                       CurrentRevisionService currentRevision,
-                       ContextFactory contextFactory) {
+    public DefaultAdjudicator(EventStoreDBConfig eventStoreDBConfig,
+                              EventStoreConnectionManager eventStoreConnectionManager,
+                              CurrentRevisionService currentRevision,
+                              ContextFactory contextFactory) {
         this.eventStoreDBConfig = eventStoreDBConfig;
         this.eventStoreConnectionManager = eventStoreConnectionManager;
         this.currentRevision = currentRevision;
         this.contextFactory = contextFactory;
-        this.retry = Retry.of("Adjudicator", RetryConfig.custom()
+        this.retry = Retry.of("DefaultAdjudicator", RetryConfig.custom()
                 .retryExceptions(WrongExpectedVersionException.class)
                 .maxAttempts(3)
                 .waitDuration(Duration.ofSeconds(2))
                 .build());
     }
 
+    @Override
     public Object adjudicateOperation(String operation, Map<String, Object> args) throws PMException {
         Supplier<Object> supplier = () -> {
             try {
@@ -65,6 +69,7 @@ public class Adjudicator {
         return executeWithRetry(supplier);
     }
 
+    @Override
     public void adjudicateRoutine(List<OperationRequest> adminCommands) throws PMException {
         adjudicateTransaction(ctx -> {
             UserContext userContext = contextFactory.createUserContext(ctx.pap());
@@ -88,12 +93,14 @@ public class Adjudicator {
         });
     }
 
+    @Override
     public <R> R adjudicateQuery(PDPTxFunction<R> consumer) throws PMException {
         NGACContext ctx = contextFactory.createContext();
         UserContext userCtx = contextFactory.createUserContext(ctx.pap());
-        return ctx.pdp().runTx(userCtx, pdpTx -> consumer.apply(ctx.pap(), userCtx, pdpTx));
+        return consumer.apply(ctx.pap(), userCtx);
     }
 
+    @Override
     public Object executePML(String pml) throws PMException {
         Supplier<Object> supplier = () -> {
             try {
@@ -113,12 +120,7 @@ public class Adjudicator {
         return executeWithRetry(supplier);
     }
 
-    /**
-     * Executes a transaction consumer and returns the last event's revision.
-     *
-     * @param txConsumer The transaction consumer to execute
-     * @return The revision of the last event in the transaction.
-     */
+    @Override
     public long adjudicateTransaction(PMConsumer<NGACContext> txConsumer) throws PMException {
         Supplier<Long> supplier = () -> {
             try {
@@ -148,7 +150,8 @@ public class Adjudicator {
         }
     }
 
-    private long publishEvents(EventTrackingPAP pap) throws PMException {
+    private long publishEvents(PAP papBase) throws PMException {
+        EventTrackingPAP pap = (EventTrackingPAP) papBase;
         long revision = currentRevision.get();
         return pap.publishToEventStore(
                 eventStoreConnectionManager.getOrInitClient(),

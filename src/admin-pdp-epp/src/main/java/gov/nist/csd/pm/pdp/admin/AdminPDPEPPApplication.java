@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import gov.nist.csd.pm.pdp.shared.config.DefaultMode;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -41,6 +42,7 @@ public class AdminPDPEPPApplication {
     }
 
     @Bean
+    @DefaultMode
     public GraphDatabaseService graphDb(AdminPDPConfig adminPDPConfig) {
         logger.info("Creating Neo4j embedded database instance");
 
@@ -53,6 +55,7 @@ public class AdminPDPEPPApplication {
     }
 
     @Bean
+    @DefaultMode
     public Neo4jEmbeddedPolicyStore eventListenerPolicyStore(GraphDatabaseService graphDb) throws PMException {
         Neo4jEmbeddedPolicyStore.createIndexes(graphDb);
 
@@ -70,6 +73,7 @@ public class AdminPDPEPPApplication {
     }
 
     @Bean
+    @DefaultMode
     public Neo4jEmbeddedPAP neo4jEmbeddedPAP(Neo4jEmbeddedPolicyStore eventListenerPolicyStore, List<Operation<?>> pluginOps) throws PMException {
         Neo4jEmbeddedPAP neo4jEmbeddedPAP = new Neo4jEmbeddedPAP(eventListenerPolicyStore);
 

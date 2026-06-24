@@ -1,6 +1,7 @@
 package gov.nist.csd.pm.pdp.shared.eventstore;
 
 import com.eventstore.dbclient.*;
+import gov.nist.csd.pm.pdp.shared.config.DefaultMode;
 import io.github.resilience4j.core.IntervalFunction;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
@@ -20,6 +21,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * Does not process events — only records revision numbers for consistency checks.
  */
 @Service
+@DefaultMode
 public class LatestRevisionTracker {
 
 	private static final Logger logger = LoggerFactory.getLogger(LatestRevisionTracker.class);

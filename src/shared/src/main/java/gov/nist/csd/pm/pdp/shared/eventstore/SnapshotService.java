@@ -7,6 +7,7 @@ import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.serialization.json.JSONDeserializer;
 import gov.nist.csd.pm.core.pap.serialization.json.JSONSerializer;
 import gov.nist.csd.pm.pdp.proto.event.PMSnapshot;
+import gov.nist.csd.pm.pdp.shared.config.DefaultMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 @Service
+@DefaultMode
 public class SnapshotService {
 
     private static final Logger logger = LoggerFactory.getLogger(SnapshotService.class);

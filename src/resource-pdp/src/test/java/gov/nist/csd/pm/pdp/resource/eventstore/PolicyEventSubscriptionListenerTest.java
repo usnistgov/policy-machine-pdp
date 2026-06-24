@@ -9,7 +9,6 @@ import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

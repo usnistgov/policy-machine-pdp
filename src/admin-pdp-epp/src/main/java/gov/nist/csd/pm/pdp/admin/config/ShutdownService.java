@@ -7,7 +7,7 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
 
 @Service
-@DependsOn(value = "Neo4jBootstrapper")
+@DependsOn(value = "policyBootstrapper")
 public class ShutdownService implements ApplicationListener<ApplicationReadyEvent> {
 
 	private final AdminPDPConfig config;

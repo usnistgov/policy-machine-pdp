@@ -2,7 +2,7 @@ package gov.nist.csd.pm.pdp.admin.epp;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.impl.grpc.util.FromProtoUtil;
-import gov.nist.csd.pm.pdp.admin.pdp.Adjudicator;
+import gov.nist.csd.pm.pdp.admin.pdp.AdminAdjudicator;
 import gov.nist.csd.pm.proto.v1.epp.EPPServiceGrpc;
 import gov.nist.csd.pm.proto.v1.epp.EventContext;
 import gov.nist.csd.pm.proto.v1.epp.ProcessEventResponse;
@@ -19,9 +19,9 @@ public class EPPService extends EPPServiceGrpc.EPPServiceImplBase {
 
 	private static final Logger logger = LoggerFactory.getLogger(EPPService.class);
 
-	private final Adjudicator adjudicator;
+	private final AdminAdjudicator adjudicator;
 
-	public EPPService(Adjudicator adjudicator) {
+	public EPPService(AdminAdjudicator adjudicator) {
 		this.adjudicator = adjudicator;
 	}
 

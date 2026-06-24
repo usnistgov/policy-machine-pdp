@@ -11,6 +11,7 @@ import gov.nist.csd.pm.pdp.shared.eventstore.PolicyEventHandler;
 import gov.nist.csd.pm.pdp.shared.eventstore.SnapshotService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import gov.nist.csd.pm.pdp.shared.config.DefaultMode;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ExecutionException;
@@ -18,6 +19,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @Component
+@DefaultMode
 public class PolicyEventPersistentSubscriptionListener extends PersistentSubscriptionListener {
 
     private static final Logger logger = LoggerFactory.getLogger(PolicyEventPersistentSubscriptionListener.class);
