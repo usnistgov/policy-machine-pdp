@@ -21,17 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * In-memory adjudicator for playground mode. Mirrors {@link DefaultAdjudicator}'s PDP path over a single
- * shared {@link MemoryPAP} (no Neo4j, no EventStoreDB), but the {@link PDP} it uses is a {@link PlaygroundPDP}
- * that skips NGAC privilege checks so any user can freely exercise the policy. Obligations/EPP still fire:
- * {@link PlaygroundPDP} publishes the same admin-operation events that a real {@code PDPTx} would, it just
- * never calls {@code canExecute}.
- *
- * <p>Because the PDP/EPP and PAP are shared singletons across gRPC worker threads (unlike default mode,
- * which builds a fresh per-request context), mutating and querying entry points are serialized on
- * {@link #lock}.
- */
 @Component
 @PlaygroundMode
 public class PlaygroundAdjudicator implements AdminAdjudicator {
@@ -95,11 +84,11 @@ public class PlaygroundAdjudicator implements AdminAdjudicator {
     }
 
     /**
-     * A {@link PDP} that overrides {@link #adjudicateOperation} and {@link #executePML} to skip the
-     * {@code canExecute} privilege gate and execute straight against the underlying {@link PAP}, while still
-     * publishing admin-operation events to {@link #epp} so obligations keep firing. {@link #runTx} is left
-     * untouched, so {@code EPP.processEvent}'s own use of it to run obligation responses still goes through
-     * the real, privilege-checked {@code PDPTx} machinery.
+     * A PDP that overrides adjudicateOperation and executePML to skip the
+     * canExecute privilege gate and execute straight against the underlying PAP, while still
+     * publishing admin-operation events to epp so obligations keep firing. runTx is left
+     * untouched, so EPP.processEvent's own use of it to run obligation responses still goes through
+     * the real, privilege-checked PDPTx machinery.
      */
     private static final class PlaygroundPDP extends PDP {
 

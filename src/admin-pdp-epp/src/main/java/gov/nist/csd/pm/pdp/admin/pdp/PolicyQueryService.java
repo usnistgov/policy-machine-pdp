@@ -39,7 +39,7 @@ import java.util.Map;
 
 /**
  * gRPC policy-query service shared by both server modes. It reads the policy graph through the
- * mode-specific {@link AdminAdjudicator} bean (default mode wraps each read in a PDP transaction;
+ * mode-specific AdminAdjudicator bean (default mode wraps each read in a PDP transaction;
  * playground mode runs it directly against the in-memory PAP), so a single implementation serves both.
  */
 @GrpcService
