@@ -13,7 +13,7 @@ import gov.nist.csd.pm.core.pap.pml.operation.PMLOperation;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextResolver;
-import gov.nist.csd.pm.pdp.shared.config.PlaygroundMode;
+import gov.nist.csd.pm.pdp.shared.config.SandboxMode;
 import gov.nist.csd.pm.proto.v1.pdp.adjudication.OperationRequest;
 import org.springframework.stereotype.Component;
 
@@ -22,23 +22,23 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Component
-@PlaygroundMode
-public class PlaygroundAdjudicator implements AdminAdjudicator {
+@SandboxMode
+public class SandboxAdjudicator implements AdminAdjudicator {
 
     private final MemoryPAP pap;
     private final UserContextResolver userContextResolver;
-    private final PlaygroundPDP pdp;
+    private final SandboxPDP pdp;
     private final EPP epp;
     private final Object lock = new Object();
 
-    public PlaygroundAdjudicator(MemoryPAP pap, UserContextResolver userContextResolver) throws PMException {
+    public SandboxAdjudicator(MemoryPAP pap, UserContextResolver userContextResolver) throws PMException {
         this.pap = pap;
         this.userContextResolver = userContextResolver;
 
         // The PDP and EPP form a cycle: the PDP fires events to the EPP, and the EPP runs obligation
         // responses back through the PDP. Construct the PDP first, then the EPP, then wire the EPP into
         // the PDP. All three share the single injected PAP.
-        this.pdp = new PlaygroundPDP(pap);
+        this.pdp = new SandboxPDP(pap);
         this.epp = new EPP(pdp, pap);
         pdp.setEpp(epp);
     }
@@ -81,7 +81,7 @@ public class PlaygroundAdjudicator implements AdminAdjudicator {
     public long adjudicateTransaction(PMConsumer<NGACContext> txConsumer) throws PMException {
         synchronized (lock) {
             txConsumer.accept(new NGACContext(pdp, epp, pap));
-            // no EventStoreDB in playground mode, so there is no revision to report
+            // no EventStoreDB in sandbox mode, so there is no revision to report
             return -1;
         }
     }
@@ -93,16 +93,16 @@ public class PlaygroundAdjudicator implements AdminAdjudicator {
      * untouched, so EPP.processEvent's own use of it to run obligation responses still goes through
      * the real, privilege-checked PDPTx machinery.
      */
-    private static final class PlaygroundPDP extends PDP {
+    private static final class SandboxPDP extends PDP {
 
-        // PlaygroundPAP wraps the same underlying policy store as the PDP's base PAP (super(pap)); it only
+        // SandboxPAP wraps the same underlying policy store as the PDP's base PAP (super(pap)); it only
         // overrides executeOperation to bypass the privilege gate while still firing admin events to the EPP.
-        private final PAP playgroundPAP;
+        private final PAP sandboxPAP;
         private EPP epp;
 
-        PlaygroundPDP(PAP pap) throws PMException {
+        SandboxPDP(PAP pap) throws PMException {
             super(pap);
-            this.playgroundPAP = new PlaygroundPAP(pap);
+            this.sandboxPAP = new SandboxPAP(pap);
         }
 
         void setEpp(EPP epp) {
@@ -115,22 +115,22 @@ public class PlaygroundAdjudicator implements AdminAdjudicator {
             Args args = op.validateArgs(rawArgs);
 
             AtomicReference<Object> result = new AtomicReference<>();
-            playgroundPAP.runTx(tx -> result.set(tx.executeOperation(op, user, args)));
+            sandboxPAP.runTx(tx -> result.set(tx.executeOperation(op, user, args)));
             return result.get();
         }
 
         @Override
         public Object executePML(UserContext userCtx, String pml) throws PMException {
             AtomicReference<Object> ret = new AtomicReference<>();
-            playgroundPAP.runTx(tx -> {
+            sandboxPAP.runTx(tx -> {
                 ret.set(tx.executePML(userCtx, pml));
             });
             return ret.get();
         }
 
-        private final class PlaygroundPAP extends PAP {
+        private final class SandboxPAP extends PAP {
 
-            PlaygroundPAP(PAP pap) throws PMException {
+            SandboxPAP(PAP pap) throws PMException {
                 super(pap);
             }
 

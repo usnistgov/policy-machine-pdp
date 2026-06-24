@@ -10,7 +10,7 @@ import java.nio.file.Paths;
 /**
  * Reads and validates a policy bootstrap file, exposing its contents and detected format.
  *
- * <p>Shared by the default (Neo4j/EventStoreDB) and playground (in-memory) bootstrappers. They apply
+ * <p>Shared by the default (Neo4j/EventStoreDB) and sandbox (in-memory) bootstrappers. They apply
  * the policy differently, but parse and validate the file the same way: the path must be configured,
  * the file must exist and be non-empty, and the extension must be a supported format.
  */

@@ -8,7 +8,7 @@ import javax.annotation.PostConstruct;
 public class AdminPDPConfig {
 
     /**
-     * Server mode: "default" (Neo4j + EventStoreDB) or "playground" (in-memory PAP, no Neo4j/EventStoreDB and
+     * Server mode: "default" (Neo4j + EventStoreDB) or "sandbox" (in-memory PAP, no Neo4j/EventStoreDB and
      * no access checks on admin operations).
      */
     private String mode = "default";
@@ -54,7 +54,7 @@ public class AdminPDPConfig {
             throw new IllegalArgumentException("bootstrapFilePath is null or empty");
         }
 
-        if ("playground".equals(mode)) {
+        if ("sandbox".equals(mode)) {
             return;
         }
 

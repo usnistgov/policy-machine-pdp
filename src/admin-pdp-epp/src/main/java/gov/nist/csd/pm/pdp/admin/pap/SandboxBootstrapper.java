@@ -8,22 +8,22 @@ import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.pdp.shared.bootstrap.BootstrapFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import gov.nist.csd.pm.pdp.shared.config.PlaygroundMode;
+import gov.nist.csd.pm.pdp.shared.config.SandboxMode;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
 
 @Component("policyBootstrapper")
-@PlaygroundMode
-public class PlaygroundBootstrapper {
+@SandboxMode
+public class SandboxBootstrapper {
 
-    private static final Logger logger = LoggerFactory.getLogger(PlaygroundBootstrapper.class);
+    private static final Logger logger = LoggerFactory.getLogger(SandboxBootstrapper.class);
 
     private final AdminPDPConfig adminPDPConfig;
     private final MemoryPAP pap;
 
-    public PlaygroundBootstrapper(AdminPDPConfig adminPDPConfig, MemoryPAP pap) {
+    public SandboxBootstrapper(AdminPDPConfig adminPDPConfig, MemoryPAP pap) {
         this.adminPDPConfig = adminPDPConfig;
         this.pap = pap;
     }
@@ -31,7 +31,7 @@ public class PlaygroundBootstrapper {
     @PostConstruct
     public void bootstrap() throws PMException, IOException {
         String bootstrapFilePath = adminPDPConfig.getBootstrapFilePath();
-        logger.info("playground mode: bootstrapping from file {}", bootstrapFilePath);
+        logger.info("sandbox mode: bootstrapping from file {}", bootstrapFilePath);
 
         BootstrapFile bootstrapFile = BootstrapFile.load(bootstrapFilePath);
         switch (bootstrapFile.format()) {
@@ -39,6 +39,6 @@ public class PlaygroundBootstrapper {
             case JSON -> pap.deserialize(bootstrapFile.data(), new JSONDeserializer());
         }
 
-        logger.info("playground mode: bootstrap complete");
+        logger.info("sandbox mode: bootstrap complete");
     }
 }
