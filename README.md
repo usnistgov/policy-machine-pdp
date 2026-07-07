@@ -42,29 +42,21 @@ ResourceAdjudicationServiceGrpc.ResourceAdjudicationServiceBlockingStub blocking
 
 ### Mode: `jwt`
 
-User identity is derived from a JWT passed in the `x-pm-token` gRPC metadata header. The token is decoded (signature verification is not yet enforced) and the actor's identity is read from configurable claim names.
+User identity is derived from a JWT passed in the `x-pm-token` gRPC metadata header. The token's RSA signature is verified against the public key published at the configured JWKS endpoint (and, when set, the expected issuer/audience are enforced) before the user's identity is read from configurable claim names. Tokens that fail verification are rejected with `UNAUTHENTICATED`.
 
-Two claim names are configurable — the first match found in an actor's token wins:
+Each request maps to exactly one user — the identity carried by the token. Any delegation or impersonation is the client's concern: it must resolve the effective user and present a single token for them, so the server stays decoupled from any particular delegation format.
+
+The claim and key-source properties are configurable:
 
 | Property | Default | Description |
 |---|---|---|
-| `pm.pdp.auth.username-claim` | `username` | Claim whose **string** value is the actor's username → `NameUserContext` |
-| `pm.pdp.auth.user-attrs-claim` | `user_attrs` | Claim whose **string or list** value is the actor's user-attribute names → `AttributeNamesUserContext` |
+| `pm.pdp.auth.jwks-uri` | — | **Required when `mode: jwt`.** JWKS endpoint used to fetch the RSA public signing key(s) |
+| `pm.pdp.auth.issuer` | — | When set, tokens whose `iss` claim differs are rejected |
+| `pm.pdp.auth.audience` | — | When set, tokens missing this `aud` are rejected |
+| `pm.pdp.auth.username-claim` | `username` | Claim whose **string** value is the user's name → `NodeUserContext` |
+| `pm.pdp.auth.user-attrs-claim` | `user_attrs` | Claim whose **string or list** value is the user's attribute names → `AnonymousUserContext` |
 
-`username-claim` is tried first. If not present, `user-attrs-claim` is used. Each actor in the token must have at least one of the two configured claims or the request is rejected with `UNAUTHENTICATED`.
-
-#### Delegation chains (RFC 8693)
-
-JWT delegation chains are supported via the `act` claim (RFC 8693 token exchange). The outermost token represents the active subject; each nested `act` object represents a delegating actor. The server extracts a `UserContext` for every actor in the chain and requires **all** of them to be authorized for the request to succeed (`ConjunctiveUserContext`).
-
-```
-{
-  "username": "alice",          ← active user → NameUserContext("alice")
-  "act": {
-    "username": "service-a"    ← delegating actor → NameUserContext("service-a")
-  }
-}
-```
+`username-claim` is tried first. If not present, `user-attrs-claim` is used. The token must carry at least one of the two configured claims or the request is rejected with `UNAUTHENTICATED`.
 
 The `x-pm-process` header is still accepted alongside a JWT token.
 
@@ -74,9 +66,12 @@ The `x-pm-process` header is still accepted alongside a JWT token.
 pm:
   pdp:
     auth:
-      mode: jwt                      # "none" (default) or "jwt"
-      username-claim: username       # default
-      user-attrs-claim: user_attrs   # default
+      mode: jwt                                  # "none" (default) or "jwt"
+      jwks-uri: https://issuer.example.com/.well-known/jwks.json   # required for jwt
+      issuer: https://issuer.example.com         # optional
+      audience: policy-machine                   # optional
+      username-claim: username                   # default
+      user-attrs-claim: user_attrs               # default
 ```
 
 ## Services

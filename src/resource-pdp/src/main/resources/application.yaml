@@ -3,6 +3,8 @@ grpc:
     port: 50051
 pm:
   pdp:
+    auth:
+      mode: none
     resource:
       admin-hostname: localhost
       admin-port: 50052

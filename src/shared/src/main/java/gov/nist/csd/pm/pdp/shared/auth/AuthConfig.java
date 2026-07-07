@@ -12,7 +12,7 @@ public class AuthConfig {
 
     /**
      * JWT claim whose string value identifies the actor by username (-> NameUserContext).
-     * Configure this or userAttrsClaim (or both) when auth-mode is "jwt".
+     * Configure this or userAttrsClaim (or both) when mode is "jwt".
      */
     private String usernameClaim = "username";
 
@@ -22,12 +22,52 @@ public class AuthConfig {
      */
     private String userAttrsClaim = "user_attrs";
 
+    /**
+     * JWKS endpoint used to fetch the public signing key(s) for JWT verification.
+     * Required when mode is "jwt".
+     */
+    private String jwksUri;
+
+    /**
+     * Expected JWT issuer ("iss" claim). When set, tokens from any other issuer are rejected.
+     */
+    private String issuer;
+
+    /**
+     * Expected JWT audience ("aud" claim). When set, tokens without this audience are rejected.
+     */
+    private String audience;
+
     public String getMode() {
         return mode;
     }
 
     public void setMode(String mode) {
         this.mode = mode;
+    }
+
+    public String getJwksUri() {
+        return jwksUri;
+    }
+
+    public void setJwksUri(String jwksUri) {
+        this.jwksUri = jwksUri;
+    }
+
+    public String getIssuer() {
+        return issuer;
+    }
+
+    public void setIssuer(String issuer) {
+        this.issuer = issuer;
+    }
+
+    public String getAudience() {
+        return audience;
+    }
+
+    public void setAudience(String audience) {
+        this.audience = audience;
     }
 
     public String getUsernameClaim() {

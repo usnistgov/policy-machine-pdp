@@ -51,26 +51,31 @@ class UserContextInterceptorTest {
 	}
 
 	@Test
-	void interceptCall_invalidAttrsFormat_throwsRuntimeException() {
+	void interceptCall_invalidAttrsFormat_closesWithInvalidArgument() {
 		Metadata headers = new Metadata();
 
 		headers.put(PM_USER_ATTRS_METADATA_KEY, "\"test\"");
 
+		boolean[] handlerInvoked = {false};
 		ServerCallHandler<String, String> handler = (call1, headers1) -> {
-			assertNull(UserContextInterceptor.getPmUserHeaderValue());
-			assertNull(UserContextInterceptor.getPmUserAttrsHeaderValue());
-			assertNull(UserContextInterceptor.getPmProcessHeaderValue());
+			handlerInvoked[0] = true;
 			return new ServerCall.Listener<>() {};
 		};
 
-		assertThrows(RuntimeException.class, () -> interceptor.interceptCall(new NoopServerCall<>(), headers, handler));
+		NoopServerCall<String, String> call = new NoopServerCall<>();
+		interceptor.interceptCall(call, headers, handler);
+
+		assertNotNull(call.closedStatus);
+		assertEquals(Status.Code.INVALID_ARGUMENT, call.closedStatus.getCode());
+		assertFalse(handlerInvoked[0], "downstream handler must not be invoked on bad header");
 	}
 
 	private static class NoopServerCall<ReqT, RespT> extends ServerCall<ReqT, RespT> {
+		private Status closedStatus;
 		@Override public void request(int numMessages) {}
 		@Override public void sendHeaders(Metadata headers) {}
 		@Override public void sendMessage(RespT message) {}
-		@Override public void close(Status status, Metadata trailers) {}
+		@Override public void close(Status status, Metadata trailers) { this.closedStatus = status; }
 		@Override public boolean isCancelled() { return false; }
 		@Override public MethodDescriptor<ReqT, RespT> getMethodDescriptor() { return null; }
 	}

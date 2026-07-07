@@ -61,6 +61,9 @@ public class DefaultAdjudicator implements AdminAdjudicator {
                 publishEvents(ctx.pap());
 
                 return result;
+            } catch (WrongExpectedVersionException e) {
+                // let the retry observe version conflicts so they can be retried
+                throw e;
             } catch (Exception e) {
                 throw new PMRuntimeException(e);
             }
@@ -107,6 +110,9 @@ public class DefaultAdjudicator implements AdminAdjudicator {
                 publishEvents(ctx.pap());
 
                 return null;
+            } catch (WrongExpectedVersionException e) {
+                // let the retry observe version conflicts so they can be retried
+                throw e;
             } catch (Exception e) {
                 throw new PMRuntimeException(e);
             }

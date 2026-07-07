@@ -50,6 +50,11 @@ public class AdminPDPConfig {
 
     @PostConstruct
     public void validate() {
+        if (!"default".equals(mode) && !"sandbox".equals(mode)) {
+            throw new IllegalArgumentException(
+                    "pm.pdp.admin.mode must be 'default' or 'sandbox', got: " + mode);
+        }
+
         if (bootstrapFilePath == null || bootstrapFilePath.isEmpty() || bootstrapFilePath.equals("null")) {
             throw new IllegalArgumentException("bootstrapFilePath is null or empty");
         }

@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConditionalOnProperty(name = "pm.pdp.auth-mode", havingValue = "none", matchIfMissing = true)
+@ConditionalOnProperty(name = "pm.pdp.auth.mode", havingValue = "none", matchIfMissing = true)
 public class BasicUserContextResolver implements UserContextResolver {
 
     @Override

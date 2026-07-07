@@ -1,8 +1,14 @@
 package gov.nist.csd.pm.pdp.shared.auth;
 
+import com.auth0.jwk.Jwk;
+import com.auth0.jwk.JwkException;
+import com.auth0.jwk.JwkProvider;
+import com.auth0.jwk.JwkProviderBuilder;
 import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.auth0.jwt.interfaces.Verification;
 import io.grpc.*;
 import net.devh.boot.grpc.server.interceptor.GrpcGlobalServerInterceptor;
 import org.slf4j.Logger;
@@ -10,14 +16,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.security.interfaces.RSAPublicKey;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Component
 @GrpcGlobalServerInterceptor
-@ConditionalOnProperty(name = "pm.pdp.auth-mode", havingValue = "jwt")
+@ConditionalOnProperty(name = "pm.pdp.auth.mode", havingValue = "jwt")
 public class JwtUserContextInterceptor implements ServerInterceptor {
 
     public static final String PM_TOKEN_KEY = "x-pm-token";
@@ -25,19 +33,43 @@ public class JwtUserContextInterceptor implements ServerInterceptor {
     public static final Metadata.Key<String> PM_TOKEN_METADATA_KEY =
             Metadata.Key.of(PM_TOKEN_KEY, Metadata.ASCII_STRING_MARSHALLER);
 
-    // Stores one map per actor in the delegation chain, outermost first.
-    // Each map contains the extracted username-claim and/or user-attrs-claim values.
-    public static final Context.Key<List<Map<String, Object>>> PM_JWT_ACTORS_CONTEXT_KEY =
-            Context.key("x-pm-jwt-actors");
+    // Holds the verified user's claims for this request: the extracted username-claim
+    // and/or user-attrs-claim values. One request maps to exactly one user.
+    public static final Context.Key<Map<String, Object>> PM_JWT_CLAIMS_CONTEXT_KEY =
+            Context.key("x-pm-jwt-claims");
 
     private static final Logger logger = LoggerFactory.getLogger(JwtUserContextInterceptor.class);
 
     private final String usernameClaim;
     private final String userAttrsClaim;
+    private final String issuer;
+    private final String audience;
+    private final JwkProvider jwkProvider;
 
     public JwtUserContextInterceptor(AuthConfig authConfig) {
+        this(authConfig, buildJwkProvider(authConfig));
+    }
+
+    // Visible for testing: allows injecting a JwkProvider backed by a known key pair.
+    JwtUserContextInterceptor(AuthConfig authConfig, JwkProvider jwkProvider) {
         this.usernameClaim = authConfig.getUsernameClaim();
         this.userAttrsClaim = authConfig.getUserAttrsClaim();
+        this.issuer = authConfig.getIssuer();
+        this.audience = authConfig.getAudience();
+        this.jwkProvider = jwkProvider;
+    }
+
+    private static JwkProvider buildJwkProvider(AuthConfig authConfig) {
+        String jwksUri = authConfig.getJwksUri();
+        if (jwksUri == null || jwksUri.isBlank()) {
+            throw new IllegalStateException(
+                    "pm.pdp.auth.jwks-uri must be configured when pm.pdp.auth.mode=jwt");
+        }
+        try {
+            return new JwkProviderBuilder(new URL(jwksUri)).cached(true).rateLimited(true).build();
+        } catch (MalformedURLException e) {
+            throw new IllegalStateException("invalid pm.pdp.auth.jwks-uri: " + jwksUri, e);
+        }
     }
 
     @Override
@@ -52,65 +84,63 @@ public class JwtUserContextInterceptor implements ServerInterceptor {
             return new ServerCall.Listener<>() {};
         }
 
-        // NOTE: This decodes the JWT without verifying its signature.
-        // Add signature verification (e.g. JWT.require(...).build().verify(tokenStr))
-        // once the key/JWKS source is available.
         DecodedJWT jwt;
         try {
-            jwt = JWT.decode(tokenStr);
+            jwt = verify(tokenStr);
         } catch (Exception e) {
-            logger.error("failed to decode JWT", e);
-            call.close(Status.UNAUTHENTICATED.withDescription("invalid JWT: " + e.getMessage()), new Metadata());
+            // Unauthenticated callers control this path, so keep it quiet (no stack trace) and
+            // avoid echoing internal verification details back to the client.
+            logger.warn("failed to verify JWT: {}", e.getMessage());
+            call.close(Status.UNAUTHENTICATED.withDescription("invalid JWT"), new Metadata());
             return new ServerCall.Listener<>() {};
         }
 
-        List<Map<String, Object>> actors;
+        Map<String, Object> claims;
         try {
-            actors = extractActors(jwt);
+            claims = extractRelevantClaims(jwt);
         } catch (UnauthenticatedException e) {
-            logger.error("JWT actor validation failed: {}", e.getMessage());
+            logger.warn("JWT claim validation failed: {}", e.getMessage());
             call.close(Status.UNAUTHENTICATED.withDescription(e.getMessage()), new Metadata());
             return new ServerCall.Listener<>() {};
         }
 
-        Context context = Context.current().withValue(PM_JWT_ACTORS_CONTEXT_KEY, actors);
+        Context context = Context.current().withValue(PM_JWT_CLAIMS_CONTEXT_KEY, claims);
 
         String process = headers.get(UserContextInterceptor.PM_PROCESS_METADATA_KEY);
         if (process != null) {
             context = context.withValue(UserContextInterceptor.PM_PROCESS_CONTEXT_KEY, process);
         }
 
-        logger.debug("jwt auth: {} actor(s) extracted, process={}", actors.size(), process);
+        logger.debug("jwt auth: user claims extracted, process={}", process);
 
         return Contexts.interceptCall(context, call, headers, next);
     }
 
     /**
-     * Walks the JWT's {@code act} claim chain and returns one claims map per actor,
-     * starting with the outermost (primary) token.
+     * Verifies the token's RSA signature against the JWKS-published key matching its {@code kid},
+     * and enforces the configured issuer/audience when set. Returns the decoded, verified token.
      */
-    private List<Map<String, Object>> extractActors(DecodedJWT jwt) throws UnauthenticatedException {
-        List<Map<String, Object>> actors = new ArrayList<>();
+    private DecodedJWT verify(String tokenStr) throws JwkException {
+        DecodedJWT decoded = JWT.decode(tokenStr);
+        Jwk jwk = jwkProvider.get(decoded.getKeyId());
+        Algorithm algorithm = Algorithm.RSA256((RSAPublicKey) jwk.getPublicKey(), null);
 
-        actors.add(extractRelevantClaims(jwt));
-
-        // Walk the act chain (RFC 8693)
-        Claim actClaim = jwt.getClaim("act");
-        Map<String, Object> currentAct = actClaim.isNull() ? null : actClaim.asMap();
-        while (currentAct != null) {
-            actors.add(extractRelevantClaimsFromMap(currentAct));
-            Object nestedAct = currentAct.get("act");
-            if (nestedAct instanceof Map<?, ?> nestedMap) {
-                //noinspection unchecked
-                currentAct = (Map<String, Object>) nestedMap;
-            } else {
-                currentAct = null;
-            }
+        Verification verification = JWT.require(algorithm);
+        if (issuer != null && !issuer.isBlank()) {
+            verification.withIssuer(issuer);
+        }
+        if (audience != null && !audience.isBlank()) {
+            verification.withAudience(audience);
         }
 
-        return actors;
+        return verification.build().verify(tokenStr);
     }
 
+    /**
+     * Extracts the configured username and/or user-attribute claims from the verified token.
+     * One request maps to exactly one user; any delegation/impersonation is the client's concern
+     * and must be resolved into a single effective identity before the token reaches the PDP.
+     */
     private Map<String, Object> extractRelevantClaims(DecodedJWT jwt) throws UnauthenticatedException {
         Map<String, Object> result = new HashMap<>();
 
@@ -139,47 +169,19 @@ public class JwtUserContextInterceptor implements ServerInterceptor {
             }
         }
 
-        validateActorClaims(result);
+        validateClaims(result);
         return result;
     }
 
-    private Map<String, Object> extractRelevantClaimsFromMap(Map<String, Object> claimMap)
-            throws UnauthenticatedException {
-        Map<String, Object> result = new HashMap<>();
-
-        if (usernameClaim != null) {
-            Object val = claimMap.get(usernameClaim);
-            if (val instanceof String) {
-                result.put(usernameClaim, val);
-            }
-        }
-
-        if (userAttrsClaim != null) {
-            Object val = claimMap.get(userAttrsClaim);
-            if (val instanceof String) {
-                result.put(userAttrsClaim, val);
-            } else if (val instanceof List<?> list) {
-                List<String> strList = new ArrayList<>();
-                for (Object item : list) {
-                    strList.add(String.valueOf(item));
-                }
-                result.put(userAttrsClaim, strList);
-            }
-        }
-
-        validateActorClaims(result);
-        return result;
-    }
-
-    private void validateActorClaims(Map<String, Object> actorClaims) throws UnauthenticatedException {
-        if (usernameClaim != null && actorClaims.containsKey(usernameClaim)) {
+    private void validateClaims(Map<String, Object> claims) throws UnauthenticatedException {
+        if (usernameClaim != null && claims.containsKey(usernameClaim)) {
             return;
         }
-        if (userAttrsClaim != null && actorClaims.containsKey(userAttrsClaim)) {
+        if (userAttrsClaim != null && claims.containsKey(userAttrsClaim)) {
             return;
         }
         throw new UnauthenticatedException(
-                "JWT actor is missing required claim(s): username-claim=" + usernameClaim
+                "JWT is missing required claim(s): username-claim=" + usernameClaim
                         + ", user-attrs-claim=" + userAttrsClaim);
     }
 

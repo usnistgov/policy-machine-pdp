@@ -4,8 +4,10 @@ grpc:
     address: "::"
 pm:
   pdp:
+    auth:
+      mode: none
     admin:
-      mode: default
+      mode: sandbox
       bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/bootstrap.pml"
       neo4j-db-path: "neo4j/data"
       esdb-consumer-group: admin-pdp-epp-cg4
