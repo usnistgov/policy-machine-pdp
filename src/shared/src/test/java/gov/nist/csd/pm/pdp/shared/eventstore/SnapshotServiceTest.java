@@ -9,7 +9,7 @@ import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.NodeType;
 import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
 import gov.nist.csd.pm.core.pap.query.GraphQuery;
-import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
+import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
 import gov.nist.csd.pm.core.pap.serialization.json.JSONDeserializer;
 import gov.nist.csd.pm.pdp.proto.event.PMSnapshot;
 import gov.nist.csd.pm.pdp.sharedtest.EventStoreTestContainer;
@@ -30,7 +30,7 @@ class SnapshotServiceTest {
 			eventStoreTestContainer.start();
 
 			MemoryPAP pap = new MemoryPAP();
-			pap.executePML(new UserContext(0), """
+			pap.executePML(NodeUserContext.of(0), """
 					create pc "pc1"
 					create ua "ua1" in ["pc1"]
 					create oa "oa1" in ["pc1"]
@@ -81,7 +81,7 @@ class SnapshotServiceTest {
 		// create test event store container
 		try (EventStoreTestContainer eventStoreTestContainer = new EventStoreTestContainer()) {
 			MemoryPAP pap = new MemoryPAP();
-			pap.executePML(new UserContext(0), """
+			pap.executePML(NodeUserContext.of(0), """
 					create pc "pc1"
 					create ua "ua1" in ["pc1"]
 					create oa "oa1" in ["pc1"]
@@ -120,7 +120,7 @@ class SnapshotServiceTest {
 			eventStoreTestContainer.start();
 
 			MemoryPAP pap = new MemoryPAP();
-			pap.executePML(new UserContext(0), """
+			pap.executePML(NodeUserContext.of(0), """
 					create pc "pc1"
 					create ua "ua1" in ["pc1"]
 					create oa "oa1" in ["pc1"]

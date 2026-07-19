@@ -8,7 +8,7 @@ import gov.nist.csd.pm.core.pap.operation.ResourceOperation;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.core.pdp.UnauthorizedException;
-import gov.nist.csd.pm.pdp.shared.auth.UserContextFromHeader;
+import gov.nist.csd.pm.pdp.shared.auth.UserContextResolver;
 import gov.nist.csd.pm.proto.v1.pdp.adjudication.AdjudicateOperationResponse;
 import gov.nist.csd.pm.proto.v1.pdp.adjudication.OperationRequest;
 import gov.nist.csd.pm.proto.v1.pdp.adjudication.ResourceAdjudicationServiceGrpc;
@@ -18,6 +18,8 @@ import net.devh.boot.grpc.server.service.GrpcService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+
 @GrpcService
 public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.ResourceAdjudicationServiceImplBase {
 
@@ -25,17 +27,19 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
 
     private final PDP pdp;
     private final PAP pap;
+    private final UserContextResolver userContextResolver;
 
-    public ResourcePDPService(PDP pdp, PAP pap) {
+    public ResourcePDPService(PDP pdp, PAP pap, UserContextResolver userContextResolver) {
         this.pdp = pdp;
         this.pap = pap;
+        this.userContextResolver = userContextResolver;
     }
 
     @Override
     public void adjudicateResourceOperation(OperationRequest request,
                                             StreamObserver<AdjudicateOperationResponse> responseObserver) {
         try {
-            UserContext userCtx = UserContextFromHeader.get(pap);
+            UserContext userCtx = userContextResolver.resolve(pap);
 
             // only allow resource operations to be adjudicated
             Operation<?> operation = pap.query().operations().getOperation(request.getName());
@@ -43,10 +47,11 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
                 throw new OperationIsNotResourceOperationException();
             }
 
+            Map<String, Object> args = FromProtoUtil.fromValueMap(request.getArgs());
             Object result = pdp.adjudicateOperation(
                     userCtx,
                     request.getName(),
-                    FromProtoUtil.fromValueMap(request.getArgs())
+                    args
             );
 
             AdjudicateOperationResponse.Builder b = AdjudicateOperationResponse.newBuilder();

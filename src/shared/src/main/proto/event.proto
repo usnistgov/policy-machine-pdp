@@ -28,6 +28,7 @@ message PMEvent {
     OperationCreated operation_created = 16;
     OperationDeleted operation_deleted = 17;
     ResourceAccessRightsSet resource_access_rights_set = 18;
+    JsonDeserializedEvent json_deserialized_event = 19;
   }
 }
 
@@ -113,8 +114,11 @@ message ProhibitionDeleted {
 
 // obligations
 message ObligationCreated {
-  int64 author = 1;
-  string pml = 2;
+  oneof author {
+    int64 author_id = 1;
+    string author_name = 2;
+  }
+  string pml = 3;
 }
 
 message ObligationDeleted {
@@ -132,4 +136,9 @@ message OperationDeleted {
 
 message ResourceAccessRightsSet {
   repeated string operations = 1;
+}
+
+// json
+message JsonDeserializedEvent {
+  string json = 1;
 }

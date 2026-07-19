@@ -1,17 +1,18 @@
-package gov.nist.csd.pm.pdp.admin.plugin.wrapper;
+package gov.nist.csd.pm.pdp.shared.plugin.wrapper;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.operation.AdminOperation;
+import gov.nist.csd.pm.core.pap.operation.ResourceOperation;
 import gov.nist.csd.pm.core.pap.operation.arg.Args;
+import gov.nist.csd.pm.core.pap.query.PolicyQuery;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 
-public class AdminOperationPluginWrapper<T> extends AdminOperation<T> implements OperationPluginWrapper {
+public class ResourceOperationPluginWrapper<T> extends ResourceOperation<T> implements OperationPluginWrapper {
 
-	private final AdminOperation<T> operation;
+	private final ResourceOperation<T> operation;
 	private final ClassLoader classLoader;
 
-	public AdminOperationPluginWrapper(AdminOperation<T> operation, ClassLoader classLoader) {
+	public ResourceOperationPluginWrapper(ResourceOperation<T> operation, ClassLoader classLoader) {
 		super(operation.getName(), operation.getReturnType(), operation.getFormalParameters(), operation.getRequiredCapabilities());
 		this.operation = operation;
 		this.classLoader = classLoader;
@@ -26,8 +27,7 @@ public class AdminOperationPluginWrapper<T> extends AdminOperation<T> implements
 	}
 
 	@Override
-	public T execute(PAP pap, Args args) throws PMException {
-		return executeWithContext(classLoader, () -> operation.execute(pap, args));
+	public T execute(PolicyQuery query, UserContext userContext, Args args) throws PMException {
+		return executeWithContext(classLoader, () -> operation.execute(query, userContext, args));
 	}
-
 }

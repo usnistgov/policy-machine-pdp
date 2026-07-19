@@ -4,7 +4,9 @@ import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.NodeType;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
+import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
+import gov.nist.csd.pm.core.pap.serialization.json.JSONDeserializer;
 import gov.nist.csd.pm.core.pap.store.PolicyStore;
 import gov.nist.csd.pm.pdp.proto.event.*;
 import org.slf4j.Logger;
@@ -66,6 +68,7 @@ public class PolicyEventHandler {
             case OPERATION_CREATED -> handleOperationCreated(pmEvent.getOperationCreated());
             case OPERATION_DELETED -> handleOperationDeleted(pmEvent.getOperationDeleted(), policyStore);
             case RESOURCE_ACCESS_RIGHTS_SET -> handleResourceAccessRightsSet(pmEvent.getResourceAccessRightsSet(), policyStore);
+            case JSON_DESERIALIZED_EVENT -> handleJsonDeserializedEvent(pmEvent.getJsonDeserializedEvent());
             case EVENT_NOT_SET -> logger.debug("event not set for {}", pmEvent);
         }
     }
@@ -132,7 +135,11 @@ public class PolicyEventHandler {
             return;
         }
 
-        pap.executePML(new UserContext(obligationCreated.getAuthor()), obligationCreated.getPml());
+        NodeUserContext author = obligationCreated.getAuthorCase() == ObligationCreated.AuthorCase.AUTHOR_NAME
+                ? NodeUserContext.of(obligationCreated.getAuthorName())
+                : NodeUserContext.of(obligationCreated.getAuthorId());
+
+        pap.executePML(author, obligationCreated.getPml());
     }
 
     private void handleObligationDeleted(ObligationDeleted obligationDeleted, PolicyStore policyStore) throws PMException {
@@ -183,10 +190,14 @@ public class PolicyEventHandler {
     }
 
     private void handleOperationCreated(OperationCreated operationCreated) throws PMException {
-        pap.executePML(new UserContext(0), operationCreated.getPml());
+        pap.executePML(NodeUserContext.of(0), operationCreated.getPml());
     }
 
     private void handleOperationDeleted(OperationDeleted operationDeleted, PolicyStore policyStore) throws PMException {
         policyStore.operations().deleteOperation(operationDeleted.getName());
+    }
+
+    private void handleJsonDeserializedEvent(JsonDeserializedEvent jsonDeserializedEvent) throws PMException {
+        pap.deserialize(jsonDeserializedEvent.getJson(), new JSONDeserializer());
     }
 }

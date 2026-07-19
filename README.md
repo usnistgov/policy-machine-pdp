@@ -15,25 +15,63 @@ This will create the following services:
 
 See client examples for the `resource-pdp` and `admin-pdp-epp` in the [client examples project](./examples/client)
 
-## gRPC Headers
+## gRPC Headers / Authentication
 
-There is no authentication mechanism implemented in this server. The gRPC services accept the following headers:
+The server supports two authentication modes, configured via `pm.pdp.auth.mode`.
 
-- `x-pm-user`: The username as it is in the NGAC graph.
-- `x-pm-user-attrs` A json array of attribute names that the user is assigned to. The user itself does not need to exist in the graph.
-- `x-pm-process` An ID representing the process a user is operating.
+### Mode: `none` (default)
 
-One of `x-pm-user` and `x-pm-user-attrs` is required. `x-pm-process` is optional.
+User identity is passed directly in gRPC metadata headers:
 
-To set the headers in the client side gRPC:
-```Java
+- `x-pm-user` — the username as it appears in the NGAC graph.
+- `x-pm-user-attrs` — a JSON array of user-attribute names; the user node does not need to exist in the graph.
+- `x-pm-process` — (optional) a process identifier.
+
+One of `x-pm-user` or `x-pm-user-attrs` is required.
+
+```java
 String[] attributes = new String[]{"ua1", "ua2"};
 Metadata metadata = new io.grpc.Metadata();
 Metadata.Key<String> userKey = Metadata.Key.of("x-pm-user-attrs", Metadata.ASCII_STRING_MARSHALLER);
 metadata.put(userKey, new ObjectMapper().writeValueAsString(attributes));
 
-ResourceAdjudicationServiceGrpc.ResourceAdjudicationServiceBlockingStub blockingStub = ResourceAdjudicationServiceGrpc.newBlockingStub(channel)
-		.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
+ResourceAdjudicationServiceGrpc.ResourceAdjudicationServiceBlockingStub blockingStub =
+    ResourceAdjudicationServiceGrpc.newBlockingStub(channel)
+        .withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
+```
+
+### Mode: `jwt`
+
+User identity is derived from a JWT passed in the `x-pm-token` gRPC metadata header. The token's RSA signature is verified against the public key published at the configured JWKS endpoint (and, when set, the expected issuer/audience are enforced) before the user's identity is read from configurable claim names. Tokens that fail verification are rejected with `UNAUTHENTICATED`.
+
+Each request maps to exactly one user — the identity carried by the token. Any delegation or impersonation is the client's concern: it must resolve the effective user and present a single token for them, so the server stays decoupled from any particular delegation format.
+
+The claim and key-source properties are configurable:
+
+| Property | Default | Description |
+|---|---|---|
+| `pm.pdp.auth.jwks-uri` | — | **Required when `mode: jwt`.** JWKS endpoint used to fetch the RSA public signing key(s) |
+| `pm.pdp.auth.issuer` | — | When set, tokens whose `iss` claim differs are rejected |
+| `pm.pdp.auth.audience` | — | When set, tokens missing this `aud` are rejected |
+| `pm.pdp.auth.username-claim` | `username` | Claim whose **string** value is the user's name → `NodeUserContext` |
+| `pm.pdp.auth.user-attrs-claim` | `user_attrs` | Claim whose **string or list** value is the user's attribute names → `AnonymousUserContext` |
+
+`username-claim` is tried first. If not present, `user-attrs-claim` is used. The token must carry at least one of the two configured claims or the request is rejected with `UNAUTHENTICATED`.
+
+The `x-pm-process` header is still accepted alongside a JWT token.
+
+#### Auth configuration
+
+```yaml
+pm:
+  pdp:
+    auth:
+      mode: jwt                                  # "none" (default) or "jwt"
+      jwks-uri: https://issuer.example.com/.well-known/jwks.json   # required for jwt
+      issuer: https://issuer.example.com         # optional
+      audience: policy-machine                   # optional
+      username-claim: username                   # default
+      user-attrs-claim: user_attrs               # default
 ```
 
 ## Services
@@ -50,7 +88,9 @@ events. **The policy is persisted in an embedded Neo4j instance.**
 pm:
   pdp:
     admin:
-      # The file path to the policy file used to bootstrap the PDP.
+      # PDP mode: "default" or "sandbox" (see Admin Modes below).
+      mode: default
+      # The file path to the policy file used to bootstrap the PDP. Supports .pml and .json formats.
       bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/bootstrap.pml"
       # Path to store Neo4j policy locally.
       neo4j-db-path: "neo4j/data"
@@ -74,6 +114,14 @@ pm:
       # Name of the event store stream for snapshots.
       snapshot-stream: pm-snapshot-v1
 ```
+
+#### Admin Modes
+The `admin-pdp-epp` runs in one of two modes, set via `pm.pdp.admin.mode`:
+
+- **`default`** (default) — Policy is persisted in embedded Neo4j and changes are event-sourced through EventStoreDB. Admin operations are access-controlled: the requesting user must hold the required privileges.
+- **`sandbox`** — A single in-memory policy with no Neo4j and no EventStoreDB. The NGAC privilege check is skipped, so any request-header user can execute any operation (obligations/EPP still fire). Intended for demos and testing only — not for production.
+
+Both modes bootstrap from `bootstrap-file-path` and support `.pml` and `.json` files.
 
 #### Operation Plugins
 Custom policy-machine-core Operations can be packaged into jar files and provided to the admin-pdp-epp. This 

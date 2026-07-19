@@ -8,8 +8,9 @@ import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.core.pdp.PDP;
 import gov.nist.csd.pm.pdp.admin.pap.EventTrackingPAP;
 import gov.nist.csd.pm.pdp.admin.pap.NoCommitNeo4jPolicyStore;
-import gov.nist.csd.pm.pdp.shared.auth.UserContextFromHeader;
+import gov.nist.csd.pm.pdp.shared.auth.UserContextResolver;
 import org.neo4j.graphdb.GraphDatabaseService;
+import gov.nist.csd.pm.pdp.shared.config.DefaultMode;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -18,14 +19,18 @@ import java.util.List;
  * Factory for creating NGACContext instances.
  */
 @Component
+@DefaultMode
 public class ContextFactory {
 
     private final GraphDatabaseService graphDb;
     private final List<Operation<?>> plugins;
+    private final UserContextResolver userContextResolver;
 
-    public ContextFactory(GraphDatabaseService graphDb, List<Operation<?>> plugins) {
+    public ContextFactory(GraphDatabaseService graphDb, List<Operation<?>> plugins,
+                          UserContextResolver userContextResolver) {
         this.graphDb = graphDb;
         this.plugins = plugins;
+        this.userContextResolver = userContextResolver;
     }
 
     /**
@@ -47,6 +52,6 @@ public class ContextFactory {
     }
 
     public UserContext createUserContext(PAP pap) throws PMException {
-        return UserContextFromHeader.get(pap);
+        return userContextResolver.resolve(pap);
     }
 }

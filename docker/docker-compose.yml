@@ -14,6 +14,12 @@ services:
       - "2113:2113"
       - "1113:1113"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:2113/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     networks:
       - pm_pdp
 
@@ -34,6 +40,9 @@ services:
       - "50052:50052"
     volumes:
       - ./bootstrap.json:/config/bootstrap.json
+    depends_on:
+      eventstore:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - pm_pdp
@@ -50,6 +59,11 @@ services:
       - PM_PDP_ESDB_SNAPSHOT_STREAM=pm-snapshot-v1
     ports:
       - "50051:50051"
+    depends_on:
+      eventstore:
+        condition: service_healthy
+      admin-pdp-epp:
+        condition: service_started
     restart: unless-stopped
     networks:
       - pm_pdp

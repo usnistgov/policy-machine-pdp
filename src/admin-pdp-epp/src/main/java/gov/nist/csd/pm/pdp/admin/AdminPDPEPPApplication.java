@@ -5,7 +5,8 @@ import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
 import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.store.Neo4jEmbeddedPolicyStore;
 import gov.nist.csd.pm.core.pap.operation.Operation;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
-import gov.nist.csd.pm.pdp.admin.plugin.PluginLoader;
+import gov.nist.csd.pm.pdp.shared.auth.AuthConfig;
+import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
 import org.neo4j.configuration.GraphDatabaseSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
@@ -15,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import gov.nist.csd.pm.pdp.shared.config.DefaultMode;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -30,7 +32,7 @@ import static org.neo4j.configuration.GraphDatabaseSettings.DEFAULT_DATABASE_NAM
 @ComponentScan(
     basePackages = {"gov.nist.csd.pm.pdp"}
 )
-@EnableConfigurationProperties({EventStoreDBConfig.class, AdminPDPConfig.class})
+@EnableConfigurationProperties({EventStoreDBConfig.class, AdminPDPConfig.class, AuthConfig.class})
 public class AdminPDPEPPApplication {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminPDPEPPApplication.class);
@@ -40,6 +42,7 @@ public class AdminPDPEPPApplication {
     }
 
     @Bean
+    @DefaultMode
     public GraphDatabaseService graphDb(AdminPDPConfig adminPDPConfig) {
         logger.info("Creating Neo4j embedded database instance");
 
@@ -52,10 +55,16 @@ public class AdminPDPEPPApplication {
     }
 
     @Bean
+    @DefaultMode
     public Neo4jEmbeddedPolicyStore eventListenerPolicyStore(GraphDatabaseService graphDb) throws PMException {
         Neo4jEmbeddedPolicyStore.createIndexes(graphDb);
 
         return new Neo4jEmbeddedPolicyStore(graphDb, getClass().getClassLoader());
+    }
+
+    @Bean
+    public PluginLoader pluginLoader(AdminPDPConfig config) {
+        return new PluginLoader(config.getPluginsDir());
     }
 
     @Bean
@@ -64,6 +73,7 @@ public class AdminPDPEPPApplication {
     }
 
     @Bean
+    @DefaultMode
     public Neo4jEmbeddedPAP neo4jEmbeddedPAP(Neo4jEmbeddedPolicyStore eventListenerPolicyStore, List<Operation<?>> pluginOps) throws PMException {
         Neo4jEmbeddedPAP neo4jEmbeddedPAP = new Neo4jEmbeddedPAP(eventListenerPolicyStore);
 

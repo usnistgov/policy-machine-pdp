@@ -1,14 +1,12 @@
-package gov.nist.csd.pm.pdp.admin.plugin;
+package gov.nist.csd.pm.pdp.shared.plugin;
 
 import gov.nist.csd.pm.core.pap.operation.*;
-import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
-import gov.nist.csd.pm.pdp.admin.plugin.wrapper.*;
+import gov.nist.csd.pm.pdp.shared.plugin.wrapper.*;
 import org.pf4j.DefaultPluginManager;
 import org.pf4j.PluginManager;
 import org.pf4j.PluginWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.PreDestroy;
 import java.nio.file.Path;
@@ -18,7 +16,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-@Configuration
 public class PluginLoader {
 
 	private static final Logger logger = LoggerFactory.getLogger(PluginLoader.class);
@@ -28,8 +25,8 @@ public class PluginLoader {
 	private final Object lifecycleMonitor = new Object();
 	private volatile boolean initialized;
 
-	public PluginLoader(AdminPDPConfig config) {
-		this.pluginsRoot = resolvePluginsRoot(config.getPluginsDir());
+	public PluginLoader(String pluginsDir) {
+		this.pluginsRoot = resolvePluginsRoot(pluginsDir);
 		this.pluginManager = (this.pluginsRoot == null)
 				? null
 				: new DefaultPluginManager(this.pluginsRoot);
@@ -50,10 +47,10 @@ public class PluginLoader {
 
 			Operation wrappedOp = switch (op) {
 				case AdminOperation adminOperation -> new AdminOperationPluginWrapper<>(adminOperation, pluginCl);
-				case Function function ->  new FunctionPluginWrapper(function, pluginCl);
-				case QueryOperation queryOperation ->  new QueryOperationPluginWrapper(queryOperation, pluginCl);
-				case ResourceOperation resourceOperation ->  new ResourceOperationPluginWrapper(resourceOperation, pluginCl);
-				case Routine routine ->  new RoutinePluginWrapper(routine, pluginCl);
+				case Function function -> new FunctionPluginWrapper(function, pluginCl);
+				case QueryOperation queryOperation -> new QueryOperationPluginWrapper(queryOperation, pluginCl);
+				case ResourceOperation resourceOperation -> new ResourceOperationPluginWrapper(resourceOperation, pluginCl);
+				case Routine routine -> new RoutinePluginWrapper(routine, pluginCl);
 			};
 
 			wrapped.add(wrappedOp);

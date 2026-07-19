@@ -1,31 +1,29 @@
 package gov.nist.csd.pm.pdp.admin.pap;
 
-import com.eventstore.dbclient.ReadResult;
-import com.eventstore.dbclient.ReadStreamOptions;
-import com.eventstore.dbclient.ResolvedEvent;
-import com.eventstore.dbclient.StreamNotFoundException;
+import com.eventstore.dbclient.*;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.operation.Operation;
-import gov.nist.csd.pm.core.pdp.bootstrap.JSONBootstrapper;
 import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapperWithSuper;
-import gov.nist.csd.pm.core.pdp.bootstrap.PolicyBootstrapper;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
+import gov.nist.csd.pm.pdp.shared.bootstrap.BootstrapFile;
+import gov.nist.csd.pm.pdp.proto.event.JsonDeserializedEvent;
+import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import gov.nist.csd.pm.pdp.shared.config.DefaultMode;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-@Component(value = "Neo4jBootstrapper")
+@Component("policyBootstrapper")
+@DefaultMode
 public class Neo4jBootstrapper {
 
     private static final Logger logger = LoggerFactory.getLogger(Neo4jBootstrapper.class);
@@ -58,27 +56,13 @@ public class Neo4jBootstrapper {
         }
 
         String bootstrapFilePath = adminPDPConfig.getBootstrapFilePath();
-        if (bootstrapFilePath == null) {
-            logger.info("No bootstrap file path configured");
-            throw new PMException("No bootstrap file path configured");
-        }
-
         logger.info("bootstrapping from file {}", bootstrapFilePath);
-        Path path = Paths.get(bootstrapFilePath);
-        if (!Files.exists(path)) {
-            logger.error("Bootstrap file not found: {}", bootstrapFilePath);
-            throw new PMException("Bootstrap file not found: " + bootstrapFilePath);
-        }
 
-        String data = Files.readString(path);
-        if (data.isEmpty()) {
-            throw new PMException("Bootstrap file is empty: " + bootstrapFilePath);
-        }
-
-        bootstrap(bootstrapFilePath, data);
+        BootstrapFile bootstrapFile = BootstrapFile.load(bootstrapFilePath);
+        bootstrap(bootstrapFile);
     }
 
-    private void bootstrap(String bootstrapFilePath, String data) throws PMException {
+    private void bootstrap(BootstrapFile bootstrapFile) throws PMException {
         NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb, getClass().getClassLoader());
 
         // need to start a transaction so the initial policy admin verification succeeds
@@ -86,19 +70,51 @@ public class Neo4jBootstrapper {
         EventTrackingPAP eventTrackingPAP = new EventTrackingPAP(noCommitNeo4jPolicyStore, pluginOps);
         noCommitNeo4jPolicyStore.commit();
 
-        PolicyBootstrapper policyBootstrapper;
-        if (bootstrapFilePath.endsWith(".pml")) {
-            policyBootstrapper = new PMLBootstrapperWithSuper(data);
-        } else if (bootstrapFilePath.endsWith(".json")) {
-            policyBootstrapper = new JSONBootstrapper(data);
-        } else {
-            throw new PMException("unsupported bootstrap file type, expected .json or .pml");
+        switch (bootstrapFile.format()) {
+            case PML -> {
+                eventTrackingPAP.beginTx();
+                eventTrackingPAP.bootstrap(new PMLBootstrapperWithSuper(bootstrapFile.data()));
+                eventTrackingPAP.publishToEventStore(eventStoreConnectionManager.getOrInitClient(), eventStoreDBConfig.getEventStream(), 0);
+                eventTrackingPAP.commit();
+            }
+            case JSON -> publishJsonBootstrapEvent(bootstrapFile.data());
         }
+    }
 
-        eventTrackingPAP.beginTx();
-        eventTrackingPAP.bootstrap(policyBootstrapper);
-        eventTrackingPAP.publishToEventStore(eventStoreConnectionManager.getOrInitClient(), eventStoreDBConfig.getEventStream(), 0);
-        eventTrackingPAP.commit();
+    private void publishJsonBootstrapEvent(String data) {
+        logger.info("publishing JsonDeserializedEvent to event store at revision 0");
+
+        AppendToStreamOptions options = AppendToStreamOptions.get();
+        options.expectedRevision(ExpectedRevision.noStream());
+
+        PMEvent pmEvent = PMEvent.newBuilder()
+                .setJsonDeserializedEvent(JsonDeserializedEvent.newBuilder()
+                        .setJson(data)
+                        .build())
+                .build();
+        EventData eventData = EventData.builderAsBinary(
+                pmEvent.getDescriptorForType().getName(),
+                pmEvent.toByteArray()
+        ).build();
+
+        try {
+            eventStoreConnectionManager.getOrInitClient()
+                    .appendToStream(eventStoreDBConfig.getEventStream(), options, eventData)
+                    .get();
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof WrongExpectedVersionException we) {
+                logger.error(we.getMessage());
+                throw we;
+            } else if (cause != null) {
+                throw new RuntimeException("Unexpected error bootstrapping json", cause);
+            }
+
+            throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Appending JsonDeserializedEvent to event store was interrupted", e);
+        }
     }
 
     protected boolean eventsInStream() throws ExecutionException, InterruptedException {

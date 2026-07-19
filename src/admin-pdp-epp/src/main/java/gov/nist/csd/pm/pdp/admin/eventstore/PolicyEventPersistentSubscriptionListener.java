@@ -11,6 +11,7 @@ import gov.nist.csd.pm.pdp.shared.eventstore.PolicyEventHandler;
 import gov.nist.csd.pm.pdp.shared.eventstore.SnapshotService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import gov.nist.csd.pm.pdp.shared.config.DefaultMode;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ExecutionException;
@@ -18,6 +19,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @Component
+@DefaultMode
 public class PolicyEventPersistentSubscriptionListener extends PersistentSubscriptionListener {
 
     private static final Logger logger = LoggerFactory.getLogger(PolicyEventPersistentSubscriptionListener.class);
@@ -52,6 +54,10 @@ public class PolicyEventPersistentSubscriptionListener extends PersistentSubscri
         } catch (PMException | InvalidProtocolBufferException e) {
             logger.error("unexpected error handling event", e);
             subscription.nack(NackAction.Park, e.getMessage(), event);
+            // we have parked the event that has an error
+            // we need to still advance the revision or else the server will be stuck until the next
+            // successful event is handled
+            currentRevision.set(revision);
         }
     }
 

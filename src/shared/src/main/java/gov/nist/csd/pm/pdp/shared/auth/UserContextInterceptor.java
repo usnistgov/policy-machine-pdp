@@ -7,12 +7,14 @@ import io.grpc.*;
 import net.devh.boot.grpc.server.interceptor.GrpcGlobalServerInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
 @GrpcGlobalServerInterceptor
+@ConditionalOnProperty(name = "pm.pdp.auth.mode", havingValue = "none", matchIfMissing = true)
 public class UserContextInterceptor implements ServerInterceptor {
 
     public static final String PM_USER_KEY = "x-pm-user";
@@ -44,12 +46,16 @@ public class UserContextInterceptor implements ServerInterceptor {
             try {
                 pmUserAttrsHeaderValue = userAttrsMapper.readValue(attrsStr, new TypeReference<>() {});
             } catch (JsonProcessingException e) {
-                logger.error("error parsing user attributes in header", e);
-                throw new RuntimeException(e);
+                logger.warn("error parsing user attributes in header: {}", e.getMessage());
+                call.close(Status.INVALID_ARGUMENT
+                        .withDescription("invalid " + PM_USER_ATTRS_KEY + " header: " + e.getMessage())
+                        .withCause(e), new Metadata());
+                return new ServerCall.Listener<>() {};
             }
         }
 
-        logger.debug("user header values user={} attributes={} process={}", pmUserHeaderValue, pmUserAttrsHeaderValue, pmProcessHeaderValue);
+        logger.debug("user header values user={} attributes={} process={}",
+                pmUserHeaderValue, pmUserAttrsHeaderValue, pmProcessHeaderValue);
 
         Context context = Context.current();
         if (pmUserHeaderValue != null) {

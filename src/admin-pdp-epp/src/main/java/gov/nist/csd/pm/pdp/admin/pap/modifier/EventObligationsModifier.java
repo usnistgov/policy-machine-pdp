@@ -5,6 +5,8 @@ import gov.nist.csd.pm.core.pap.modification.ObligationsModifier;
 import gov.nist.csd.pm.core.pap.obligation.Obligation;
 import gov.nist.csd.pm.core.pap.obligation.event.EventPattern;
 import gov.nist.csd.pm.core.pap.obligation.response.ObligationResponse;
+import gov.nist.csd.pm.core.pap.pml.statement.operation.CreateObligationStatement;
+import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
 import gov.nist.csd.pm.core.pap.store.PolicyStore;
 import gov.nist.csd.pm.pdp.proto.event.ObligationCreated;
 import gov.nist.csd.pm.pdp.proto.event.ObligationDeleted;
@@ -23,18 +25,27 @@ public class EventObligationsModifier extends ObligationsModifier {
     }
 
     @Override
-    public void createObligation(long authorId, String name, EventPattern eventPattern,
+    public void createObligation(NodeUserContext author, String name, EventPattern eventPattern,
                                  ObligationResponse response) throws PMException {
+        author.resolveNodeIds(policyStore.graph());
+
+        String pml = CreateObligationStatement.fromObligation(new Obligation(author, name, eventPattern, response))
+                .toFormattedString(0);
+
+        ObligationCreated.Builder builder = ObligationCreated.newBuilder()
+                .setPml(pml);
+        if (author.getName() != null) {
+            builder.setAuthorName(author.getName());
+        } else {
+            builder.setAuthorId(author.getId());
+        }
+
         PMEvent event = PMEvent.newBuilder()
-                .setObligationCreated(
-                        ObligationCreated.newBuilder()
-                                .setAuthor(authorId)
-                                .setPml(new Obligation(authorId, name, eventPattern, response).toString())
-                )
+                .setObligationCreated(builder)
                 .build();
         events.add(event);
 
-        super.createObligation(authorId, name, eventPattern, response);
+        super.createObligation(author, name, eventPattern, response);
     }
 
     @Override

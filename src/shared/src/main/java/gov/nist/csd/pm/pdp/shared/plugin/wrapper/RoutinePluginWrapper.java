@@ -1,9 +1,10 @@
-package gov.nist.csd.pm.pdp.admin.plugin.wrapper;
+package gov.nist.csd.pm.pdp.shared.plugin.wrapper;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.PAP;
 import gov.nist.csd.pm.core.pap.operation.Routine;
 import gov.nist.csd.pm.core.pap.operation.arg.Args;
+import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
 
 public class RoutinePluginWrapper<T> extends Routine<T> implements OperationPluginWrapper {
 
@@ -17,7 +18,7 @@ public class RoutinePluginWrapper<T> extends Routine<T> implements OperationPlug
 	}
 
 	@Override
-	public T execute(PAP pap, Args args) throws PMException {
-		return executeWithContext(classLoader, () -> operation.execute(pap, args));
+	public T execute(PAP pap, UserContext userContext, Args args) throws PMException {
+		return executeWithContext(classLoader, () -> operation.execute(pap, userContext, args));
 	}
 }

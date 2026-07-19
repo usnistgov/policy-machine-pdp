@@ -3,6 +3,7 @@ package gov.nist.csd.pm.pdp.shared.eventstore;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.NodeType;
 import gov.nist.csd.pm.core.pap.PAP;
+import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
 import gov.nist.csd.pm.core.pap.store.*;
 import gov.nist.csd.pm.pdp.proto.event.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -326,21 +327,33 @@ class PolicyEventHandlerTest {
 	}
 
 	@Test
-	void obligationCreated_executesPmlAsAuthor() throws Exception {
+	void obligationCreated_executesPmlAsAuthorId() throws Exception {
 		PMEvent event = PMEvent.newBuilder()
 				.setObligationCreated(
 						ObligationCreated.newBuilder()
-								.setAuthor(1)
+								.setAuthorId(1)
 								.setPml("test")
 								.build()
 				).build();
 
 		handler.handleEvent(event);
 
-		verify(pap).executePML(
-				argThat(uc -> uc != null && uc.getUser() == 1L),
-				eq("test")
-		);
+		verify(pap).executePML(eq(NodeUserContext.of(1)), eq("test"));
+	}
+
+	@Test
+	void obligationCreated_executesPmlAsAuthorName() throws Exception {
+		PMEvent event = PMEvent.newBuilder()
+				.setObligationCreated(
+						ObligationCreated.newBuilder()
+								.setAuthorName("u1")
+								.setPml("test")
+								.build()
+				).build();
+
+		handler.handleEvent(event);
+
+		verify(pap).executePML(eq(NodeUserContext.of("u1")), eq("test"));
 	}
 
 	@Test
@@ -380,7 +393,7 @@ class PolicyEventHandlerTest {
 		handler.handleEvent(event);
 
 		verify(pap).executePML(
-				argThat(uc -> uc != null && uc.getUser() == 0L),
+				argThat(uc -> uc instanceof NodeUserContext),
 				eq("test")
 		);
 	}

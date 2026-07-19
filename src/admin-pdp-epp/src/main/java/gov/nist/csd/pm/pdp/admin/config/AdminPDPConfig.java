@@ -1,11 +1,18 @@
 package gov.nist.csd.pm.pdp.admin.config;
 
+import gov.nist.csd.pm.pdp.shared.config.AdminPDPMode;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import javax.annotation.PostConstruct;
 
 @ConfigurationProperties(prefix = "pm.pdp.admin")
 public class AdminPDPConfig {
+
+    /**
+     * Server mode: "default" (Neo4j + EventStoreDB) or "sandbox" (in-memory PAP, no Neo4j/EventStoreDB and
+     * no access checks on admin operations).
+     */
+    private String mode = AdminPDPMode.DEFAULT;
 
     /**
      * Path to store neo4j policy locally
@@ -44,12 +51,22 @@ public class AdminPDPConfig {
 
     @PostConstruct
     public void validate() {
-        if (neo4jDbPath == null || neo4jDbPath.isEmpty() || neo4jDbPath.equals("null")) {
-            setNeo4jDbPath("/neo4j");
+        if (!AdminPDPMode.DEFAULT.equals(mode) && !AdminPDPMode.SANDBOX.equals(mode)) {
+            throw new IllegalArgumentException(
+                    "pm.pdp.admin.mode must be '" + AdminPDPMode.DEFAULT + "' or '" + AdminPDPMode.SANDBOX
+                            + "', got: " + mode);
         }
 
         if (bootstrapFilePath == null || bootstrapFilePath.isEmpty() || bootstrapFilePath.equals("null")) {
             throw new IllegalArgumentException("bootstrapFilePath is null or empty");
+        }
+
+        if (AdminPDPMode.SANDBOX.equals(mode)) {
+            return;
+        }
+
+        if (neo4jDbPath == null || neo4jDbPath.isEmpty() || neo4jDbPath.equals("null")) {
+            setNeo4jDbPath("/neo4j");
         }
 
         if (esdbConsumerGroup == null || esdbConsumerGroup.isEmpty() || esdbConsumerGroup.equals("null")) {
@@ -63,6 +80,14 @@ public class AdminPDPConfig {
         if (revisionConsistencyTimeout <= 0) {
             setRevisionConsistencyTimeout(1000);
         }
+    }
+
+    public String getMode() {
+        return mode;
+    }
+
+    public void setMode(String mode) {
+        this.mode = mode;
     }
 
     public String getNeo4jDbPath() {

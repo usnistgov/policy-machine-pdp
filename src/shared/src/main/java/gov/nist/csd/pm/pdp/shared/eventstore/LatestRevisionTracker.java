@@ -1,6 +1,7 @@
 package gov.nist.csd.pm.pdp.shared.eventstore;
 
 import com.eventstore.dbclient.*;
+import gov.nist.csd.pm.pdp.shared.config.DefaultMode;
 import io.github.resilience4j.core.IntervalFunction;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
@@ -20,6 +21,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * Does not process events — only records revision numbers for consistency checks.
  */
 @Service
+@DefaultMode
 public class LatestRevisionTracker {
 
 	private static final Logger logger = LoggerFactory.getLogger(LatestRevisionTracker.class);
@@ -30,6 +32,7 @@ public class LatestRevisionTracker {
 	private final Retry retry;
 
 	private volatile boolean initialized;
+	private volatile boolean retrying;
 	private final ReentrantLock lock;
 	private final Condition initializedCondition;
 
@@ -39,6 +42,7 @@ public class LatestRevisionTracker {
 		this.eventStoreDBConfig = eventStoreDBConfig;
 		this.latestRevision = new AtomicLong(-1);
 		this.initialized = false;
+		this.retrying = false;
 		this.lock = new ReentrantLock();
 		this.initializedCondition = lock.newCondition();
 
@@ -117,7 +121,20 @@ public class LatestRevisionTracker {
 					public void onCancelled(Subscription subscription, Throwable exception) {
 						logger.warn("Latest revision tracker subscription cancelled", exception);
 						initialized = false;
-						startSubscriptionWithRetry();
+						// Spawn a new daemon thread so we don't block the gRPC executor thread.
+						// Guard against concurrent retries if onCancelled fires multiple times.
+						if (!retrying) {
+							retrying = true;
+							Thread retryThread = new Thread(() -> {
+								try {
+									startSubscriptionWithRetry();
+								} finally {
+									retrying = false;
+								}
+							}, "latest-revision-tracker-retry");
+							retryThread.setDaemon(true);
+							retryThread.start();
+						}
 					}
 				}, options)
 				.get(5, TimeUnit.SECONDS);
@@ -126,6 +143,7 @@ public class LatestRevisionTracker {
 		readCurrentLatestRevision(stream);
 
 		initialized = true;
+		retrying = false;
 		lock.lock();
 		try {
 			initializedCondition.signalAll();

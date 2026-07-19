@@ -22,12 +22,12 @@ import static org.mockito.Mockito.*;
 
 class AdminAdjudicationServiceTest {
 
-	private Adjudicator adjudicator;
+	private AdminAdjudicator adjudicator;
 	private AdminAdjudicationService adminAdjudicationService;
 
 	@BeforeEach
 	void setUp() {
-		adjudicator = mock(Adjudicator.class);
+		adjudicator = mock(AdminAdjudicator.class);
 		adminAdjudicationService = new AdminAdjudicationService(adjudicator);
 	}
 
@@ -40,7 +40,7 @@ class AdminAdjudicationServiceTest {
 			args.put("key", Value.newBuilder().setStringValue("value").build());
 			OperationRequest request = OperationRequest.newBuilder()
 					.setName("op")
-					.setArgs(ValueMap.newBuilder().putAllValues(args).build())
+					.putAllArgs(args)
 					.build();
 
 			when(adjudicator.adjudicateOperation(anyString(), anyMap())).thenReturn("result");

@@ -1,4 +1,4 @@
-package gov.nist.csd.pm.pdp.admin.plugin.wrapper;
+package gov.nist.csd.pm.pdp.shared.plugin.wrapper;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.PAP;
@@ -27,7 +27,7 @@ public class QueryOperationPluginWrapper<T> extends QueryOperation<T> implements
 	}
 
 	@Override
-	public T execute(PolicyQuery query, Args args) throws PMException {
-		return executeWithContext(classLoader, () -> operation.execute(query, args));
+	public T execute(PolicyQuery query, UserContext userContext, Args args) throws PMException {
+		return executeWithContext(classLoader, () -> operation.execute(query, userContext, args));
 	}
 }

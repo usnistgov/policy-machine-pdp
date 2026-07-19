@@ -2,7 +2,7 @@ package gov.nist.csd.pm.pdp.admin.epp;
 
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.impl.grpc.util.FromProtoUtil;
-import gov.nist.csd.pm.pdp.admin.pdp.Adjudicator;
+import gov.nist.csd.pm.pdp.admin.pdp.AdminAdjudicator;
 import gov.nist.csd.pm.proto.v1.epp.EPPServiceGrpc;
 import gov.nist.csd.pm.proto.v1.epp.EventContext;
 import gov.nist.csd.pm.proto.v1.epp.ProcessEventResponse;
@@ -19,9 +19,9 @@ public class EPPService extends EPPServiceGrpc.EPPServiceImplBase {
 
 	private static final Logger logger = LoggerFactory.getLogger(EPPService.class);
 
-	private final Adjudicator adjudicator;
+	private final AdminAdjudicator adjudicator;
 
-	public EPPService(Adjudicator adjudicator) {
+	public EPPService(AdminAdjudicator adjudicator) {
 		this.adjudicator = adjudicator;
 	}
 
@@ -29,12 +29,7 @@ public class EPPService extends EPPServiceGrpc.EPPServiceImplBase {
 	public void processEvent(EventContext request, StreamObserver<ProcessEventResponse> responseObserver) {
 		try {
 			long lastRevision = adjudicator.adjudicateTransaction(ctx -> {
-				try {
-					ctx.epp().processEvent(FromProtoUtil.fromEventContextProto(request));
-				} catch (PMException e) {
-					// Can't throw checked from the lambda; wrap it.
-					throw new RuntimeException(e);
-				}
+				ctx.epp().processEvent(FromProtoUtil.fromEventContextProto(request));
 			});
 
 			ProcessEventResponse.Builder resp = ProcessEventResponse.newBuilder();
@@ -52,6 +47,7 @@ public class EPPService extends EPPServiceGrpc.EPPServiceImplBase {
 			responseObserver.onNext(resp.build());
 			responseObserver.onCompleted();
 		} catch (RuntimeException | PMException e) {
+			logger.error(e.getMessage(), e);
 			responseObserver.onError(Status.INTERNAL
 					                         .withDescription(e.getMessage())
 					                         .withCause(e)

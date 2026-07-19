@@ -6,5 +6,5 @@ VOLUME /plugins
 
 WORKDIR /app
 COPY /target/resource-pdp-1.0-SNAPSHOT.jar /app/resource-pdp-1.0-SNAPSHOT.jar
-EXPOSE ${GRPC_SERVER_PORT}
+EXPOSE 50051
 ENTRYPOINT ["java", "-jar", "/app/resource-pdp-1.0-SNAPSHOT.jar"]
