@@ -1,16 +1,8 @@
 package gov.nist.csd.pm.pdp.shared.eventstore;
 
-import com.google.protobuf.ByteString;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.NodeType;
 import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.obligation.Obligation;
-import gov.nist.csd.pm.core.pap.obligation.event.EventPattern;
-import gov.nist.csd.pm.core.pap.obligation.event.operation.AnyOperationPattern;
-import gov.nist.csd.pm.core.pap.obligation.event.subject.SubjectPattern;
-import gov.nist.csd.pm.core.pap.obligation.response.ObligationResponse;
-import gov.nist.csd.pm.core.pap.pml.expression.literal.StringLiteralExpression;
-import gov.nist.csd.pm.core.pap.pml.statement.operation.CreatePolicyClassStatement;
 import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
 import gov.nist.csd.pm.core.pap.store.*;
 import gov.nist.csd.pm.pdp.proto.event.*;
@@ -20,8 +12,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectOutputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -337,34 +327,33 @@ class PolicyEventHandlerTest {
 	}
 
 	@Test
-	void obligationCreated_deserializesAndCreatesObligation() throws Exception {
-		Obligation expected = new Obligation(
-                NodeUserContext.of(1), "test", new EventPattern(new SubjectPattern(), new AnyOperationPattern()),
-				new ObligationResponse(
-						"ctx",
-						List.of(new CreatePolicyClassStatement(new StringLiteralExpression("pc1")))
-				)
-		);
-
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
-			oos.writeObject(expected);
-		}
-		ByteString bytes = ByteString.copyFrom(baos.toByteArray());
-
+	void obligationCreated_executesPmlAsAuthorId() throws Exception {
 		PMEvent event = PMEvent.newBuilder()
 				.setObligationCreated(
 						ObligationCreated.newBuilder()
 								.setAuthorId(1)
-								.setData(bytes)
+								.setPml("test")
 								.build()
 				).build();
 
 		handler.handleEvent(event);
 
-		verify(obligations).createObligation(
-				eq(NodeUserContext.of(1)), eq("test"), eq(expected.getEventPattern()), eq(expected.getResponse())
-		);
+		verify(pap).executePML(eq(NodeUserContext.of(1)), eq("test"));
+	}
+
+	@Test
+	void obligationCreated_executesPmlAsAuthorName() throws Exception {
+		PMEvent event = PMEvent.newBuilder()
+				.setObligationCreated(
+						ObligationCreated.newBuilder()
+								.setAuthorName("u1")
+								.setPml("test")
+								.build()
+				).build();
+
+		handler.handleEvent(event);
+
+		verify(pap).executePML(eq(NodeUserContext.of("u1")), eq("test"));
 	}
 
 	@Test

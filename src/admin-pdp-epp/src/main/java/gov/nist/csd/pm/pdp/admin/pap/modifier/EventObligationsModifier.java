@@ -1,20 +1,17 @@
 package gov.nist.csd.pm.pdp.admin.pap.modifier;
 
-import com.google.protobuf.ByteString;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.pap.modification.ObligationsModifier;
 import gov.nist.csd.pm.core.pap.obligation.Obligation;
 import gov.nist.csd.pm.core.pap.obligation.event.EventPattern;
 import gov.nist.csd.pm.core.pap.obligation.response.ObligationResponse;
+import gov.nist.csd.pm.core.pap.pml.statement.operation.CreateObligationStatement;
 import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
 import gov.nist.csd.pm.core.pap.store.PolicyStore;
 import gov.nist.csd.pm.pdp.proto.event.ObligationCreated;
 import gov.nist.csd.pm.pdp.proto.event.ObligationDeleted;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.util.List;
 
 public class EventObligationsModifier extends ObligationsModifier {
@@ -30,24 +27,23 @@ public class EventObligationsModifier extends ObligationsModifier {
     @Override
     public void createObligation(NodeUserContext author, String name, EventPattern eventPattern,
                                  ObligationResponse response) throws PMException {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
-                oos.writeObject(new Obligation(author, name, eventPattern, response));
-            }
+        author.resolveNodeIds(policyStore.graph());
 
-            ObligationCreated.Builder builder = ObligationCreated.newBuilder()
-                    .setData(ByteString.copyFrom(baos.toByteArray()));
+        String pml = CreateObligationStatement.fromObligation(new Obligation(author, name, eventPattern, response))
+                .toFormattedString(0);
 
-            author.resolveNodeIds(policyStore.graph());
-
-            PMEvent event = PMEvent.newBuilder()
-                    .setObligationCreated(builder)
-                    .build();
-            events.add(event);
-        } catch (IOException e) {
-            throw new PMException("failed to serialize obligation: " + e.getMessage(), e);
+        ObligationCreated.Builder builder = ObligationCreated.newBuilder()
+                .setPml(pml);
+        if (author.getName() != null) {
+            builder.setAuthorName(author.getName());
+        } else {
+            builder.setAuthorId(author.getId());
         }
+
+        PMEvent event = PMEvent.newBuilder()
+                .setObligationCreated(builder)
+                .build();
+        events.add(event);
 
         super.createObligation(author, name, eventPattern, response);
     }

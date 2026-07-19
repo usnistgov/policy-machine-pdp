@@ -118,7 +118,7 @@ message ObligationCreated {
     int64 author_id = 1;
     string author_name = 2;
   }
-  bytes data = 3;
+  string pml = 3;
 }
 
 message ObligationDeleted {

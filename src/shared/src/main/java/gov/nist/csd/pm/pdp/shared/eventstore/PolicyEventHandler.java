@@ -3,7 +3,6 @@ package gov.nist.csd.pm.pdp.shared.eventstore;
 import gov.nist.csd.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.core.common.graph.node.NodeType;
 import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.obligation.Obligation;
 import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
 import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
 import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
@@ -13,9 +12,6 @@ import gov.nist.csd.pm.pdp.proto.event.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.util.HashSet;
 import java.util.List;
 
@@ -139,13 +135,11 @@ public class PolicyEventHandler {
             return;
         }
 
-        try (ObjectInputStream ois = new ObjectInputStream(
-                new ByteArrayInputStream(obligationCreated.getData().toByteArray()))) {
-            Obligation o = (Obligation) ois.readObject();
-            pap.policyStore().obligations().createObligation(o.getAuthor(), o.getName(), o.getEventPattern(), o.getResponse());
-        } catch (IOException | ClassNotFoundException e) {
-            throw new PMException("failed to deserialize obligation: " + e.getMessage(), e);
-        }
+        NodeUserContext author = obligationCreated.getAuthorCase() == ObligationCreated.AuthorCase.AUTHOR_NAME
+                ? NodeUserContext.of(obligationCreated.getAuthorName())
+                : NodeUserContext.of(obligationCreated.getAuthorId());
+
+        pap.executePML(author, obligationCreated.getPml());
     }
 
     private void handleObligationDeleted(ObligationDeleted obligationDeleted, PolicyStore policyStore) throws PMException {
