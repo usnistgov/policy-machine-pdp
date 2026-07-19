@@ -9,6 +9,6 @@ import java.lang.annotation.Target;
 
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-@ConditionalOnProperty(name = "pm.pdp.admin.mode", havingValue = "sandbox")
+@ConditionalOnProperty(name = AdminPDPMode.PROPERTY, havingValue = AdminPDPMode.SANDBOX)
 public @interface SandboxMode {
 }

@@ -9,6 +9,6 @@ import java.lang.annotation.Target;
 
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-@ConditionalOnProperty(name = "pm.pdp.admin.mode", havingValue = "default", matchIfMissing = true)
+@ConditionalOnProperty(name = AdminPDPMode.PROPERTY, havingValue = AdminPDPMode.DEFAULT, matchIfMissing = true)
 public @interface DefaultMode {
 }

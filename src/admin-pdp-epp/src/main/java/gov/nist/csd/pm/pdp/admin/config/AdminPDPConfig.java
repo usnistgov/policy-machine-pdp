@@ -1,5 +1,6 @@
 package gov.nist.csd.pm.pdp.admin.config;
 
+import gov.nist.csd.pm.pdp.shared.config.AdminPDPMode;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import javax.annotation.PostConstruct;
@@ -11,7 +12,7 @@ public class AdminPDPConfig {
      * Server mode: "default" (Neo4j + EventStoreDB) or "sandbox" (in-memory PAP, no Neo4j/EventStoreDB and
      * no access checks on admin operations).
      */
-    private String mode = "default";
+    private String mode = AdminPDPMode.DEFAULT;
 
     /**
      * Path to store neo4j policy locally
@@ -50,16 +51,17 @@ public class AdminPDPConfig {
 
     @PostConstruct
     public void validate() {
-        if (!"default".equals(mode) && !"sandbox".equals(mode)) {
+        if (!AdminPDPMode.DEFAULT.equals(mode) && !AdminPDPMode.SANDBOX.equals(mode)) {
             throw new IllegalArgumentException(
-                    "pm.pdp.admin.mode must be 'default' or 'sandbox', got: " + mode);
+                    "pm.pdp.admin.mode must be '" + AdminPDPMode.DEFAULT + "' or '" + AdminPDPMode.SANDBOX
+                            + "', got: " + mode);
         }
 
         if (bootstrapFilePath == null || bootstrapFilePath.isEmpty() || bootstrapFilePath.equals("null")) {
             throw new IllegalArgumentException("bootstrapFilePath is null or empty");
         }
 
-        if ("sandbox".equals(mode)) {
+        if (AdminPDPMode.SANDBOX.equals(mode)) {
             return;
         }
 
