@@ -1,13 +1,11 @@
 package gov.nist.csd.pm.pdp.admin.pap.modifier;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.pap.modification.ObligationsModifier;
-import gov.nist.csd.pm.core.pap.obligation.Obligation;
-import gov.nist.csd.pm.core.pap.obligation.event.EventPattern;
-import gov.nist.csd.pm.core.pap.obligation.response.ObligationResponse;
-import gov.nist.csd.pm.core.pap.pml.statement.operation.CreateObligationStatement;
-import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
-import gov.nist.csd.pm.core.pap.store.PolicyStore;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.pap.modification.ObligationsModifier;
+import gov.nist.ngac.pm.core.pap.obligation.Obligation;
+import gov.nist.ngac.pm.core.pap.pml.statement.operation.CreateObligationStatement;
+import gov.nist.ngac.pm.core.pap.query.model.context.NodeUserContext;
+import gov.nist.ngac.pm.core.pap.store.PolicyStore;
 import gov.nist.csd.pm.pdp.proto.event.ObligationCreated;
 import gov.nist.csd.pm.pdp.proto.event.ObligationDeleted;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
@@ -25,11 +23,11 @@ public class EventObligationsModifier extends ObligationsModifier {
     }
 
     @Override
-    public void createObligation(NodeUserContext author, String name, EventPattern eventPattern,
-                                 ObligationResponse response) throws PMException {
+    public void createObligation(Obligation obligation) throws PMException {
+        NodeUserContext author = obligation.getAuthor();
         author.resolveNodeIds(policyStore.graph());
 
-        String pml = CreateObligationStatement.fromObligation(new Obligation(author, name, eventPattern, response))
+        String pml = CreateObligationStatement.fromObligation(obligation)
                 .toFormattedString(0);
 
         ObligationCreated.Builder builder = ObligationCreated.newBuilder()
@@ -45,7 +43,7 @@ public class EventObligationsModifier extends ObligationsModifier {
                 .build();
         events.add(event);
 
-        super.createObligation(author, name, eventPattern, response);
+        super.createObligation(obligation);
     }
 
     @Override

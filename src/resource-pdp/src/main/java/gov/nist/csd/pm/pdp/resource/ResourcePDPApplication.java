@@ -1,11 +1,11 @@
 package gov.nist.csd.pm.pdp.resource;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
-import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.operation.Operation;
-import gov.nist.csd.pm.core.pap.operation.ResourceOperation;
-import gov.nist.csd.pm.core.pdp.PDP;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.impl.memory.pap.MemoryPAP;
+import gov.nist.ngac.pm.core.pap.PAP;
+import gov.nist.ngac.pm.core.pap.operation.Operation;
+import gov.nist.ngac.pm.core.pap.operation.ResourceOperation;
+import gov.nist.ngac.pm.core.pdp.PDP;
 import gov.nist.csd.pm.pdp.resource.config.ResourcePDPConfig;
 import gov.nist.csd.pm.pdp.shared.auth.AuthConfig;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
@@ -47,7 +47,7 @@ public class ResourcePDPApplication {
     public PAP pap(List<Operation<?>> pluginOps) throws PMException {
         MemoryPAP pap = new MemoryPAP();
         for (Operation<?> op : pluginOps) {
-            pap.plugins().addOperation(op);
+            pap.javaOperations().register(op);
         }
         return pap;
     }

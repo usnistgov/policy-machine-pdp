@@ -1,8 +1,8 @@
 package gov.nist.csd.pm.pdp.shared.plugin.wrapper;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.pap.operation.Function;
-import gov.nist.csd.pm.core.pap.operation.arg.Args;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.pap.operation.Function;
+import gov.nist.ngac.pm.core.pap.operation.arg.Args;
 
 public class FunctionPluginWrapper<T> extends Function<T> implements OperationPluginWrapper {
 

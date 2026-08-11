@@ -1,9 +1,9 @@
 package gov.nist.csd.pm.pdp.admin.epp;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.pdp.admin.pdp.AdminAdjudicator;
-import gov.nist.csd.pm.proto.v1.epp.EventContext;
-import gov.nist.csd.pm.proto.v1.epp.ProcessEventResponse;
+import gov.nist.ngac.pm.proto.v1.epp.EventContext;
+import gov.nist.ngac.pm.proto.v1.epp.ProcessEventResponse;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;

@@ -1,10 +1,10 @@
 package gov.nist.csd.pm.pdp.shared.auth;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.query.model.context.AnonymousUserContext;
-import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
-import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.pap.PAP;
+import gov.nist.ngac.pm.core.pap.query.model.context.AnonymousUserContext;
+import gov.nist.ngac.pm.core.pap.query.model.context.NodeUserContext;
+import gov.nist.ngac.pm.core.pap.query.model.context.UserContext;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 

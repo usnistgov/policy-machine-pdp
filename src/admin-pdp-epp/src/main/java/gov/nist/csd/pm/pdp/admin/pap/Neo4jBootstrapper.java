@@ -1,9 +1,9 @@
 package gov.nist.csd.pm.pdp.admin.pap;
 
 import com.eventstore.dbclient.*;
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.pap.operation.Operation;
-import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapperWithSuper;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.pap.operation.Operation;
+import gov.nist.ngac.pm.core.pdp.bootstrap.PMLBootstrapperWithSuper;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.pdp.shared.bootstrap.BootstrapFile;
 import gov.nist.csd.pm.pdp.proto.event.JsonDeserializedEvent;
@@ -63,7 +63,7 @@ public class Neo4jBootstrapper {
     }
 
     private void bootstrap(BootstrapFile bootstrapFile) throws PMException {
-        NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb, getClass().getClassLoader());
+        NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb);
 
         // need to start a transaction so the initial policy admin verification succeeds
         noCommitNeo4jPolicyStore.beginTx();

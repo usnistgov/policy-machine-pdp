@@ -1,20 +1,20 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.epp.EPP;
-import gov.nist.csd.pm.core.epp.EventContext;
-import gov.nist.csd.pm.core.impl.grpc.util.FromProtoUtil;
-import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
-import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.operation.AdminOperation;
-import gov.nist.csd.pm.core.pap.operation.Operation;
-import gov.nist.csd.pm.core.pap.operation.arg.Args;
-import gov.nist.csd.pm.core.pap.pml.operation.PMLOperation;
-import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
-import gov.nist.csd.pm.core.pdp.PDP;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.epp.EPP;
+import gov.nist.ngac.pm.core.epp.EventContext;
+import gov.nist.ngac.pm.core.grpc.util.FromProtoUtil;
+import gov.nist.ngac.pm.core.impl.memory.pap.MemoryPAP;
+import gov.nist.ngac.pm.core.pap.PAP;
+import gov.nist.ngac.pm.core.pap.operation.AdminOperation;
+import gov.nist.ngac.pm.core.pap.operation.Operation;
+import gov.nist.ngac.pm.core.pap.operation.arg.Args;
+import gov.nist.ngac.pm.core.pap.pml.operation.PMLOperation;
+import gov.nist.ngac.pm.core.pap.query.model.context.UserContext;
+import gov.nist.ngac.pm.core.pdp.PDP;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextResolver;
 import gov.nist.csd.pm.pdp.shared.config.SandboxMode;
-import gov.nist.csd.pm.proto.v1.pdp.adjudication.OperationRequest;
+import gov.nist.ngac.pm.proto.v1.pdp.adjudication.OperationRequest;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

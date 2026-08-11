@@ -1,9 +1,9 @@
 package gov.nist.csd.pm.pdp.admin.pap;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
-import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapperWithSuper;
-import gov.nist.csd.pm.core.pap.serialization.json.JSONDeserializer;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.impl.memory.pap.MemoryPAP;
+import gov.nist.ngac.pm.core.pdp.bootstrap.PMLBootstrapperWithSuper;
+import gov.nist.ngac.pm.core.pap.serialization.json.JSONDeserializer;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.pdp.shared.bootstrap.BootstrapFile;
 import org.slf4j.Logger;

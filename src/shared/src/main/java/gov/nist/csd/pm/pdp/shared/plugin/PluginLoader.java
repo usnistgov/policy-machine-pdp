@@ -1,6 +1,6 @@
 package gov.nist.csd.pm.pdp.shared.plugin;
 
-import gov.nist.csd.pm.core.pap.operation.*;
+import gov.nist.ngac.pm.core.pap.operation.*;
 import gov.nist.csd.pm.pdp.shared.plugin.wrapper.*;
 import org.pf4j.DefaultPluginManager;
 import org.pf4j.PluginManager;

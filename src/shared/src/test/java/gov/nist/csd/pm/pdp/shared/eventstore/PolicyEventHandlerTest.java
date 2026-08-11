@@ -1,10 +1,10 @@
 package gov.nist.csd.pm.pdp.shared.eventstore;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.common.graph.node.NodeType;
-import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
-import gov.nist.csd.pm.core.pap.store.*;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.common.graph.node.NodeType;
+import gov.nist.ngac.pm.core.pap.PAP;
+import gov.nist.ngac.pm.core.pap.query.model.context.NodeUserContext;
+import gov.nist.ngac.pm.core.pap.store.*;
 import gov.nist.csd.pm.pdp.proto.event.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -1,11 +1,11 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.epp.EPP;
-import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.operation.Operation;
-import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
-import gov.nist.csd.pm.core.pdp.PDP;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.epp.EPP;
+import gov.nist.ngac.pm.core.pap.PAP;
+import gov.nist.ngac.pm.core.pap.operation.Operation;
+import gov.nist.ngac.pm.core.pap.query.model.context.UserContext;
+import gov.nist.ngac.pm.core.pdp.PDP;
 import gov.nist.csd.pm.pdp.admin.pap.EventTrackingPAP;
 import gov.nist.csd.pm.pdp.admin.pap.NoCommitNeo4jPolicyStore;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextResolver;
@@ -40,7 +40,7 @@ public class ContextFactory {
      * @throws PMException If an error occurs during context creation
      */
     public NGACContext createContext() throws PMException {
-        NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb, getClass().getClassLoader());
+        NoCommitNeo4jPolicyStore noCommitNeo4jPolicyStore = new NoCommitNeo4jPolicyStore(graphDb);
         EventTrackingPAP pap = new EventTrackingPAP(noCommitNeo4jPolicyStore, plugins);
         PDP pdp = new PDP(pap);
 

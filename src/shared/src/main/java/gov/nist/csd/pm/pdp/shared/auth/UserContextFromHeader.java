@@ -1,9 +1,9 @@
 package gov.nist.csd.pm.pdp.shared.auth;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.query.model.context.*;
-import gov.nist.csd.pm.proto.v1.pdp.query.ConjunctiveUserContext;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.pap.PAP;
+import gov.nist.ngac.pm.core.pap.query.model.context.*;
+import gov.nist.ngac.pm.proto.v1.pdp.query.ConjunctiveUserContext;
 
 import java.util.*;
 

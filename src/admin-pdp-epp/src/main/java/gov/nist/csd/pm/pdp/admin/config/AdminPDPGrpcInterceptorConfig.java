@@ -23,9 +23,9 @@ public class AdminPDPGrpcInterceptorConfig {
         Set<String> excluded = new HashSet<>();
 
         // these methods already have revision checks when appending to the event store
-        excluded.add("gov.nist.csd.pm.proto.v1.epp.EPPService/processEvent");
-        excluded.add("gov.nist.csd.pm.proto.v1.pdp.adjudication.AdminAdjudicationService/adjudicateOperation");
-        excluded.add("gov.nist.csd.pm.proto.v1.pdp.adjudication.AdminAdjudicationService/adjudicateRoutine");
+        excluded.add("gov.nist.ngac.pm.proto.v1.epp.EPPService/processEvent");
+        excluded.add("gov.nist.ngac.pm.proto.v1.pdp.adjudication.AdminAdjudicationService/adjudicateOperation");
+        excluded.add("gov.nist.ngac.pm.proto.v1.pdp.adjudication.AdminAdjudicationService/adjudicateRoutine");
 
         return new RevisionConsistencyInterceptor(
                 adminPDPConfig.getRevisionConsistencyTimeout(),

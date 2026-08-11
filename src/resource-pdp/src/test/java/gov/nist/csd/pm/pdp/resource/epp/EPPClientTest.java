@@ -1,14 +1,14 @@
 package gov.nist.csd.pm.pdp.resource.epp;
 
-import gov.nist.csd.pm.core.epp.EventContext;
-import gov.nist.csd.pm.core.impl.grpc.util.ToProtoUtil;
-import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pdp.PDP;
+import gov.nist.ngac.pm.core.epp.EventContext;
+import gov.nist.ngac.pm.core.grpc.util.ToProtoUtil;
+import gov.nist.ngac.pm.core.pap.PAP;
+import gov.nist.ngac.pm.core.pdp.PDP;
 import gov.nist.csd.pm.pdp.resource.config.ResourcePDPConfig;
-import gov.nist.csd.pm.proto.v1.epp.EPPServiceGrpc;
-import gov.nist.csd.pm.proto.v1.epp.ProcessEventResponse;
-import gov.nist.csd.pm.proto.v1.model.Value;
-import gov.nist.csd.pm.proto.v1.model.ValueMap;
+import gov.nist.ngac.pm.proto.v1.epp.EPPServiceGrpc;
+import gov.nist.ngac.pm.proto.v1.epp.ProcessEventResponse;
+import gov.nist.ngac.pm.proto.v1.model.Value;
+import gov.nist.ngac.pm.proto.v1.model.ValueMap;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import org.junit.jupiter.api.BeforeEach;
@@ -76,7 +76,7 @@ class EPPClientTest {
 		writeField(client, "blockingStub", blockingStub);
 
 		EventContext eventCtx = mock(EventContext.class);
-		gov.nist.csd.pm.proto.v1.epp.EventContext protoCtx = mock(gov.nist.csd.pm.proto.v1.epp.EventContext.class);
+		gov.nist.ngac.pm.proto.v1.epp.EventContext protoCtx = mock(gov.nist.ngac.pm.proto.v1.epp.EventContext.class);
 
 		ProcessEventResponse response = ProcessEventResponse.newBuilder().build();
 		when(blockingStub.processEvent(protoCtx)).thenReturn(response);
@@ -95,7 +95,7 @@ class EPPClientTest {
 		writeField(client, "blockingStub", blockingStub);
 
 		EventContext eventCtx = mock(EventContext.class);
-		gov.nist.csd.pm.proto.v1.epp.EventContext protoCtx = mock(gov.nist.csd.pm.proto.v1.epp.EventContext.class);
+		gov.nist.ngac.pm.proto.v1.epp.EventContext protoCtx = mock(gov.nist.ngac.pm.proto.v1.epp.EventContext.class);
 
 		when(blockingStub.processEvent(protoCtx)).thenReturn(responseWithLastRevision(5));
 

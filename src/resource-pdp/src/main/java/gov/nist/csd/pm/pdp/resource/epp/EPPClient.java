@@ -1,12 +1,12 @@
 package gov.nist.csd.pm.pdp.resource.epp;
 
-import gov.nist.csd.pm.core.epp.EPP;
-import gov.nist.csd.pm.core.epp.EventContext;
-import gov.nist.csd.pm.core.impl.grpc.util.ToProtoUtil;
-import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pdp.PDP;
+import gov.nist.ngac.pm.core.epp.EPP;
+import gov.nist.ngac.pm.core.epp.EventContext;
+import gov.nist.ngac.pm.core.grpc.util.ToProtoUtil;
+import gov.nist.ngac.pm.core.pap.PAP;
+import gov.nist.ngac.pm.core.pdp.PDP;
 import gov.nist.csd.pm.pdp.resource.config.ResourcePDPConfig;
-import gov.nist.csd.pm.proto.v1.epp.EPPServiceGrpc;
+import gov.nist.ngac.pm.proto.v1.epp.EPPServiceGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import org.slf4j.Logger;
@@ -55,7 +55,7 @@ public class EPPClient extends EPP {
     public void processEvent(EventContext eventCtx) {
         logger.info("sending to EPP {}", eventCtx);
 
-        gov.nist.csd.pm.proto.v1.epp.EventContext eventCtxProto = ToProtoUtil.toEventContextProto(eventCtx);
+        gov.nist.ngac.pm.proto.v1.epp.EventContext eventCtxProto = ToProtoUtil.toEventContextProto(eventCtx);
 
         blockingStub.processEvent(eventCtxProto);
     }

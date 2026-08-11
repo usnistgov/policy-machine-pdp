@@ -45,8 +45,12 @@
             <artifactId>db-client-java</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.github.usnistgov</groupId>
+            <groupId>gov.nist.ngac.pm</groupId>
             <artifactId>policy-machine-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>gov.nist.ngac.pm</groupId>
+            <artifactId>policy-machine-grpc</artifactId>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

@@ -1,16 +1,16 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
 import com.eventstore.dbclient.WrongExpectedVersionException;
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.common.exception.PMRuntimeException;
-import gov.nist.csd.pm.core.impl.grpc.util.FromProtoUtil;
-import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.query.model.context.UserContext;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.common.exception.PMRuntimeException;
+import gov.nist.ngac.pm.core.grpc.util.FromProtoUtil;
+import gov.nist.ngac.pm.core.pap.PAP;
+import gov.nist.ngac.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.pdp.admin.pap.EventTrackingPAP;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;
-import gov.nist.csd.pm.proto.v1.pdp.adjudication.OperationRequest;
+import gov.nist.ngac.pm.proto.v1.pdp.adjudication.OperationRequest;
 import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryConfig;
 import org.slf4j.Logger;

@@ -2,8 +2,8 @@ package gov.nist.csd.pm.pdp.admin.eventstore;
 
 import com.eventstore.dbclient.*;
 import com.google.protobuf.InvalidProtocolBufferException;
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.neo4j.embedded.pap.Neo4jEmbeddedPAP;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
