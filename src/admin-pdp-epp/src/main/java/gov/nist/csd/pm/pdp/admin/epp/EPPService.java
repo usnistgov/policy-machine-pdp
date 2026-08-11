@@ -1,13 +1,13 @@
 package gov.nist.csd.pm.pdp.admin.epp;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.impl.grpc.util.FromProtoUtil;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.grpc.util.FromProtoUtil;
 import gov.nist.csd.pm.pdp.admin.pdp.AdminAdjudicator;
-import gov.nist.csd.pm.proto.v1.epp.EPPServiceGrpc;
-import gov.nist.csd.pm.proto.v1.epp.EventContext;
-import gov.nist.csd.pm.proto.v1.epp.ProcessEventResponse;
-import gov.nist.csd.pm.proto.v1.model.Value;
-import gov.nist.csd.pm.proto.v1.model.ValueMap;
+import gov.nist.ngac.pm.proto.v1.epp.EPPServiceGrpc;
+import gov.nist.ngac.pm.proto.v1.epp.EventContext;
+import gov.nist.ngac.pm.proto.v1.epp.ProcessEventResponse;
+import gov.nist.ngac.pm.proto.v1.model.Value;
+import gov.nist.ngac.pm.proto.v1.model.ValueMap;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;

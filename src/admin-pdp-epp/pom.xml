@@ -28,6 +28,10 @@
             <version>1.0-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>gov.nist.ngac.pm</groupId>
+            <artifactId>policy-machine-core-neo4j</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

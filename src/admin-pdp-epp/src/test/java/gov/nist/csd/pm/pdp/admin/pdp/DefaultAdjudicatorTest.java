@@ -2,9 +2,9 @@ package gov.nist.csd.pm.pdp.admin.pdp;
 
 import com.eventstore.dbclient.EventStoreDBClient;
 import com.eventstore.dbclient.WrongExpectedVersionException;
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.epp.EPP;
-import gov.nist.csd.pm.core.pdp.PDP;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.epp.EPP;
+import gov.nist.ngac.pm.core.pdp.PDP;
 import gov.nist.csd.pm.pdp.admin.pap.EventTrackingPAP;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;

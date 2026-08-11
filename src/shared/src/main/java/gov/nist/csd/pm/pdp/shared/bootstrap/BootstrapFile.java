@@ -1,6 +1,6 @@
 package gov.nist.csd.pm.pdp.shared.bootstrap;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.common.exception.PMException;
 
 import java.io.IOException;
 import java.nio.file.Files;

@@ -1,9 +1,9 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
-import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
-import gov.nist.csd.pm.core.pdp.bootstrap.PMLBootstrapperWithSuper;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.impl.memory.pap.MemoryPAP;
+import gov.nist.ngac.pm.core.pap.query.model.context.NodeUserContext;
+import gov.nist.ngac.pm.core.pdp.bootstrap.PMLBootstrapperWithSuper;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextResolver;
 import org.junit.jupiter.api.Test;
 

@@ -1,12 +1,12 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.pap.operation.AdminOperation;
-import gov.nist.csd.pm.core.pap.operation.ResourceOperation;
-import gov.nist.csd.pm.core.pdp.UnauthorizedException;
-import gov.nist.csd.pm.proto.v1.model.Value;
-import gov.nist.csd.pm.proto.v1.pdp.adjudication.AdjudicateOperationResponse;
-import gov.nist.csd.pm.proto.v1.pdp.adjudication.OperationRequest;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.pap.operation.AdminOperation;
+import gov.nist.ngac.pm.core.pap.operation.ResourceOperation;
+import gov.nist.ngac.pm.core.pdp.UnauthorizedException;
+import gov.nist.ngac.pm.proto.v1.model.Value;
+import gov.nist.ngac.pm.proto.v1.pdp.adjudication.AdjudicateOperationResponse;
+import gov.nist.ngac.pm.proto.v1.pdp.adjudication.OperationRequest;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;

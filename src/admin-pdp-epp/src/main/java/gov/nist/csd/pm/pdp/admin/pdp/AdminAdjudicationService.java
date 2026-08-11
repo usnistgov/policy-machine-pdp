@@ -1,9 +1,9 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
-import gov.nist.csd.pm.core.impl.grpc.util.FromProtoUtil;
-import gov.nist.csd.pm.core.impl.grpc.util.ToProtoUtil;
-import gov.nist.csd.pm.core.pdp.UnauthorizedException;
-import gov.nist.csd.pm.proto.v1.pdp.adjudication.*;
+import gov.nist.ngac.pm.core.grpc.util.FromProtoUtil;
+import gov.nist.ngac.pm.core.grpc.util.ToProtoUtil;
+import gov.nist.ngac.pm.core.pdp.UnauthorizedException;
+import gov.nist.ngac.pm.proto.v1.pdp.adjudication.*;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;

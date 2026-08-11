@@ -2,10 +2,10 @@ package gov.nist.csd.pm.pdp.shared.eventstore;
 
 import com.eventstore.dbclient.*;
 import com.google.protobuf.InvalidProtocolBufferException;
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.serialization.json.JSONDeserializer;
-import gov.nist.csd.pm.core.pap.serialization.json.JSONSerializer;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.pap.PAP;
+import gov.nist.ngac.pm.core.pap.serialization.json.JSONDeserializer;
+import gov.nist.ngac.pm.core.pap.serialization.json.JSONSerializer;
 import gov.nist.csd.pm.pdp.proto.event.PMSnapshot;
 import gov.nist.csd.pm.pdp.shared.config.DefaultMode;
 import org.slf4j.Logger;

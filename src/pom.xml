@@ -20,14 +20,8 @@
         <maven.compiler.target>21</maven.compiler.target>
         <spring-boot.version>3.2.4</spring-boot.version>
         <protobuf.version>3.2.4</protobuf.version>
+        <policy-machine-core.version>4.0.0-rc.3</policy-machine-core.version>
     </properties>
-
-    <repositories>
-        <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
-        </repository>
-    </repositories>
 
     <dependencyManagement>
         <dependencies>
@@ -82,9 +76,19 @@
                 <version>5.4.5</version>
             </dependency>
             <dependency>
-                <groupId>com.github.usnistgov</groupId>
+                <groupId>gov.nist.ngac.pm</groupId>
                 <artifactId>policy-machine-core</artifactId>
-                <version>3.6.0</version>
+                <version>${policy-machine-core.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>gov.nist.ngac.pm</groupId>
+                <artifactId>policy-machine-core-neo4j</artifactId>
+                <version>${policy-machine-core.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>gov.nist.ngac.pm</groupId>
+                <artifactId>policy-machine-grpc</artifactId>
+                <version>${policy-machine-core.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>

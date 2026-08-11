@@ -1,16 +1,17 @@
 package gov.nist.csd.pm.pdp.admin.pap.modifier;
 
-import gov.nist.csd.pm.core.common.graph.node.Node;
-import gov.nist.csd.pm.core.pap.obligation.event.EventPattern;
-import gov.nist.csd.pm.core.pap.obligation.event.operation.AnyOperationPattern;
-import gov.nist.csd.pm.core.pap.obligation.event.subject.SubjectPattern;
-import gov.nist.csd.pm.core.pap.obligation.response.ObligationResponse;
-import gov.nist.csd.pm.core.pap.pml.expression.literal.StringLiteralExpression;
-import gov.nist.csd.pm.core.pap.pml.statement.operation.CreatePolicyClassStatement;
-import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
-import gov.nist.csd.pm.core.pap.store.GraphStore;
-import gov.nist.csd.pm.core.pap.store.ObligationsStore;
-import gov.nist.csd.pm.core.pap.store.PolicyStore;
+import gov.nist.ngac.pm.core.common.graph.node.Node;
+import gov.nist.ngac.pm.core.pap.obligation.Obligation;
+import gov.nist.ngac.pm.core.pap.obligation.event.EventPattern;
+import gov.nist.ngac.pm.core.pap.obligation.event.operation.AnyOperationPattern;
+import gov.nist.ngac.pm.core.pap.obligation.event.subject.SubjectPattern;
+import gov.nist.ngac.pm.core.pap.obligation.response.ObligationResponse;
+import gov.nist.ngac.pm.core.pap.pml.expression.literal.StringLiteralExpression;
+import gov.nist.ngac.pm.core.pap.pml.statement.operation.CreatePolicyClassStatement;
+import gov.nist.ngac.pm.core.pap.query.model.context.NodeUserContext;
+import gov.nist.ngac.pm.core.pap.store.GraphStore;
+import gov.nist.ngac.pm.core.pap.store.ObligationsStore;
+import gov.nist.ngac.pm.core.pap.store.PolicyStore;
 import gov.nist.csd.pm.pdp.proto.event.ObligationCreated;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,7 +60,8 @@ class EventObligationsModifierTest {
                 List.of(new CreatePolicyClassStatement(new StringLiteralExpression("pc1")))
         );
 
-        modifier.createObligation(author, "test", eventPattern, response);
+        Obligation obligation = new Obligation(author, "test", eventPattern, response);
+        modifier.createObligation(obligation);
 
         assertEquals(1, events.size());
         ObligationCreated created = events.get(0).getObligationCreated();
@@ -68,7 +70,7 @@ class EventObligationsModifierTest {
         assertTrue(created.getPml().contains("create obligation \"test\""));
         assertTrue(created.getPml().contains("pc1"));
 
-        verify(obligations).createObligation(author, "test", eventPattern, response);
+        verify(obligations).createObligation(obligation);
         verifyNoInteractions(graph);
     }
 
@@ -85,12 +87,13 @@ class EventObligationsModifierTest {
         when(node.getId()).thenReturn(5L);
         when(graph.getNodeByName("u1")).thenReturn(node);
 
-        modifier.createObligation(author, "test", eventPattern, response);
+        Obligation obligation = new Obligation(author, "test", eventPattern, response);
+        modifier.createObligation(obligation);
 
         ObligationCreated created = events.get(0).getObligationCreated();
         assertEquals(ObligationCreated.AuthorCase.AUTHOR_NAME, created.getAuthorCase());
         assertEquals("u1", created.getAuthorName());
 
-        verify(obligations).createObligation(author, "test", eventPattern, response);
+        verify(obligations).createObligation(obligation);
     }
 }

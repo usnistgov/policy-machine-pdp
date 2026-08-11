@@ -1,10 +1,10 @@
 package gov.nist.csd.pm.pdp.admin.pap.modifier;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.pap.id.IdGenerator;
-import gov.nist.csd.pm.core.pap.modification.GraphModifier;
-import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
-import gov.nist.csd.pm.core.pap.store.PolicyStore;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.pap.id.IdGenerator;
+import gov.nist.ngac.pm.core.pap.modification.GraphModifier;
+import gov.nist.ngac.pm.core.pap.operation.accessright.AccessRightSet;
+import gov.nist.ngac.pm.core.pap.store.PolicyStore;
 import gov.nist.csd.pm.pdp.proto.event.*;
 
 import java.util.Collection;

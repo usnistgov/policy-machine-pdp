@@ -1,7 +1,7 @@
 package gov.nist.csd.pm.pdp.admin.pap;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.store.TxHandler;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.neo4j.embedded.pap.store.TxHandler;
 import org.neo4j.graphdb.GraphDatabaseService;
 
 public class NoCommitTxHandler extends TxHandler {

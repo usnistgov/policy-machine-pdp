@@ -1,9 +1,9 @@
 package gov.nist.csd.pm.pdp.admin.pap.modifier;
 
-import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.store.Neo4jEmbeddedPolicyStore;
-import gov.nist.csd.pm.core.pap.PluginRegistry;
-import gov.nist.csd.pm.core.pap.id.IdGenerator;
-import gov.nist.csd.pm.core.pap.modification.PolicyModifier;
+import gov.nist.ngac.pm.core.neo4j.embedded.pap.store.Neo4jEmbeddedPolicyStore;
+import gov.nist.ngac.pm.core.pap.operation.JavaOperationRegistry;
+import gov.nist.ngac.pm.core.pap.id.IdGenerator;
+import gov.nist.ngac.pm.core.pap.modification.PolicyModifier;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 
 import java.util.ArrayList;
@@ -23,7 +23,7 @@ public class EventTrackingPolicyModifier extends PolicyModifier {
         this.events = events;
     }
 
-    public static EventTrackingPolicyModifier createInstance(Neo4jEmbeddedPolicyStore policyStore, IdGenerator idGenerator, PluginRegistry pluginRegistry) {
+    public static EventTrackingPolicyModifier createInstance(Neo4jEmbeddedPolicyStore policyStore, IdGenerator idGenerator, JavaOperationRegistry pluginRegistry) {
         List<PMEvent> events = new ArrayList<>();
 
         EventGraphModifier graphModifier = new EventGraphModifier(events, policyStore, idGenerator);

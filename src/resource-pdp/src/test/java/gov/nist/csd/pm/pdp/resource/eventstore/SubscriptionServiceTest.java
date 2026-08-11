@@ -2,9 +2,9 @@ package gov.nist.csd.pm.pdp.resource.eventstore;
 
 import com.eventstore.dbclient.EventData;
 import com.google.protobuf.InvalidProtocolBufferException;
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.impl.memory.pap.MemoryPAP;
-import gov.nist.csd.pm.core.pap.PAP;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.impl.memory.pap.MemoryPAP;
+import gov.nist.ngac.pm.core.pap.PAP;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import gov.nist.csd.pm.pdp.proto.event.PolicyClassCreated;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;

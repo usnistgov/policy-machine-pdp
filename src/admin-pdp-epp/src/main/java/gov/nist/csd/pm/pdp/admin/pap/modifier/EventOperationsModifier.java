@@ -1,12 +1,12 @@
 package gov.nist.csd.pm.pdp.admin.pap.modifier;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.pap.PluginRegistry;
-import gov.nist.csd.pm.core.pap.modification.OperationsModifier;
-import gov.nist.csd.pm.core.pap.operation.Operation;
-import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
-import gov.nist.csd.pm.core.pap.pml.statement.PMLStatementSerializable;
-import gov.nist.csd.pm.core.pap.store.PolicyStore;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.pap.operation.JavaOperationRegistry;
+import gov.nist.ngac.pm.core.pap.modification.OperationsModifier;
+import gov.nist.ngac.pm.core.pap.operation.Operation;
+import gov.nist.ngac.pm.core.pap.operation.accessright.AccessRightSet;
+import gov.nist.ngac.pm.core.pap.pml.statement.PMLStatementSerializable;
+import gov.nist.ngac.pm.core.pap.store.PolicyStore;
 import gov.nist.csd.pm.pdp.proto.event.OperationCreated;
 import gov.nist.csd.pm.pdp.proto.event.OperationDeleted;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
@@ -18,7 +18,7 @@ public class EventOperationsModifier extends OperationsModifier {
 
     private final List<PMEvent> events;
 
-    public EventOperationsModifier(List<PMEvent> events, PolicyStore store, PluginRegistry pluginRegistry) {
+    public EventOperationsModifier(List<PMEvent> events, PolicyStore store, JavaOperationRegistry pluginRegistry) {
         super(store, pluginRegistry);
 
         this.events = events;

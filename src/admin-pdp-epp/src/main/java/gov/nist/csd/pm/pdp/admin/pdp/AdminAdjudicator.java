@@ -1,7 +1,7 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.proto.v1.pdp.adjudication.OperationRequest;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.proto.v1.pdp.adjudication.OperationRequest;
 
 import java.util.List;
 import java.util.Map;

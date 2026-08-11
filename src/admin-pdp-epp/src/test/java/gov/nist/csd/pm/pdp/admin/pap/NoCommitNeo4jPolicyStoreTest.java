@@ -1,7 +1,7 @@
 package gov.nist.csd.pm.pdp.admin.pap;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.common.graph.node.NodeType;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.common.graph.node.NodeType;
 import org.junit.jupiter.api.Test;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.dbms.api.DatabaseManagementServiceBuilder;
@@ -25,8 +25,8 @@ class NoCommitNeo4jPolicyStoreTest {
             tx.commit();
         }
 
-        NoCommitNeo4jPolicyStore policyStore = new NoCommitNeo4jPolicyStore(graphDb, NoCommitNeo4jPolicyStoreTest.class.getClassLoader());
-        NoCommitNeo4jPolicyStore actual = new NoCommitNeo4jPolicyStore(graphDb, getClass().getClassLoader());
+        NoCommitNeo4jPolicyStore policyStore = new NoCommitNeo4jPolicyStore(graphDb);
+        NoCommitNeo4jPolicyStore actual = new NoCommitNeo4jPolicyStore(graphDb);
 
         policyStore.beginTx();
         policyStore.graph().createNode(1, "pc1", NodeType.PC);

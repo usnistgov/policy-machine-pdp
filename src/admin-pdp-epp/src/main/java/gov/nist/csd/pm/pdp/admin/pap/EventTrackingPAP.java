@@ -1,10 +1,10 @@
 package gov.nist.csd.pm.pdp.admin.pap;
 
 import com.eventstore.dbclient.*;
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
-import gov.nist.csd.pm.core.pap.id.RandomIdGenerator;
-import gov.nist.csd.pm.core.pap.operation.Operation;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.neo4j.embedded.pap.Neo4jEmbeddedPAP;
+import gov.nist.ngac.pm.core.pap.id.RandomIdGenerator;
+import gov.nist.ngac.pm.core.pap.operation.Operation;
 import gov.nist.csd.pm.pdp.admin.pap.modifier.EventTrackingPolicyModifier;
 import gov.nist.csd.pm.pdp.proto.event.PMEvent;
 import org.slf4j.Logger;
@@ -22,10 +22,10 @@ public class EventTrackingPAP extends Neo4jEmbeddedPAP {
         super(policyStore);
 
         for (Operation<?> op : plugins) {
-            plugins().addOperation(op);
+            javaOperations().register(op);
         }
 
-        withPolicyModifier(EventTrackingPolicyModifier.createInstance(policyStore, new RandomIdGenerator(), plugins()));
+        withPolicyModifier(EventTrackingPolicyModifier.createInstance(policyStore, new RandomIdGenerator(), javaOperations()));
     }
 
     @Override

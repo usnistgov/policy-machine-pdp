@@ -1,31 +1,31 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.common.graph.node.Node;
-import gov.nist.csd.pm.core.common.graph.node.NodeType;
-import gov.nist.csd.pm.core.common.prohibition.Prohibition;
-import gov.nist.csd.pm.core.impl.grpc.util.FromProtoUtil;
-import gov.nist.csd.pm.core.impl.grpc.util.ToProtoUtil;
-import gov.nist.csd.pm.core.pap.PAP;
-import gov.nist.csd.pm.core.pap.graph.Association;
-import gov.nist.csd.pm.core.pap.obligation.Obligation;
-import gov.nist.csd.pm.core.pap.operation.*;
-import gov.nist.csd.pm.core.pap.operation.accessright.AccessRightSet;
-import gov.nist.csd.pm.core.pap.operation.arg.type.Type;
-import gov.nist.csd.pm.core.pap.operation.param.*;
-import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredCapability;
-import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilege;
-import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilegeOnNode;
-import gov.nist.csd.pm.core.pap.operation.reqcap.RequiredPrivilegeOnParameter;
-import gov.nist.csd.pm.core.pap.query.model.context.NodeUserContext;
-import gov.nist.csd.pm.core.pap.query.model.explain.Explain;
-import gov.nist.csd.pm.core.pap.query.model.subgraph.Subgraph;
-import gov.nist.csd.pm.core.pap.query.model.subgraph.SubgraphPrivileges;
-import gov.nist.csd.pm.core.pap.serialization.PolicySerializer;
-import gov.nist.csd.pm.core.pap.serialization.json.JSONSerializer;
-import gov.nist.csd.pm.core.pdp.UnauthorizedException;
-import gov.nist.csd.pm.proto.v1.model.SerializationFormat;
-import gov.nist.csd.pm.proto.v1.pdp.query.*;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.common.graph.node.Node;
+import gov.nist.ngac.pm.core.common.graph.node.NodeType;
+import gov.nist.ngac.pm.core.common.prohibition.Prohibition;
+import gov.nist.ngac.pm.core.grpc.util.FromProtoUtil;
+import gov.nist.ngac.pm.core.grpc.util.ToProtoUtil;
+import gov.nist.ngac.pm.core.pap.PAP;
+import gov.nist.ngac.pm.core.pap.graph.Association;
+import gov.nist.ngac.pm.core.pap.obligation.Obligation;
+import gov.nist.ngac.pm.core.pap.operation.*;
+import gov.nist.ngac.pm.core.pap.operation.accessright.AccessRightSet;
+import gov.nist.ngac.pm.core.pap.operation.arg.type.Type;
+import gov.nist.ngac.pm.core.pap.operation.param.*;
+import gov.nist.ngac.pm.core.pap.operation.reqcap.RequiredCapability;
+import gov.nist.ngac.pm.core.pap.operation.reqcap.RequiredPrivilege;
+import gov.nist.ngac.pm.core.pap.operation.reqcap.RequiredPrivilegeOnNode;
+import gov.nist.ngac.pm.core.pap.operation.reqcap.RequiredPrivilegeOnParameter;
+import gov.nist.ngac.pm.core.pap.query.model.context.NodeUserContext;
+import gov.nist.ngac.pm.core.pap.query.model.explain.Explain;
+import gov.nist.ngac.pm.core.pap.query.model.subgraph.Subgraph;
+import gov.nist.ngac.pm.core.pap.query.model.subgraph.SubgraphPrivileges;
+import gov.nist.ngac.pm.core.pap.serialization.PolicySerializer;
+import gov.nist.ngac.pm.core.pap.serialization.json.JSONSerializer;
+import gov.nist.ngac.pm.core.pdp.UnauthorizedException;
+import gov.nist.ngac.pm.proto.v1.model.SerializationFormat;
+import gov.nist.ngac.pm.proto.v1.pdp.query.*;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
@@ -106,7 +106,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 					request.getPropertiesMap()
 			));
 
-			List<gov.nist.csd.pm.proto.v1.model.Node> nodeProtos = new ArrayList<>();
+			List<gov.nist.ngac.pm.proto.v1.model.Node> nodeProtos = new ArrayList<>();
 			for (Node node : nodes) {
 				nodeProtos.add(ToProtoUtil.toNodeProto(node));
 			}
@@ -124,7 +124,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getPolicyClasses(GetPolicyClassesRequest request, StreamObserver<GetPolicyClassesResponse> responseObserver) {
 		try {
-			List<gov.nist.csd.pm.proto.v1.model.Node> nodeProtos = adjudicator.adjudicateQuery((pap, userCtx) -> {
+			List<gov.nist.ngac.pm.proto.v1.model.Node> nodeProtos = adjudicator.adjudicateQuery((pap, userCtx) -> {
 				Collection<Long> policyClasses = pap.query().graph().getPolicyClasses();
 				return nodeIdsToNodeProtoList(pap, policyClasses);
 			});
@@ -143,7 +143,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getAdjacentDescendants(GetAdjacentDescendantsRequest request,
 	                                   StreamObserver<GetAdjacentDescendantsResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Node> descs = adjudicator.adjudicateQuery((pap, userCtx) -> {
+			Collection<gov.nist.ngac.pm.proto.v1.model.Node> descs = adjudicator.adjudicateQuery((pap, userCtx) -> {
 				Collection<Long> adjacentDescendants = pap.query().graph().getAdjacentDescendants(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
 				return nodeIdsToNodeProtoList(pap, adjacentDescendants);
 			});
@@ -162,7 +162,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getAdjacentAscendants(GetAdjacentAscendantsRequest request,
 	                                  StreamObserver<GetAdjacentAscendantsResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Node> ascs = adjudicator.adjudicateQuery((pap, userCtx) -> {
+			Collection<gov.nist.ngac.pm.proto.v1.model.Node> ascs = adjudicator.adjudicateQuery((pap, userCtx) -> {
 				Collection<Long> adjacentAscendants = pap.query().graph().getAdjacentAscendants(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
 				return nodeIdsToNodeProtoList(pap, adjacentAscendants);
 			});
@@ -181,7 +181,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getAssociationsWithSource(GetAssociationsWithSourceRequest request,
 	                                      StreamObserver<GetAssociationsWithSourceResponse> responseObserver) {
 		try {
-			List<gov.nist.csd.pm.proto.v1.model.Association> associations = adjudicator.adjudicateQuery((pap, userCtx) -> {
+			List<gov.nist.ngac.pm.proto.v1.model.Association> associations = adjudicator.adjudicateQuery((pap, userCtx) -> {
 				Collection<Association> associationsWithSource = pap.query().graph().getAssociationsWithSource(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
 				return toAssociationProtoList(pap, associationsWithSource);
 			});
@@ -200,7 +200,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getAssociationsWithTarget(GetAssociationsWithTargetRequest request,
 	                                      StreamObserver<GetAssociationsWithTargetResponse> responseObserver) {
 		try {
-			List<gov.nist.csd.pm.proto.v1.model.Association> associations = adjudicator.adjudicateQuery((pap, userCtx) -> {
+			List<gov.nist.ngac.pm.proto.v1.model.Association> associations = adjudicator.adjudicateQuery((pap, userCtx) -> {
 				Collection<Association> associationsWithTarget = pap.query().graph().getAssociationsWithTarget(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
 				return toAssociationProtoList(pap, associationsWithTarget);
 			});
@@ -253,7 +253,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getAttributeDescendants(GetAttributeDescendantsRequest request,
 	                                    StreamObserver<GetAttributeDescendantsResponse> responseObserver) {
 		try {
-			List<gov.nist.csd.pm.proto.v1.model.Node> nodes = adjudicator.adjudicateQuery((pap, userCtx) -> {
+			List<gov.nist.ngac.pm.proto.v1.model.Node> nodes = adjudicator.adjudicateQuery((pap, userCtx) -> {
 				Collection<Long> descs = pap.query().graph().getAttributeDescendants(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
 				return nodeIdsToNodeProtoList(pap, descs);
 			});
@@ -272,7 +272,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getPolicyClassDescendants(GetPolicyClassDescendantsRequest request,
 	                                      StreamObserver<GetPolicyClassDescendantsResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Node> descs = adjudicator.adjudicateQuery((pap, userCtx) -> {
+			Collection<gov.nist.ngac.pm.proto.v1.model.Node> descs = adjudicator.adjudicateQuery((pap, userCtx) -> {
 				Collection<Long> policyClassDescendants = pap.query().graph().getPolicyClassDescendants(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
 				return nodeIdsToNodeProtoList(pap, policyClassDescendants);
 			});
@@ -330,8 +330,8 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getProhibitions(GetProhibitionsRequest request, StreamObserver<GetProhibitionsResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitions = adjudicator.adjudicateQuery((pap, userCtx) -> {
-				List<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = new ArrayList<>();
+			Collection<gov.nist.ngac.pm.proto.v1.model.Prohibition> prohibitions = adjudicator.adjudicateQuery((pap, userCtx) -> {
+				List<gov.nist.ngac.pm.proto.v1.model.Prohibition> prohibitionProtos = new ArrayList<>();
 				for (Prohibition prohibition : pap.query().prohibitions().getProhibitions()) {
 					prohibitionProtos.add(ToProtoUtil.toProhibitionProto(prohibition, pap.query()));
 				}
@@ -353,9 +353,9 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getProhibitionsBySubject(GetProhibitionsBySubjectRequest request,
 	                                     StreamObserver<GetProhibitionsBySubjectResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitions = adjudicator.adjudicateQuery((pap, userCtx) -> {
+			Collection<gov.nist.ngac.pm.proto.v1.model.Prohibition> prohibitions = adjudicator.adjudicateQuery((pap, userCtx) -> {
 				Collection<Prohibition> prohibitionsWithSubject = pap.query().prohibitions().getNodeProhibitions(FromProtoUtil.resolveNodeRefId(pap, request.getNode()));
-				List<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = new ArrayList<>();
+				List<gov.nist.ngac.pm.proto.v1.model.Prohibition> prohibitionProtos = new ArrayList<>();
 				for (Prohibition prohibition : prohibitionsWithSubject) {
 					prohibitionProtos.add(ToProtoUtil.toProhibitionProto(prohibition, pap.query()));
 				}
@@ -383,7 +383,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getProhibition(GetProhibitionRequest request, StreamObserver<GetProhibitionResponse> responseObserver) {
 		try {
-			gov.nist.csd.pm.proto.v1.model.Prohibition prohibition = adjudicator.adjudicateQuery((pap, userCtx) -> {
+			gov.nist.ngac.pm.proto.v1.model.Prohibition prohibition = adjudicator.adjudicateQuery((pap, userCtx) -> {
 				Prohibition p = pap.query().prohibitions().getProhibition(request.getName());
 				return ToProtoUtil.toProhibitionProto(p, pap.query());
 			});
@@ -402,12 +402,12 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getInheritedProhibitions(GetInheritedProhibitionsRequest request,
 	                                     StreamObserver<GetInheritedProhibitionsResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = adjudicator.adjudicateQuery((pap, userCtx) -> {
+			Collection<gov.nist.ngac.pm.proto.v1.model.Prohibition> prohibitionProtos = adjudicator.adjudicateQuery((pap, userCtx) -> {
 				Collection<Prohibition> inheritedProhibitionsFor = pap.query().prohibitions().getInheritedProhibitionsFor(
 						FromProtoUtil.resolveNodeRefId(pap, request.getSubject())
 				);
 
-				List<gov.nist.csd.pm.proto.v1.model.Prohibition> protos = new ArrayList<>();
+				List<gov.nist.ngac.pm.proto.v1.model.Prohibition> protos = new ArrayList<>();
 				for (Prohibition prohibition : inheritedProhibitionsFor) {
 					protos.add(ToProtoUtil.toProhibitionProto(prohibition, pap.query()));
 				}
@@ -429,12 +429,12 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getProhibitionsWithContainer(GetProhibitionsWithContainerRequest request,
 	                                         StreamObserver<GetProhibitionsWithContainerResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Prohibition> prohibitionProtos = adjudicator.adjudicateQuery((pap, userCtx) -> {
+			Collection<gov.nist.ngac.pm.proto.v1.model.Prohibition> prohibitionProtos = adjudicator.adjudicateQuery((pap, userCtx) -> {
 				Collection<Prohibition> prohibitionsWithContainer = pap.query().prohibitions().getProhibitionsWithContainer(
 						FromProtoUtil.resolveNodeRefId(pap, request.getContainer())
 				);
 
-				List<gov.nist.csd.pm.proto.v1.model.Prohibition> protos = new ArrayList<>();
+				List<gov.nist.ngac.pm.proto.v1.model.Prohibition> protos = new ArrayList<>();
 				for (Prohibition prohibition : prohibitionsWithContainer) {
 					protos.add(ToProtoUtil.toProhibitionProto(prohibition, pap.query()));
 				}
@@ -455,7 +455,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getObligations(GetObligationsRequest request, StreamObserver<GetObligationsResponse> responseObserver) {
 		try {
-			List<gov.nist.csd.pm.proto.v1.model.Obligation> obligationProtos = adjudicator.adjudicateQuery((pap, userCtx) -> {
+			List<gov.nist.ngac.pm.proto.v1.model.Obligation> obligationProtos = adjudicator.adjudicateQuery((pap, userCtx) -> {
 				Collection<Obligation> obligations = pap.query().obligations().getObligations();
 				return toObligationProtoList(pap, obligations);
 			});
@@ -473,7 +473,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	@Override
 	public void getObligation(GetObligationRequest request, StreamObserver<GetObligationResponse> responseObserver) {
 		try {
-			gov.nist.csd.pm.proto.v1.model.Obligation obligation = adjudicator.adjudicateQuery((pap, userCtx) -> {
+			gov.nist.ngac.pm.proto.v1.model.Obligation obligation = adjudicator.adjudicateQuery((pap, userCtx) -> {
 				Obligation o = pap.query().obligations().getObligation(request.getName());
 				return ToProtoUtil.toObligationProto(o, pap);
 			});
@@ -492,7 +492,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 	public void getObligationsByAuthor(GetObligationsByAuthorRequest request,
 	                                   StreamObserver<GetObligationsByAuthorResponse> responseObserver) {
 		try {
-			Collection<gov.nist.csd.pm.proto.v1.model.Obligation> obligations = adjudicator.adjudicateQuery((pap, userCtx) -> {
+			Collection<gov.nist.ngac.pm.proto.v1.model.Obligation> obligations = adjudicator.adjudicateQuery((pap, userCtx) -> {
 				Collection<Obligation> obligationsWithAuthor = pap.query().obligations().getObligationsWithAuthor(
                         NodeUserContext.of(FromProtoUtil.resolveNodeRefId(pap, request.getAuthor()))
 				);
@@ -905,28 +905,28 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 		}
 	}
 
-	private gov.nist.csd.pm.proto.v1.pdp.query.Subgraph toSubgraph(Subgraph subgraph) {
-		List<gov.nist.csd.pm.proto.v1.pdp.query.Subgraph> subgraphs = new ArrayList<>();
+	private gov.nist.ngac.pm.proto.v1.pdp.query.Subgraph toSubgraph(Subgraph subgraph) {
+		List<gov.nist.ngac.pm.proto.v1.pdp.query.Subgraph> subgraphs = new ArrayList<>();
 		for (Subgraph childSubgraph : subgraph.subgraphs()) {
 			subgraphs.add(toSubgraph(childSubgraph));
 		}
 
-		return gov.nist.csd.pm.proto.v1.pdp.query.Subgraph.newBuilder()
+		return gov.nist.ngac.pm.proto.v1.pdp.query.Subgraph.newBuilder()
 				.setNode(ToProtoUtil.toNodeProto(subgraph.node()))
 				.addAllSubgraphs(subgraphs)
 				.build();
 	}
 
-	private gov.nist.csd.pm.proto.v1.pdp.query.SubgraphPrivileges toSubgraphPrivilegesProto(SubgraphPrivileges subgraphPrivileges) {
+	private gov.nist.ngac.pm.proto.v1.pdp.query.SubgraphPrivileges toSubgraphPrivilegesProto(SubgraphPrivileges subgraphPrivileges) {
 		// prune any subgraphs in which all nodes are inaccessible
 		pruneInaccessibleSubgraphs(subgraphPrivileges);
 
-		List<gov.nist.csd.pm.proto.v1.pdp.query.SubgraphPrivileges> subgraphs = new ArrayList<>();
+		List<gov.nist.ngac.pm.proto.v1.pdp.query.SubgraphPrivileges> subgraphs = new ArrayList<>();
 		for (SubgraphPrivileges childSubgraph : subgraphPrivileges.ascendants()) {
 			subgraphs.add(toSubgraphPrivilegesProto(childSubgraph));
 		}
 
-		return gov.nist.csd.pm.proto.v1.pdp.query.SubgraphPrivileges.newBuilder()
+		return gov.nist.ngac.pm.proto.v1.pdp.query.SubgraphPrivileges.newBuilder()
 				.setNode(ToProtoUtil.toNodeProto(subgraphPrivileges.node()))
 				.addAllArset(subgraphPrivileges.privileges())
 				.addAllAscendants(subgraphs)
@@ -988,8 +988,8 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 		return nodePrivileges;
 	}
 
-	private List<gov.nist.csd.pm.proto.v1.model.Node> nodeIdsToNodeProtoList(PAP pap, Collection<Long> descs) {
-		List<gov.nist.csd.pm.proto.v1.model.Node> nodeProtos = new ArrayList<>();
+	private List<gov.nist.ngac.pm.proto.v1.model.Node> nodeIdsToNodeProtoList(PAP pap, Collection<Long> descs) {
+		List<gov.nist.ngac.pm.proto.v1.model.Node> nodeProtos = new ArrayList<>();
 		for (Long desc : descs) {
 			try {
 				nodeProtos.add(ToProtoUtil.toNodeProto(pap.query().graph().getNodeById(desc)));
@@ -1001,12 +1001,12 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 		return nodeProtos;
 	}
 
-	private List<gov.nist.csd.pm.proto.v1.model.Association> toAssociationProtoList(PAP pap, Collection<Association> associations) {
-		List<gov.nist.csd.pm.proto.v1.model.Association> associationProtos = new ArrayList<>();
+	private List<gov.nist.ngac.pm.proto.v1.model.Association> toAssociationProtoList(PAP pap, Collection<Association> associations) {
+		List<gov.nist.ngac.pm.proto.v1.model.Association> associationProtos = new ArrayList<>();
 		for (Association association : associations) {
 			try {
 				associationProtos.add(
-						gov.nist.csd.pm.proto.v1.model.Association.newBuilder()
+						gov.nist.ngac.pm.proto.v1.model.Association.newBuilder()
 								.setUa(ToProtoUtil.toNodeProto(pap.query().graph().getNodeById(association.source())))
 								.setTarget(ToProtoUtil.toNodeProto(pap.query().graph().getNodeById(association.target())))
 								.addAllArset(association.arset())
@@ -1019,8 +1019,8 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 		return associationProtos;
 	}
 
-	private List<gov.nist.csd.pm.proto.v1.model.Obligation> toObligationProtoList(PAP pap, Collection<Obligation> obligations) {
-		List<gov.nist.csd.pm.proto.v1.model.Obligation> obligationProtos = new ArrayList<>();
+	private List<gov.nist.ngac.pm.proto.v1.model.Obligation> toObligationProtoList(PAP pap, Collection<Obligation> obligations) {
+		List<gov.nist.ngac.pm.proto.v1.model.Obligation> obligationProtos = new ArrayList<>();
 		for (Obligation obligation : obligations) {
 			try {
 				obligationProtos.add(ToProtoUtil.toObligationProto(obligation, pap));
@@ -1060,22 +1060,22 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 
 	private ParamType typeToParamType(Type<?> type) {
 		switch (type) {
-			case gov.nist.csd.pm.core.pap.operation.arg.type.StringType stringType -> {
+			case gov.nist.ngac.pm.core.pap.operation.arg.type.StringType stringType -> {
 				return ParamType.newBuilder()
 						.setStringType(StringType.newBuilder().build())
 						.build();
 			}
-			case gov.nist.csd.pm.core.pap.operation.arg.type.LongType longType -> {
+			case gov.nist.ngac.pm.core.pap.operation.arg.type.LongType longType -> {
 				return ParamType.newBuilder()
 						.setLongType(LongType.newBuilder().build())
 						.build();
 			}
-			case gov.nist.csd.pm.core.pap.operation.arg.type.BooleanType booleanType -> {
+			case gov.nist.ngac.pm.core.pap.operation.arg.type.BooleanType booleanType -> {
 				return ParamType.newBuilder()
 						.setBooleanType(BooleanType.newBuilder().build())
 						.build();
 			}
-			case gov.nist.csd.pm.core.pap.operation.arg.type.ListType<?> listType -> {
+			case gov.nist.ngac.pm.core.pap.operation.arg.type.ListType<?> listType -> {
 				Type<?> elementType = listType.getElementType();
 				return ParamType.newBuilder()
 						.setListType(ListType.newBuilder()
@@ -1084,7 +1084,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 						.build();
 
 			}
-			case gov.nist.csd.pm.core.pap.operation.arg.type.MapType<?, ?> mapType -> {
+			case gov.nist.ngac.pm.core.pap.operation.arg.type.MapType<?, ?> mapType -> {
 				Type<?> keyType = mapType.getKeyType();
 				Type<?> valueType = mapType.getValueType();
 				return ParamType.newBuilder()
@@ -1121,21 +1121,21 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 		};
 	}
 
-	private List<gov.nist.csd.pm.proto.v1.pdp.query.RequiredCapability> convertReqCapsToProto(List<RequiredCapability> requiredCapabilities) {
-		List<gov.nist.csd.pm.proto.v1.pdp.query.RequiredCapability> reqCapProto = new ArrayList<>();
+	private List<gov.nist.ngac.pm.proto.v1.pdp.query.RequiredCapability> convertReqCapsToProto(List<RequiredCapability> requiredCapabilities) {
+		List<gov.nist.ngac.pm.proto.v1.pdp.query.RequiredCapability> reqCapProto = new ArrayList<>();
 		for (RequiredCapability reqcap : requiredCapabilities) {
 			List<RequiredPrivilege> requiredPrivileges = reqcap.getRequiredPrivileges();
 
-			List<gov.nist.csd.pm.proto.v1.pdp.query.RequiredPrivilege> reqPrivProtos = new ArrayList<>();
+			List<gov.nist.ngac.pm.proto.v1.pdp.query.RequiredPrivilege> reqPrivProtos = new ArrayList<>();
 			for (RequiredPrivilege reqpriv : requiredPrivileges) {
 				switch (reqpriv) {
 					case RequiredPrivilegeOnNode requiredPrivilegeOnNode ->
-							reqPrivProtos.add(gov.nist.csd.pm.proto.v1.pdp.query.RequiredPrivilege.newBuilder()
+							reqPrivProtos.add(gov.nist.ngac.pm.proto.v1.pdp.query.RequiredPrivilege.newBuilder()
 									                  .setNode(requiredPrivilegeOnNode.getName())
 									                  .addAllRequired(requiredPrivilegeOnNode.getRequired())
 									                  .build());
 					case RequiredPrivilegeOnParameter requiredPrivilegeOnParameter ->
-							reqPrivProtos.add(gov.nist.csd.pm.proto.v1.pdp.query.RequiredPrivilege.newBuilder()
+							reqPrivProtos.add(gov.nist.ngac.pm.proto.v1.pdp.query.RequiredPrivilege.newBuilder()
 									                  .setParam(requiredPrivilegeOnParameter.param().getName())
 									                  .addAllRequired(requiredPrivilegeOnParameter.getRequired())
 									                  .build());
@@ -1143,7 +1143,7 @@ public class PolicyQueryService extends PolicyQueryServiceGrpc.PolicyQueryServic
 				}
 			}
 
-			reqCapProto.add(gov.nist.csd.pm.proto.v1.pdp.query.RequiredCapability.newBuilder()
+			reqCapProto.add(gov.nist.ngac.pm.proto.v1.pdp.query.RequiredCapability.newBuilder()
 					                .addAllRequiredPrivileges(reqPrivProtos)
 					                .build());
 		}

@@ -57,7 +57,7 @@ class AdminPDPGrpcInterceptorConfigTest {
         };
 
         TestServerCall<String, String> call = new TestServerCall<>(
-                "gov.nist.csd.pm.proto.v1.epp.EPPService/processEvent"
+                "gov.nist.ngac.pm.proto.v1.epp.EPPService/processEvent"
         );
         interceptor.interceptCall(call, new Metadata(), handler);
 
@@ -80,7 +80,7 @@ class AdminPDPGrpcInterceptorConfigTest {
         };
 
         TestServerCall<String, String> call = new TestServerCall<>(
-                "gov.nist.csd.pm.proto.v1.pdp.adjudication.AdminAdjudicationService/adjudicateOperation"
+                "gov.nist.ngac.pm.proto.v1.pdp.adjudication.AdminAdjudicationService/adjudicateOperation"
         );
         interceptor.interceptCall(call, new Metadata(), handler);
 
@@ -103,7 +103,7 @@ class AdminPDPGrpcInterceptorConfigTest {
         };
 
         TestServerCall<String, String> call = new TestServerCall<>(
-                "gov.nist.csd.pm.proto.v1.pdp.adjudication.AdminAdjudicationService/adjudicateRoutine"
+                "gov.nist.ngac.pm.proto.v1.pdp.adjudication.AdminAdjudicationService/adjudicateRoutine"
         );
         interceptor.interceptCall(call, new Metadata(), handler);
 
@@ -129,7 +129,7 @@ class AdminPDPGrpcInterceptorConfigTest {
         };
 
         TestServerCall<String, String> call = new TestServerCall<>(
-                "gov.nist.csd.pm.proto.v1.pdp.query.PolicyQueryService/someMethod"
+                "gov.nist.ngac.pm.proto.v1.pdp.query.PolicyQueryService/someMethod"
         );
         interceptor.interceptCall(call, new Metadata(), handler);
 
@@ -156,7 +156,7 @@ class AdminPDPGrpcInterceptorConfigTest {
         };
 
         TestServerCall<String, String> call = new TestServerCall<>(
-                "gov.nist.csd.pm.proto.v1.pdp.query.PolicyQueryService/someMethod"
+                "gov.nist.ngac.pm.proto.v1.pdp.query.PolicyQueryService/someMethod"
         );
         interceptor.interceptCall(call, new Metadata(), handler);
 

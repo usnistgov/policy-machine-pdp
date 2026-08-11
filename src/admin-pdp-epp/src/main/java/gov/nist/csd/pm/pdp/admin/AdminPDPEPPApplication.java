@@ -1,9 +1,9 @@
 package gov.nist.csd.pm.pdp.admin;
 
-import gov.nist.csd.pm.core.common.exception.PMException;
-import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.Neo4jEmbeddedPAP;
-import gov.nist.csd.pm.core.impl.neo4j.embedded.pap.store.Neo4jEmbeddedPolicyStore;
-import gov.nist.csd.pm.core.pap.operation.Operation;
+import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.neo4j.embedded.pap.Neo4jEmbeddedPAP;
+import gov.nist.ngac.pm.core.neo4j.embedded.pap.store.Neo4jEmbeddedPolicyStore;
+import gov.nist.ngac.pm.core.pap.operation.Operation;
 import gov.nist.csd.pm.pdp.admin.config.AdminPDPConfig;
 import gov.nist.csd.pm.pdp.shared.auth.AuthConfig;
 import gov.nist.csd.pm.pdp.shared.plugin.PluginLoader;
@@ -59,7 +59,7 @@ public class AdminPDPEPPApplication {
     public Neo4jEmbeddedPolicyStore eventListenerPolicyStore(GraphDatabaseService graphDb) throws PMException {
         Neo4jEmbeddedPolicyStore.createIndexes(graphDb);
 
-        return new Neo4jEmbeddedPolicyStore(graphDb, getClass().getClassLoader());
+        return new Neo4jEmbeddedPolicyStore(graphDb);
     }
 
     @Bean
@@ -78,7 +78,7 @@ public class AdminPDPEPPApplication {
         Neo4jEmbeddedPAP neo4jEmbeddedPAP = new Neo4jEmbeddedPAP(eventListenerPolicyStore);
 
         for (Operation<?> op : pluginOps) {
-            neo4jEmbeddedPAP.plugins().addOperation(op);
+            neo4jEmbeddedPAP.javaOperations().register(op);
         }
 
         return neo4jEmbeddedPAP;

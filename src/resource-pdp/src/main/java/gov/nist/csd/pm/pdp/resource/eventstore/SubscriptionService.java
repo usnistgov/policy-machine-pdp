@@ -2,7 +2,7 @@ package gov.nist.csd.pm.pdp.resource.eventstore;
 
 import com.eventstore.dbclient.*;
 import com.google.protobuf.InvalidProtocolBufferException;
-import gov.nist.csd.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.common.exception.PMException;
 import gov.nist.csd.pm.pdp.shared.eventstore.CurrentRevisionService;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreConnectionManager;
 import gov.nist.csd.pm.pdp.shared.eventstore.EventStoreDBConfig;

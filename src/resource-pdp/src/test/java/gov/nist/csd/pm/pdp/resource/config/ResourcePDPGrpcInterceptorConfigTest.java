@@ -59,7 +59,7 @@ class ResourcePDPGrpcInterceptorConfigTest {
         };
 
         TestServerCall<String, String> call = new TestServerCall<>(
-                "gov.nist.csd.pm.proto.v1.epp.EPPService/processEvent"
+                "gov.nist.ngac.pm.proto.v1.epp.EPPService/processEvent"
         );
         interceptor.interceptCall(call, new Metadata(), handler);
 
@@ -79,8 +79,8 @@ class ResourcePDPGrpcInterceptorConfigTest {
         );
 
         String[] methodNames = {
-                "gov.nist.csd.pm.proto.v1.pdp.query.PolicyQueryService/query",
-                "gov.nist.csd.pm.proto.v1.pdp.access.AccessService/check",
+                "gov.nist.ngac.pm.proto.v1.pdp.query.PolicyQueryService/query",
+                "gov.nist.ngac.pm.proto.v1.pdp.access.AccessService/check",
                 "any.Service/anyMethod"
         };
 
