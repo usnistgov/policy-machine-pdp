@@ -8,6 +8,15 @@
     <artifactId>client</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <licenses>
+        <license>
+            <name>NIST Software License + CC BY 4.0</name>
+            <url>https://github.com/usnistgov/policy-machine-pdp/blob/main/LICENSE.md</url>
+            <distribution>repo</distribution>
+            <comments>The admin-pdp-epp module overrides this with its own GPLv3 license (see admin-pdp-epp/LICENSE).</comments>
+        </license>
+    </licenses>
+
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
