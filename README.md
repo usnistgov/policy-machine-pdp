@@ -2,6 +2,9 @@
 The Policy Machine PDP is a general purpose NGAC Policy Decision Point (PDP) and Event Processing Point (EPP). The purpose of this project is to provide a standalone NGAC PDP and EPP that can be plugged into any use case. The server is built on the [policy-machine-core library](https://github.com/usnistgov/policy-machine-core) and exposes a set of gRPC services that domain specific Policy Enforcement Points (PEP) and Resource Access Points (RAP) can call for decision making, event processing, and policy query/review. Custom NGAC operations and routines can be loaded as [plugins](#operation-and-routine-plugins) to facilitate enhanced policy adminsitration. This project is designed as an event-driven gRPC microservice implementation of the NGAC standard architecture. The gRPC 
 service and message definitions can be found in the [policy-machine-protos repo](https://github.com/usnistgov/policy-machine-protos).
 
+## Current Release Status
+Release 0.3.10 with ongoing development and improvement.
+
 ## Quickstart
 To start the PDP services using docker-compose:
 ```shell
