@@ -1,3 +1,5 @@
+server:
+  port: 8082
 grpc:
   server:
     port: 50052
@@ -7,7 +9,7 @@ pm:
     auth:
       mode: none
     admin:
-      mode: sandbox
+      mode: sandbox-pdp
       bootstrap-file-path: "./src/admin-pdp-epp/src/main/resources/bootstrap.pml"
       neo4j-db-path: "neo4j/data"
       esdb-consumer-group: admin-pdp-epp-cg

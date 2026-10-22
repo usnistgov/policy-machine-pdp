@@ -19,9 +19,9 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
 import com.eventstore.dbclient.WrongExpectedVersionException;
+import gov.nist.csd.pm.pdp.shared.auth.UserContextResolver;
 import gov.nist.ngac.pm.core.common.exception.PMException;
 import gov.nist.ngac.pm.core.common.exception.PMRuntimeException;
-import gov.nist.ngac.pm.core.grpc.util.FromProtoUtil;
 import gov.nist.ngac.pm.core.pap.PAP;
 import gov.nist.ngac.pm.core.pap.query.model.context.UserContext;
 import gov.nist.csd.pm.pdp.admin.pap.EventTrackingPAP;
@@ -70,10 +70,19 @@ public class DefaultAdjudicator implements AdminAdjudicator {
 
     @Override
     public Object adjudicateOperation(String operation, Map<String, Object> args) throws PMException {
+        return adjudicateOperation(contextFactory::createUserContext, operation, args);
+    }
+
+    @Override
+    public Object adjudicateOperation(UserContext userCtx, String operation, Map<String, Object> args) throws PMException {
+        return adjudicateOperation(pap -> userCtx, operation, args);
+    }
+
+    private Object adjudicateOperation(UserContextResolver userCtxResolver, String operation, Map<String, Object> args) throws PMException {
         Supplier<Object> supplier = () -> {
             try {
                 NGACContext ctx = contextFactory.createContext();
-                UserContext userContext = contextFactory.createUserContext(ctx.pap());
+                UserContext userContext = userCtxResolver.resolve(ctx.pap());
 
                 Object result = ctx.pdp().adjudicateOperation(userContext, operation, args);
                 publishEvents(ctx.pap());
@@ -92,16 +101,25 @@ public class DefaultAdjudicator implements AdminAdjudicator {
 
     @Override
     public void adjudicateRoutine(List<OperationRequest> adminCommands) throws PMException {
+        adjudicateRoutine(contextFactory::createUserContext, OperationRequestConverter.fromProto(adminCommands));
+    }
+
+    @Override
+    public void adjudicateRoutine(UserContext userCtx,
+                                  List<gov.nist.ngac.pm.core.pdp.adjudication.OperationRequest> operations) throws PMException {
+        adjudicateRoutine(pap -> userCtx, operations);
+    }
+
+    private void adjudicateRoutine(UserContextResolver userCtxResolver,
+                                   List<gov.nist.ngac.pm.core.pdp.adjudication.OperationRequest> operations) throws PMException {
         adjudicateTransaction(ctx -> {
-            UserContext userContext = contextFactory.createUserContext(ctx.pap());
+            UserContext userContext = userCtxResolver.resolve(ctx.pap());
 
             // Execute every command in a single transaction. adjudicateTransaction publishes the
             // accumulated events to the event store once, after the transaction completes.
             ctx.pdp().runTx(userContext, pdpTx -> {
-                for (OperationRequest operationRequest : adminCommands) {
-                    ctx.pdp().adjudicateOperation(userContext,
-                                                  operationRequest.getName(),
-                                                  FromProtoUtil.fromValueMap(operationRequest.getArgs()));
+                for (gov.nist.ngac.pm.core.pdp.adjudication.OperationRequest operation : operations) {
+                    ctx.pdp().adjudicateOperation(userContext, operation.op(), operation.args());
                 }
 
                 return null;

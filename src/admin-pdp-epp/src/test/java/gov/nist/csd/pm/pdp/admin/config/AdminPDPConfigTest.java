@@ -49,7 +49,7 @@ class AdminPDPConfigTest {
 
     @Test
     void validate_sandboxMode_skipsEventStoreValidation() {
-        AdminPDPConfig config = newConfig("sandbox");
+        AdminPDPConfig config = newConfig("sandbox-pdp");
         // no esdbConsumerGroup / neo4jDbPath set
 
         assertDoesNotThrow(config::validate);

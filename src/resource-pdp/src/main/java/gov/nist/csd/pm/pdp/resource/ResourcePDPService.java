@@ -22,11 +22,9 @@ package gov.nist.csd.pm.pdp.resource;
 import gov.nist.ngac.pm.core.grpc.util.FromProtoUtil;
 import gov.nist.ngac.pm.core.grpc.util.ToProtoUtil;
 import gov.nist.ngac.pm.core.pap.PAP;
-import gov.nist.ngac.pm.core.pap.operation.Operation;
-import gov.nist.ngac.pm.core.pap.operation.ResourceOperation;
 import gov.nist.ngac.pm.core.pap.query.model.context.UserContext;
-import gov.nist.ngac.pm.core.pdp.PDP;
 import gov.nist.ngac.pm.core.pdp.UnauthorizedException;
+import gov.nist.csd.pm.pdp.shared.adjudication.OperationNotSupportedException;
 import gov.nist.csd.pm.pdp.shared.auth.UserContextResolver;
 import gov.nist.ngac.pm.proto.v1.pdp.adjudication.AdjudicateOperationResponse;
 import gov.nist.ngac.pm.proto.v1.pdp.adjudication.OperationRequest;
@@ -44,12 +42,12 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
 
     private static final Logger logger = LoggerFactory.getLogger(ResourcePDPService.class);
 
-    private final PDP pdp;
+    private final ResourceOperationAdjudicator adjudicator;
     private final PAP pap;
     private final UserContextResolver userContextResolver;
 
-    public ResourcePDPService(PDP pdp, PAP pap, UserContextResolver userContextResolver) {
-        this.pdp = pdp;
+    public ResourcePDPService(ResourceOperationAdjudicator adjudicator, PAP pap, UserContextResolver userContextResolver) {
+        this.adjudicator = adjudicator;
         this.pap = pap;
         this.userContextResolver = userContextResolver;
     }
@@ -59,19 +57,8 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
                                             StreamObserver<AdjudicateOperationResponse> responseObserver) {
         try {
             UserContext userCtx = userContextResolver.resolve(pap);
-
-            // only allow resource operations to be adjudicated
-            Operation<?> operation = pap.query().operations().getOperation(request.getName());
-            if (!(operation instanceof ResourceOperation<?>)) {
-                throw new OperationIsNotResourceOperationException();
-            }
-
             Map<String, Object> args = FromProtoUtil.fromValueMap(request.getArgs());
-            Object result = pdp.adjudicateOperation(
-                    userCtx,
-                    request.getName(),
-                    args
-            );
+            Object result = adjudicator.adjudicateOperation(userCtx, request.getName(), args);
 
             AdjudicateOperationResponse.Builder b = AdjudicateOperationResponse.newBuilder();
             if (result != null) {
@@ -85,7 +72,7 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
                                              .withDescription(e.getMessage())
                                              .withCause(e)
                                              .asRuntimeException());
-        } catch (OperationIsNotResourceOperationException e) {
+        } catch (OperationNotSupportedException e) {
             logger.error("adjudication FAILED", e);
             responseObserver.onError(Status.INVALID_ARGUMENT
                                              .withDescription(e.getMessage())
@@ -97,12 +84,6 @@ public class ResourcePDPService extends ResourceAdjudicationServiceGrpc.Resource
                                              .withDescription(e.getMessage())
                                              .withCause(e)
                                              .asRuntimeException());
-        }
-    }
-
-    static class OperationIsNotResourceOperationException extends Exception {
-        public OperationIsNotResourceOperationException() {
-            super("only subclasses of ResourceOperation are allowed to be invoked in the resource-pdp");
         }
     }
 }

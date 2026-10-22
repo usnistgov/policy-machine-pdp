@@ -18,10 +18,11 @@
 
 package gov.nist.csd.pm.pdp.admin.pdp;
 
+import gov.nist.csd.pm.pdp.shared.auth.UserContextResolver;
+import gov.nist.csd.pm.pdp.shared.config.SandboxPAPMode;
 import gov.nist.ngac.pm.core.common.exception.PMException;
 import gov.nist.ngac.pm.core.epp.EPP;
 import gov.nist.ngac.pm.core.epp.EventContext;
-import gov.nist.ngac.pm.core.grpc.util.FromProtoUtil;
 import gov.nist.ngac.pm.core.impl.memory.pap.MemoryPAP;
 import gov.nist.ngac.pm.core.pap.PAP;
 import gov.nist.ngac.pm.core.pap.operation.AdminOperation;
@@ -30,78 +31,36 @@ import gov.nist.ngac.pm.core.pap.operation.arg.Args;
 import gov.nist.ngac.pm.core.pap.pml.operation.PMLOperation;
 import gov.nist.ngac.pm.core.pap.query.model.context.UserContext;
 import gov.nist.ngac.pm.core.pdp.PDP;
-import gov.nist.csd.pm.pdp.shared.auth.UserContextResolver;
-import gov.nist.csd.pm.pdp.shared.config.SandboxMode;
-import gov.nist.ngac.pm.proto.v1.pdp.adjudication.OperationRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Sandbox that bypasses the NGAC privilege gate: any request user can execute any operation.
+ * Obligations still fire.
+ */
 @Component
-@SandboxMode
-public class SandboxAdjudicator implements AdminAdjudicator {
+@SandboxPAPMode
+public class SandboxPAPAdjudicator extends InMemoryAdjudicator {
 
-    private final MemoryPAP pap;
-    private final UserContextResolver userContextResolver;
-    private final SandboxPDP pdp;
-    private final EPP epp;
-    private final Object lock = new Object();
+    @Autowired
+    public SandboxPAPAdjudicator(MemoryPAP pap, UserContextResolver userContextResolver) throws PMException {
+        this(pap, userContextResolver, new SandboxPDP(pap));
+    }
 
-    public SandboxAdjudicator(MemoryPAP pap, UserContextResolver userContextResolver) throws PMException {
-        this.pap = pap;
-        this.userContextResolver = userContextResolver;
+    private SandboxPAPAdjudicator(MemoryPAP pap, UserContextResolver userContextResolver, SandboxPDP pdp)
+            throws PMException {
+        super(pap, userContextResolver, pdp, wireEpp(pap, pdp));
+    }
 
-        // The PDP and EPP form a cycle: the PDP fires events to the EPP, and the EPP runs obligation
-        // responses back through the PDP. Construct the PDP first, then the EPP, then wire the EPP into
-        // the PDP. All three share the single injected PAP.
-        this.pdp = new SandboxPDP(pap);
-        this.epp = new EPP(pdp, pap);
+    // The PDP fires events to the EPP, and the EPP runs obligation responses back through the PDP,
+    // so the PDP is constructed first and the EPP is wired in afterwards.
+    private static EPP wireEpp(MemoryPAP pap, SandboxPDP pdp) throws PMException {
+        EPP epp = new EPP(pdp, pap);
         pdp.setEpp(epp);
-    }
-
-    @Override
-    public Object adjudicateOperation(String operation, Map<String, Object> args) throws PMException {
-        synchronized (lock) {
-            UserContext userCtx = userContextResolver.resolve(pap);
-            return pdp.adjudicateOperation(userCtx, operation, args);
-        }
-    }
-
-    @Override
-    public void adjudicateRoutine(List<OperationRequest> adminCommands) throws PMException {
-        synchronized (lock) {
-            UserContext userCtx = userContextResolver.resolve(pap);
-            for (OperationRequest cmd : adminCommands) {
-                pdp.adjudicateOperation(userCtx, cmd.getName(), FromProtoUtil.fromValueMap(cmd.getArgs()));
-            }
-        }
-    }
-
-    @Override
-    public <R> R adjudicateQuery(PDPTxFunction<R> consumer) throws PMException {
-        synchronized (lock) {
-            UserContext userCtx = userContextResolver.resolve(pap);
-            return consumer.apply(pap, userCtx);
-        }
-    }
-
-    @Override
-    public Object executePML(String pml) throws PMException {
-        synchronized (lock) {
-            UserContext userCtx = userContextResolver.resolve(pap);
-            return pdp.executePML(userCtx, pml);
-        }
-    }
-
-    @Override
-    public long adjudicateTransaction(PMConsumer<NGACContext> txConsumer) throws PMException {
-        synchronized (lock) {
-            txConsumer.accept(new NGACContext(pdp, epp, pap));
-            // no EventStoreDB in sandbox mode, so there is no revision to report
-            return -1;
-        }
+        return epp;
     }
 
     /**
