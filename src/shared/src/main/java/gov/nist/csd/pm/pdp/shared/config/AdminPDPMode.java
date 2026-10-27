@@ -8,13 +8,12 @@
  * subject to copyright protection in the United States. However, NIST may hold
  * international copyright in software created by its employees and domestic
  * copyright (or licensing rights) in portions of software that were assigned or
- * licensed to NIST. To the extent that NIST holds copyright in this software, it is
- * being made available under the Creative Commons Attribution 4.0 International
- * license (CC BY 4.0). The disclaimers of the CC BY 4.0 license apply to all parts
- * of the software developed or licensed by NIST.
+ * licensed to NIST.
  *
- * ACCESS THE FULL CC BY 4.0 LICENSE HERE:
- * https://creativecommons.org/licenses/by/4.0/legalcode
+ * This file is part of the admin-pdp-epp module, which compiles against
+ * and embeds org.neo4j:neo4j (GPLv3, Community Edition). As a combined work, this
+ * module is distributed under the GNU General Public License v3.0, not the CC BY 4.0
+ * license used elsewhere in this repository. See admin-pdp-epp/LICENSE for the full text.
  */
 
 package gov.nist.csd.pm.pdp.shared.config;
@@ -23,8 +22,13 @@ public final class AdminPDPMode {
 
     public static final String PROPERTY = "pm.pdp.admin.mode";
     public static final String DEFAULT = "default";
-    public static final String SANDBOX = "sandbox";
+    public static final String SANDBOX_PAP = "sandbox-pap";
+    public static final String SANDBOX_PDP = "sandbox-pdp";
 
     private AdminPDPMode() {
+    }
+
+    public static boolean isSandbox(String mode) {
+        return SANDBOX_PAP.equals(mode) || SANDBOX_PDP.equals(mode);
     }
 }

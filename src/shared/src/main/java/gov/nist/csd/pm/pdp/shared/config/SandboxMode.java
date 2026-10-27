@@ -8,26 +8,38 @@
  * subject to copyright protection in the United States. However, NIST may hold
  * international copyright in software created by its employees and domestic
  * copyright (or licensing rights) in portions of software that were assigned or
- * licensed to NIST. To the extent that NIST holds copyright in this software, it is
- * being made available under the Creative Commons Attribution 4.0 International
- * license (CC BY 4.0). The disclaimers of the CC BY 4.0 license apply to all parts
- * of the software developed or licensed by NIST.
+ * licensed to NIST.
  *
- * ACCESS THE FULL CC BY 4.0 LICENSE HERE:
- * https://creativecommons.org/licenses/by/4.0/legalcode
+ * This file is part of the admin-pdp-epp module, which compiles against
+ * and embeds org.neo4j:neo4j (GPLv3, Community Edition). As a combined work, this
+ * module is distributed under the GNU General Public License v3.0, not the CC BY 4.0
+ * license used elsewhere in this repository. See admin-pdp-epp/LICENSE for the full text.
  */
 
 package gov.nist.csd.pm.pdp.shared.config;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Conditional;
+import org.springframework.context.annotation.Condition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.core.type.AnnotatedTypeMetadata;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Active in either sandbox mode (in-memory PAP, no Neo4j or EventStoreDB).
+ */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-@ConditionalOnProperty(name = AdminPDPMode.PROPERTY, havingValue = AdminPDPMode.SANDBOX)
+@Conditional(SandboxMode.SandboxCondition.class)
 public @interface SandboxMode {
+
+    class SandboxCondition implements Condition {
+        @Override
+        public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+            return AdminPDPMode.isSandbox(context.getEnvironment().getProperty(AdminPDPMode.PROPERTY));
+        }
+    }
 }

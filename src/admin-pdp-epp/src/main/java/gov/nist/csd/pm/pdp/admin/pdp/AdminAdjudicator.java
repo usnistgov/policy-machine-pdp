@@ -19,12 +19,13 @@
 package gov.nist.csd.pm.pdp.admin.pdp;
 
 import gov.nist.ngac.pm.core.common.exception.PMException;
+import gov.nist.ngac.pm.core.pdp.adjudication.AccessAdjudication;
 import gov.nist.ngac.pm.proto.v1.pdp.adjudication.OperationRequest;
 
 import java.util.List;
 import java.util.Map;
 
-public interface AdminAdjudicator {
+public interface AdminAdjudicator extends AccessAdjudication {
 
     Object adjudicateOperation(String operation, Map<String, Object> args) throws PMException;
 

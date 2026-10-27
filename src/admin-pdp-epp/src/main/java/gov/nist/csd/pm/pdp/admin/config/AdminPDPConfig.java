@@ -69,17 +69,17 @@ public class AdminPDPConfig {
 
     @PostConstruct
     public void validate() {
-        if (!AdminPDPMode.DEFAULT.equals(mode) && !AdminPDPMode.SANDBOX.equals(mode)) {
+        if (!AdminPDPMode.DEFAULT.equals(mode) && !AdminPDPMode.isSandbox(mode)) {
             throw new IllegalArgumentException(
-                    "pm.pdp.admin.mode must be '" + AdminPDPMode.DEFAULT + "' or '" + AdminPDPMode.SANDBOX
-                            + "', got: " + mode);
+                    "pm.pdp.admin.mode must be '" + AdminPDPMode.DEFAULT + "', '" + AdminPDPMode.SANDBOX_PAP
+                            + "' or '" + AdminPDPMode.SANDBOX_PDP + "', got: " + mode);
         }
 
         if (bootstrapFilePath == null || bootstrapFilePath.isEmpty() || bootstrapFilePath.equals("null")) {
             throw new IllegalArgumentException("bootstrapFilePath is null or empty");
         }
 
-        if (AdminPDPMode.SANDBOX.equals(mode)) {
+        if (AdminPDPMode.isSandbox(mode)) {
             return;
         }
 

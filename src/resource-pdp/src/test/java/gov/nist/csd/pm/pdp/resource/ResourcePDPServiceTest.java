@@ -68,7 +68,7 @@ class ResourcePDPServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ResourcePDPService(pdp, pap, new BasicUserContextResolver());
+        service = new ResourcePDPService(new ResourceOperationAdjudicator(pdp, pap), pap, new BasicUserContextResolver());
     }
 
     @Test

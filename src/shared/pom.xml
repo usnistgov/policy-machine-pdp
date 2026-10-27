@@ -50,6 +50,10 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
         <dependency>
@@ -128,7 +132,6 @@
                 <artifactId>protobuf-maven-plugin</artifactId>
                 <version>0.6.1</version>
                 <configuration>
-                    <pluginId>grpc-java</pluginId>
                     <protoSourceRoot>${project.basedir}/src/main/proto</protoSourceRoot>
                     <includes>
                         <include>**/*.proto</include>
@@ -136,16 +139,11 @@
                     <protocArtifact>
                         com.google.protobuf:protoc:4.28.2:exe:${os.detected.classifier}
                     </protocArtifact>
-                    <pluginId>grpc-java</pluginId>
-                    <pluginArtifact>
-                        io.grpc:protoc-gen-grpc-java:1.71.0:exe:${os.detected.classifier}
-                    </pluginArtifact>
                 </configuration>
                 <executions>
                     <execution>
                         <goals>
                             <goal>compile</goal>
-                            <goal>compile-custom</goal>
                         </goals>
                     </execution>
                 </executions>

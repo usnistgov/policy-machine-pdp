@@ -29,7 +29,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class SandboxAdjudicatorTest {
+class SandboxPAPAdjudicatorTest {
 
     /**
      * Bootstraps a super user, then a policy class with an unprivileged user "u1" that holds no
@@ -41,19 +41,19 @@ class SandboxAdjudicatorTest {
             "create ua \"ua1\" in [\"pc1\"]\n" +
             "create u \"u1\" in [\"ua1\"]\n";
 
-    private SandboxAdjudicator newAdjudicator(String pml) throws PMException {
+    private SandboxPAPAdjudicator newAdjudicator(String pml) throws PMException {
         MemoryPAP pap = new MemoryPAP();
         pap.bootstrap(new PMLBootstrapperWithSuper(pml));
 
         // Resolve every request to the unprivileged user "u1".
         UserContextResolver resolver = p -> NodeUserContext.of("u1");
 
-        return new SandboxAdjudicator(pap, resolver);
+        return new SandboxPAPAdjudicator(pap, resolver);
     }
 
     @Test
     void executePML_unprivilegedUser_skipsPrivilegeGate() throws PMException {
-        SandboxAdjudicator adjudicator = newAdjudicator(BASE_PML);
+        SandboxPAPAdjudicator adjudicator = newAdjudicator(BASE_PML);
 
         adjudicator.executePML("create pc \"pc2\"");
 
@@ -63,7 +63,7 @@ class SandboxAdjudicatorTest {
 
     @Test
     void adjudicateOperation_unprivilegedUser_skipsPrivilegeGate() throws PMException {
-        SandboxAdjudicator adjudicator = newAdjudicator(BASE_PML);
+        SandboxPAPAdjudicator adjudicator = newAdjudicator(BASE_PML);
 
         adjudicator.adjudicateOperation("create_policy_class", Map.of("name", "pc2"));
 

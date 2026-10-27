@@ -339,3 +339,94 @@ Below are diagrams illustrating the different ways data can flow through the dis
 ### Event Context Flow
 ![policy-machine-server-ec 1](https://github.com/user-attachments/assets/af7cc871-7c51-4719-9a2d-947fd59bb961)
 
+
+## AuthZEN
+Both `admin-pdp-epp` and `resource-pdp` expose an [AuthZEN](https://openid.net/specs/authorization-api-1_0.html) 
+Access Evaluation REST API. The endpoints are served on the HTTP port (`server.port`), not the gRPC port.
+
+| Service | Default HTTP port |
+|---------|-------------------|
+| admin-pdp-epp | 8082 |
+| resource-pdp | 8081 |
+
+### Endpoints
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/.well-known/authzen-configuration` | PDP metadata and endpoint URLs |
+| POST | `/access/v1/evaluation` | Single access evaluation |
+| POST | `/access/v1/evaluations` | Batch access evaluations |
+
+`X-Request-ID` is echoed in the response. No auth header is required when `pm.pdp.auth.mode` is `none`; 
+the user is taken from `subject`, not the gRPC `x-pm-*` headers.
+
+### Request mapping
+- `action.name` is the operation name.
+- `action.properties` are the operation args. Node args (e.g. `project`) must be passed here; `resource` is required but not mapped to args.
+- `subject.id` is a user name. Optional `subject.properties`:
+  - `id_type: "id"` treats `subject.id` as a node ID.
+  - `attrs: [...]` evaluates as an anonymous user assigned to those attributes.
+  - `process_id` sets the process.
+- `resource` is ignored.
+- `subject.type`, `subject.id`, `resource.type`, `resource.id` and `action.name` are required.
+
+```bash
+curl -X POST http://localhost:8082/access/v1/evaluation \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "subject":  {"type": "user", "id": "bob"},
+    "resource": {"type": "", "id": ""},
+    "action":   {"name": "read_file", "properties": {"file_name": "test.txt"}}
+  }'
+```
+
+### GET /.well-known/authzen-configuration
+Returns PDP metadata. URLs are built from the request host.
+
+```json
+{
+  "policy_decision_point": "http://localhost:8082",
+  "access_evaluation_endpoint": "http://localhost:8082/access/v1/evaluation",
+  "access_evaluations_endpoint": "http://localhost:8082/access/v1/evaluations"
+}
+```
+
+### POST /access/v1/evaluation
+Evaluates one subject/resource/action tuple (example above). Returns `{"decision": true|false}`. 
+Invalid requests (missing required field, unknown operation or node, missing arg) return `400` as `text/plain`; other failures return `500`.
+
+### POST /access/v1/evaluations
+Evaluates multiple tuples in one request. Each entry in `evaluations` is a full or partial evaluation request.
+
+#### Default values
+`subject`, `resource`, `action` and `context` may be set once at the top level. Each entry inherits any of 
+these fields it omits, and overrides only what it specifies. This example checks `bob` against three operations on one project:
+
+```json
+{
+  "subject":  {"type": "user", "id": "bob"},
+  "resource": {"type": "project", "id": "jnr6/ai-devsecops-test"},
+  "evaluations": [
+    {"action": {"name": "read_project",   "properties": {"project": "jnr6/ai-devsecops-test"}}},
+    {"action": {"name": "create_comment", "properties": {"project": "jnr6/ai-devsecops-test", "iid": "1", "body": "hi"}}},
+    {"subject": {"type": "user", "id": "alice"}, "action": {"name": "read_project", "properties": {"project": "jnr6/ai-devsecops-test"}}}
+  ],
+  "options": {"evaluations_semantic": "execute_all"}
+}
+```
+
+Response (one entry per item, in order):
+
+```json
+{"evaluations": [{"decision": true}, {"decision": false}, {"decision": false}]}
+```
+
+If `evaluations` is empty or omitted, the top-level tuple is evaluated and a single `{"decision": ...}` is returned.
+
+#### Semantics
+`options.evaluations_semantic`:
+- `execute_all` (default): evaluate every item.
+- `deny_on_first_deny`: stop after the first `false`.
+- `permit_on_first_permit`: stop after the first `true`.
+
+Skipped items return `decision: false` with `context.reason`. An item that fails returns `decision: false` with 
+`context.error` (`status`, `message`) without failing the whole request. An invalid `evaluations_semantic` returns `400`.
